@@ -1,35 +1,77 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "title": "Open Study Path configuration",
+  "title": "Open Study Path instance configuration",
   "type": "object",
-  "required": ["version", "path", "learner", "preferences", "intake", "integrations", "planning"],
+  "additionalProperties": false,
+  "required": ["version", "configured", "path", "learner", "preferences", "intake", "integrations", "planning"],
   "properties": {
     "version": {"const": 1},
+    "configured": {"type": "boolean"},
     "path": {
       "type": "object",
-      "required": ["subject", "objective", "desired_outcome"],
+      "additionalProperties": false,
+      "required": ["subject", "objective"],
       "properties": {
-        "name": {"type": "string"},
-        "subject": {"type": "string", "minLength": 1},
-        "objective": {"type": "string", "minLength": 1},
-        "desired_outcome": {"type": "string", "minLength": 1},
+        "name": {"type": ["string", "null"]},
+        "subject": {"type": "string"},
+        "objective": {"type": "string"},
+        "desired_outcome": {"type": ["string", "null"]},
+        "motivation": {"type": ["string", "null"]},
         "deadline": {"type": ["string", "null"], "format": "date"}
       }
     },
     "learner": {
       "type": "object",
+      "additionalProperties": false,
       "required": ["preferred_language", "current_level", "weekly_hours"],
       "properties": {
-        "preferred_language": {"type": "string"},
+        "preferred_language": {"type": "string", "minLength": 1},
         "current_level": {"enum": ["none", "beginner", "intermediate", "advanced"]},
         "prior_knowledge": {"type": "array", "items": {"type": "string"}},
         "weekly_hours": {"type": "number", "exclusiveMinimum": 0},
         "preferred_days": {"type": "array", "items": {"type": "string"}},
+        "preferred_periods": {"type": "array", "items": {"type": "string"}},
         "accessibility_needs": {"type": "array", "items": {"type": "string"}}
       }
     },
-    "preferences": {"type": "object"},
-    "intake": {"type": "object"},
+    "preferences": {
+      "type": "object",
+      "properties": {
+        "formats": {"type": "array", "items": {"type": "string"}},
+        "theory_practice_balance": {"type": "string"},
+        "assessment_style": {"type": "string"},
+        "notes": {"type": ["string", "null"]}
+      }
+    },
+    "references": {
+      "type": "object",
+      "properties": {
+        "text_or_urls": {"type": "array", "items": {"type": "string"}},
+        "attachments": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["name"],
+            "properties": {
+              "name": {"type": "string"},
+              "source_reference": {"type": ["string", "null"]},
+              "summary": {"type": ["string", "null"]}
+            }
+          }
+        }
+      }
+    },
+    "intake": {
+      "type": "object",
+      "required": ["provider", "persist_raw_submission"],
+      "properties": {
+        "provider": {"enum": ["unset", "jotform", "github_issue", "manual_yaml"]},
+        "form_id": {"type": ["string", "null"]},
+        "submission_strategy": {"enum": ["latest_approved", "explicit_submission", "not_applicable"]},
+        "attachments_optional": {"const": true},
+        "persist_raw_submission": {"const": false}
+      }
+    },
     "integrations": {"type": "object"},
     "planning": {"type": "object"}
   }
