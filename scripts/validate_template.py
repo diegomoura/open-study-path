@@ -15,7 +15,11 @@ from jsonschema import Draft202012Validator, FormatChecker
 ROOT = Path(__file__).resolve().parents[1]
 INSTANCE_MARKER = ".open-study-path/instance.yml"
 COMPLETION_CONTRACT = "instructions/phase-completion.md"
+DIAGNOSTIC_TEMPLATE = "templates/state/diagnostic-summary.json"
+DIAGNOSTIC_SCHEMA = "schemas/diagnostic-summary.schema.json"
+DIAGNOSTIC_STATE = "state/diagnostic-summary.json"
 MERGE_POLICIES = {"manual", "auto_after_ci", "auto_when_unambiguous"}
+DIAGNOSTIC_EXCEPTIONS = {None, "owner_requested_comprehensive", "legacy_before_policy"}
 
 REUSABLE_YAML_FILES = [
     ".open-study-path/template.yml",
@@ -37,6 +41,8 @@ REQUIRED_REUSABLE_FILES = [
     "instructions/10-intake.md",
     "instructions/20-diagnostic.md",
     COMPLETION_CONTRACT,
+    DIAGNOSTIC_TEMPLATE,
+    DIAGNOSTIC_SCHEMA,
 ]
 
 INSTANCE_ARTIFACTS = [
@@ -61,6 +67,11 @@ REQUIRED_INTAKE_KEYS = {
 def load_yaml(path: str) -> Any:
     with (ROOT / path).open("r", encoding="utf-8") as handle:
         return yaml.safe_load(handle)
+
+
+def load_json(path: str) -> Any:
+    with (ROOT / path).open("r", encoding="utf-8") as handle:
+        return json.load(handle)
 
 
 def load_text(path: str) -> str:
@@ -99,9 +110,40 @@ def validate_workflow_policy(document: dict[str, Any], *, required: bool) -> Non
         fail("instance marker workflow must be an object")
     if workflow.get("guided") is not True:
         fail("instance workflow must set guided: true")
-    policy = workflow.get("intake_merge_policy")
-    if policy not in MERGE_POLICIES:
-        fail(f"invalid intake merge policy: {policy}")
+
+    for key in ["intake_merge_policy", "diagnostic_merge_policy"]:
+        policy = workflow.get(key)
+        if policy not in MERGE_POLICIES:
+            fail(f"invalid {key}: {policy}")
+
+
+def validate_diagnostic_budget(document: dict[str, Any], path: str) -> None:
+    budget = document.get("question_budget", {})
+    target_min = budget.get("target_min")
+    target_max = budget.get("target_max")
+    hard_max = budget.get("hard_max")
+    exception = budget.get("exception")
+    count = document.get("question_count")
+
+    if not all(isinstance(value, int) for value in [target_min, target_max, hard_max, count]):
+        fail(f"diagnostic budget values must be integers in {path}")
+    if not (1 <= target_min <= target_max <= hard_max <= 10):
+        fail(f"invalid diagnostic question budget in {path}")
+    if exception not in DIAGNOSTIC_EXCEPTIONS:
+        fail(f"invalid diagnostic budget exception in {path}: {exception}")
+    if count > hard_max and exception is None:
+        fail(f"diagnostic question count exceeds hard maximum without exception in {path}")
+
+
+def validate_json_document(path: str, validator: Draft202012Validator) -> dict[str, Any]:
+    document = load_json(path)
+    errors = list(validator.iter_errors(document))
+    if errors:
+        for error in errors:
+            location = ".".join(str(part) for part in error.path) or "<root>"
+            print(f"SCHEMA ERROR in {path} at {location}: {error.message}", file=sys.stderr)
+        raise SystemExit(1)
+    return document
 
 
 def check_reusable_contract(marker: dict[str, Any]) -> None:
@@ -133,13 +175,21 @@ def check_reusable_contract(marker: dict[str, Any]) -> None:
     }
     if phases.get("intake", {}).get("next_phase") != "diagnostic":
         fail("intake phase must guide to diagnostic")
-    if phases.get("diagnostic", {}).get("next_phase") != "generate":
+    diagnostic_phase = phases.get("diagnostic", {})
+    if diagnostic_phase.get("next_phase") != "generate":
         fail("diagnostic phase must guide to generation")
+    if diagnostic_phase.get("merge_policy_path") != "workflow.diagnostic_merge_policy":
+        fail("diagnostic phase must reference its merge policy")
+    if diagnostic_phase.get("outputs") != [INSTANCE_MARKER, DIAGNOSTIC_STATE]:
+        fail("diagnostic phase must restrict outputs to marker and diagnostic summary")
 
     instance_template = load_yaml("templates/instance.yml")
     validate_workflow_policy(instance_template, required=True)
-    if instance_template.get("workflow", {}).get("intake_merge_policy") != "auto_when_unambiguous":
-        fail("new instances must default to auto_when_unambiguous")
+    workflow = instance_template.get("workflow", {})
+    if workflow.get("intake_merge_policy") != "auto_when_unambiguous":
+        fail("new instances must default intake to auto_when_unambiguous")
+    if workflow.get("diagnostic_merge_policy") != "auto_when_unambiguous":
+        fail("new instances must default diagnostic to auto_when_unambiguous")
 
     project_instructions = load_text("templates/chatgpt-project-instructions.md")
     for term in [
@@ -159,13 +209,12 @@ def check_reusable_contract(marker: dict[str, Any]) -> None:
         fail("ChatGPT Project setup guide must include the repository placeholder")
 
     intake_setup = load_text("instructions/05-configure-intake.md")
-    required_issue_handoff_terms = [
+    for term in [
         "https://github.com/OWNER/REPOSITORY/issues/new?template=create-study-path.yml",
         "explicit_issue",
         "clickable link",
         "issue number",
-    ]
-    for term in required_issue_handoff_terms:
+    ]:
         if term not in intake_setup:
             fail(f"GitHub Issue Form setup instructions are missing required term: {term}")
 
@@ -178,8 +227,26 @@ def check_reusable_contract(marker: dict[str, Any]) -> None:
         if term not in intake_instruction:
             fail(f"intake instructions are missing required guided-flow term: {term}")
 
+    diagnostic_instruction = load_text("instructions/20-diagnostic.md")
+    for term in [
+        "target 3 to 5 questions",
+        "hard maximum of 7 questions",
+        "workflow.diagnostic_merge_policy",
+        DIAGNOSTIC_TEMPLATE,
+        DIAGNOSTIC_SCHEMA,
+        "Do not send a separate transition message",
+    ]:
+        if term not in diagnostic_instruction:
+            fail(f"diagnostic instructions are missing required bounded-flow term: {term}")
+
     completion = load_text(COMPLETION_CONTRACT)
-    for term in ["Next step", "Continue command", "Concision rule", "auto_when_unambiguous"]:
+    for term in [
+        "Next step",
+        "Continue command",
+        "Concision rule",
+        "auto_when_unambiguous",
+        "Do not send a separate transition message",
+    ]:
         if term not in completion:
             fail(f"phase completion contract is missing required term: {term}")
 
@@ -188,7 +255,6 @@ def check_template_mode(marker: dict[str, Any]) -> None:
     for path in INSTANCE_ARTIFACTS:
         if (ROOT / path).exists():
             fail(f"instance artifact must not exist before instance setup: {path}")
-
     print("Template-mode guard passed.")
 
 
@@ -214,13 +280,14 @@ def check_instance_mode(marker: dict[str, Any]) -> None:
         fail("instance source_template must match the canonical repository")
 
     validate_workflow_policy(instance, required=False)
+    if instance.get("status", {}).get("diagnostic_complete") is True and not (ROOT / DIAGNOSTIC_STATE).is_file():
+        fail("completed diagnostic requires state/diagnostic-summary.json")
     print(f"Instance-mode guard passed for {repository}.")
 
 
 def check_guard() -> None:
     marker = load_yaml(".open-study-path/template.yml")
     check_reusable_contract(marker)
-
     if is_instance():
         check_instance_mode(marker)
     else:
@@ -241,7 +308,6 @@ def check_intake() -> None:
     missing_required = REQUIRED_INTAKE_KEYS.difference(field_keys)
     if missing_required:
         fail(f"jotform specification is missing required keys: {sorted(missing_required)}")
-
     if spec.get("privacy", {}).get("attachments_optional") is not True:
         fail("jotform specification must keep attachments optional")
     if spec.get("privacy", {}).get("persist_raw_submission") is not False:
@@ -289,15 +355,19 @@ def validate_config(path: str, validator: Draft202012Validator) -> None:
 
 
 def check_schema() -> None:
-    with (ROOT / "schemas/study-config.schema.json").open("r", encoding="utf-8") as handle:
-        schema = json.load(handle)
-
-    validator = Draft202012Validator(schema, format_checker=FormatChecker())
-    validate_config("study.config.example.yml", validator)
+    study_validator = Draft202012Validator(load_json("schemas/study-config.schema.json"), format_checker=FormatChecker())
+    validate_config("study.config.example.yml", study_validator)
     if is_instance():
-        validate_config("study.config.yml", validator)
+        validate_config("study.config.yml", study_validator)
 
-    print("Configuration schema passed.")
+    diagnostic_validator = Draft202012Validator(load_json(DIAGNOSTIC_SCHEMA), format_checker=FormatChecker())
+    template_document = validate_json_document(DIAGNOSTIC_TEMPLATE, diagnostic_validator)
+    validate_diagnostic_budget(template_document, DIAGNOSTIC_TEMPLATE)
+    if (ROOT / DIAGNOSTIC_STATE).is_file():
+        state_document = validate_json_document(DIAGNOSTIC_STATE, diagnostic_validator)
+        validate_diagnostic_budget(state_document, DIAGNOSTIC_STATE)
+
+    print("Configuration and diagnostic schemas passed.")
 
 
 CHECKS = {
