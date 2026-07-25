@@ -78,6 +78,8 @@ def main() -> None:
     publish = phases.get("publish", {})
     if publish.get("depends_on") != ["generate"]:
         fail("publish must depend directly on completed generation")
+    if publish.get("internal_preflight") != "instructions/42-integration-preflight.md":
+        fail("publish must reference the internal integration preflight")
 
     validate_workflow(load_yaml("templates/instance.yml"), "templates/instance.yml", default_required=True)
     if INSTANCE_MARKER.is_file():
