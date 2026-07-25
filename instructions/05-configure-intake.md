@@ -26,9 +26,9 @@ Do not silently select Jotform, create external resources or fall back to anothe
    `https://github.com/OWNER/REPOSITORY/issues/new?template=create-study-path.yml`
 
    Replace `OWNER/REPOSITORY` with the instance repository. Never return the placeholder URL.
-5. Display the URL as a clickable link. Prefer the label `Preencher o Issue Form de REPOSITORY`, replacing `REPOSITORY` with the repository name. A generic localized label such as `Preencher o formulário da trilha` is also acceptable.
+5. Display the URL as a clickable link. Prefer the label `Preencher o Issue Form de REPOSITORY`, replacing `REPOSITORY` with the repository name.
 6. Explain that the Issue Form was inherited from the repository template and was not dynamically created during setup.
-7. Tell the owner to submit the form and return with the created issue number, for example: `Import issue #4 as the approved intake. Do not generate the curriculum yet.`
+7. Tell the owner to submit the form and return with the created issue number, using a command equivalent to: `Importe a issue #4 como intake aprovado. Não gere a trilha ainda.`
 8. Stop after presenting the link and next command. Do not create or submit an issue, import answers or generate a curriculum unless explicitly requested.
 
 The completion response for `github_issue` must always contain the direct clickable link and the instruction to return with an explicit issue number.
@@ -65,7 +65,7 @@ After creation or verified reuse, save only:
 - `intake.attachments_optional: true`;
 - `intake.persist_raw_submission: false`.
 
-Display the form URL to the owner so it can be filled. Stop after configuration; do not read a submission until the owner explicitly asks to import one.
+Display the form URL and provide an exact command to import the approved or latest submission. Stop after configuration; do not read a submission until the owner explicitly asks to import one.
 
 ## Manual YAML
 
@@ -75,7 +75,7 @@ Set:
 - `intake.setup_status: ready`;
 - `intake.submission_strategy: not_applicable`.
 
-Explain that the required fields are subject, objective, current level, preferred language and weekly hours. Do not invent those values.
+Explain that the required fields are subject, objective, current level, preferred language and weekly hours. Do not invent those values. Provide an exact command for the owner to use after saving the approved values.
 
 ## Instance marker
 
@@ -86,3 +86,5 @@ Update `.open-study-path/instance.yml` with:
 - `status.setup_complete: true`.
 
 Setup completion means the instance and intake method are ready. It does not mean intake was imported or a curriculum was generated.
+
+Complete this phase using `instructions/phase-completion.md`. Keep the response concise, link the selected provider, and make the next required owner action unmistakable.
