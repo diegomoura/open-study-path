@@ -8,10 +8,12 @@ initialized_at: null
 workflow:
   guided: true
   intake_merge_policy: auto_when_unambiguous
+  diagnostic_merge_policy: auto_when_unambiguous
 
 status:
   setup_complete: false
   intake_configured: false
   intake_provider: unset
   intake_imported: false
+  diagnostic_complete: false
   curriculum_generated: false
