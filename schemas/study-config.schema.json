@@ -1,0 +1,36 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Open Study Path configuration",
+  "type": "object",
+  "required": ["version", "path", "learner", "preferences", "intake", "integrations", "planning"],
+  "properties": {
+    "version": {"const": 1},
+    "path": {
+      "type": "object",
+      "required": ["subject", "objective", "desired_outcome"],
+      "properties": {
+        "name": {"type": "string"},
+        "subject": {"type": "string", "minLength": 1},
+        "objective": {"type": "string", "minLength": 1},
+        "desired_outcome": {"type": "string", "minLength": 1},
+        "deadline": {"type": ["string", "null"], "format": "date"}
+      }
+    },
+    "learner": {
+      "type": "object",
+      "required": ["preferred_language", "current_level", "weekly_hours"],
+      "properties": {
+        "preferred_language": {"type": "string"},
+        "current_level": {"enum": ["none", "beginner", "intermediate", "advanced"]},
+        "prior_knowledge": {"type": "array", "items": {"type": "string"}},
+        "weekly_hours": {"type": "number", "exclusiveMinimum": 0},
+        "preferred_days": {"type": "array", "items": {"type": "string"}},
+        "accessibility_needs": {"type": "array", "items": {"type": "string"}}
+      }
+    },
+    "preferences": {"type": "object"},
+    "intake": {"type": "object"},
+    "integrations": {"type": "object"},
+    "planning": {"type": "object"}
+  }
+}

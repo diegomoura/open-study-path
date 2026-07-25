@@ -1,0 +1,42 @@
+version: 1
+
+path:
+  name: ""
+  subject: ""
+  objective: ""
+  desired_outcome: ""
+  deadline: null
+
+learner:
+  preferred_language: pt-BR
+  current_level: beginner
+  prior_knowledge: []
+  weekly_hours: 5
+  preferred_days: []
+  accessibility_needs: []
+
+preferences:
+  formats:
+    - documentation
+    - exercises
+    - projects
+  theory_practice_balance: practical
+  assessment_style: mixed
+
+intake:
+  provider: jotform
+  form_id: "262053811445048"
+  persist_raw_submission: false
+
+integrations:
+  task_manager:
+    provider: github_issues
+  calendar:
+    provider: none
+  notifications:
+    provider: chat
+
+planning:
+  unit: topic
+  require_evidence: true
+  allow_replanning: true
