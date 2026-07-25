@@ -15,7 +15,7 @@ Describe the observable capability the learner will gain.
 
 ## Why this matters
 
-Connect the topic to the learner's final goal.
+Connect the topic to the learner's final goal or a diagnostic gap.
 
 ## Prerequisites
 
@@ -47,11 +47,11 @@ Add links, files, explanations or assessment results.
 
 ### Required
 
-- Add primary or official resources.
+- Name a specific primary or official work and include a canonical locator such as section, chapter, book, article or letter number. Edition, translation and URL may remain pending when clearly identified.
 
 ### Optional
 
-- Add enrichment resources.
+- Add enrichment resources with the same precision when practical.
 
 ## Prompt to start a study chat
 
