@@ -24,6 +24,14 @@ YAML_FILES = [
     "templates/instance.yml",
 ]
 
+REQUIRED_TEMPLATE_FILES = [
+    "README.md",
+    "AGENTS.md",
+    "docs/chatgpt-project-setup.md",
+    "templates/chatgpt-project-instructions.md",
+    "instructions/00-bootstrap.md",
+]
+
 FORBIDDEN_TEMPLATE_ARTIFACTS = [
     ".open-study-path/instance.yml",
     "study.config.yml",
@@ -48,6 +56,10 @@ def load_yaml(path: str) -> Any:
         return yaml.safe_load(handle)
 
 
+def load_text(path: str) -> str:
+    return (ROOT / path).read_text(encoding="utf-8")
+
+
 def fail(message: str) -> None:
     print(f"ERROR: {message}", file=sys.stderr)
     raise SystemExit(1)
@@ -62,6 +74,10 @@ def check_yaml() -> None:
 
 
 def check_guard() -> None:
+    for path in REQUIRED_TEMPLATE_FILES:
+        if not (ROOT / path).is_file():
+            fail(f"missing required reusable template file: {path}")
+
     for path in FORBIDDEN_TEMPLATE_ARTIFACTS:
         if (ROOT / path).exists():
             fail(f"instance artifact must not exist in canonical template: {path}")
@@ -69,6 +85,34 @@ def check_guard() -> None:
     marker = load_yaml(".open-study-path/template.yml")
     if marker.get("generation_allowed") is not False:
         fail("template marker must set generation_allowed: false")
+
+    setup = marker.get("instance_setup", {})
+    expected_assets = {
+        "chatgpt_project_instructions_template": "templates/chatgpt-project-instructions.md",
+        "chatgpt_project_setup_guide": "docs/chatgpt-project-setup.md",
+        "instance_marker": ".open-study-path/instance.yml",
+        "configuration_template": "study.config.example.yml",
+    }
+    for key, expected in expected_assets.items():
+        if setup.get(key) != expected:
+            fail(f"template marker {key} must reference {expected}")
+
+    project_instructions = load_text("templates/chatgpt-project-instructions.md")
+    required_instruction_terms = [
+        "OWNER/REPOSITORY",
+        ".open-study-path/instance.yml",
+        "diegomoura/open-study-path",
+    ]
+    for term in required_instruction_terms:
+        if term not in project_instructions:
+            fail(f"ChatGPT Project Instructions template is missing required term: {term}")
+
+    project_setup = load_text("docs/chatgpt-project-setup.md")
+    if "Project Instructions" not in project_setup:
+        fail("ChatGPT Project setup guide must explain Project Instructions")
+    if "OWNER/REPOSITORY" not in project_setup:
+        fail("ChatGPT Project setup guide must include the repository placeholder")
+
     print("Template guard passed.")
 
 
