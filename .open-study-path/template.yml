@@ -5,6 +5,8 @@ canonical_repository: diegomoura/open-study-path
 generation_allowed: false
 
 instance_setup:
+  chatgpt_project_instructions_template: templates/chatgpt-project-instructions.md
+  chatgpt_project_setup_guide: docs/chatgpt-project-setup.md
   instance_marker: .open-study-path/instance.yml
   configuration_template: study.config.example.yml
   state_templates:
@@ -15,4 +17,6 @@ instance_setup:
 rules:
   - Never generate learner-specific content in the canonical template repository.
   - A fork or derived repository becomes an instance only after the instance marker is created.
+  - Resolve the exact OWNER/REPOSITORY from ChatGPT Project Instructions or an explicit user message before bootstrap.
+  - Persist the exact repository identity in the instance marker during bootstrap.
   - Instance setup and curriculum generation are separate explicit operations.
