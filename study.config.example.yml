@@ -1,10 +1,12 @@
 version: 1
+configured: false
 
 path:
-  name: ""
+  name: null
   subject: ""
   objective: ""
-  desired_outcome: ""
+  desired_outcome: null
+  motivation: null
   deadline: null
 
 learner:
@@ -13,6 +15,7 @@ learner:
   prior_knowledge: []
   weekly_hours: 5
   preferred_days: []
+  preferred_periods: []
   accessibility_needs: []
 
 preferences:
@@ -20,17 +23,25 @@ preferences:
     - documentation
     - exercises
     - projects
-  theory_practice_balance: practical
+  theory_practice_balance: balanced
   assessment_style: mixed
+  notes: null
+
+references:
+  text_or_urls: []
+  attachments: []
 
 intake:
-  provider: jotform
-  form_id: "262053811445048"
+  provider: unset
+  form_id: null
+  submission_strategy: not_applicable
+  attachments_optional: true
   persist_raw_submission: false
 
 integrations:
   task_manager:
-    provider: github_issues
+    provider: markdown
+    board_or_project: null
   calendar:
     provider: none
   notifications:

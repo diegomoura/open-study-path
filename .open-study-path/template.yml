@@ -1,0 +1,18 @@
+kind: open-study-path-template
+version: 1
+
+canonical_repository: diegomoura/open-study-path
+generation_allowed: false
+
+instance_setup:
+  instance_marker: .open-study-path/instance.yml
+  configuration_template: study.config.example.yml
+  state_templates:
+    intake_summary: templates/state/intake-summary.json
+    progress: templates/state/progress.json
+  roadmap_template: templates/roadmap.md
+
+rules:
+  - Never generate learner-specific content in the canonical template repository.
+  - A fork or derived repository becomes an instance only after the instance marker is created.
+  - Instance setup and curriculum generation are separate explicit operations.

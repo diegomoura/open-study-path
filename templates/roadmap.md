@@ -1,9 +1,10 @@
 # Study Roadmap
 
-This file is generated after intake normalization and diagnostic assessment.
+This file is created in an Open Study Path instance after setup. Curriculum content is generated only after approved intake and diagnostic assessment.
 
 ```mermaid
 flowchart TD
+    Setup --> Intake
     Intake --> Diagnostic
     Diagnostic --> Topics
     Topics --> Tasks
@@ -13,7 +14,7 @@ flowchart TD
 
 ## Current status
 
-No learning path has been generated yet.
+The instance is configured, but no learning path has been generated yet.
 
 ## Generation rules
 

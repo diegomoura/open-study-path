@@ -1,24 +1,50 @@
 # Open Study Path
 
-Open-source, AI-assisted system for creating, managing and adapting personalized learning paths.
+Open-source, AI-assisted template for creating, managing and adapting personalized learning paths.
 
-This repository is designed to be forked. Learners provide their goals, current context, available time and preferences through Jotform, GitHub Issue Forms or YAML. An AI agent then generates a topic-based curriculum, tasks, assessments and progress state.
+> **This repository is the template, not a learning-path instance.** Do not generate a curriculum, learner configuration, progress state, Trello board or study tasks in this repository.
 
-## Start here
+## How it works
 
-1. Fork this repository.
-2. Fill in the onboarding form: https://form.jotform.com/262053811445048
-3. Connect GitHub and, optionally, Jotform and Trello to ChatGPT.
-4. Ask: `Initialize my study path using my latest form submission.`
-5. Review the generated pull request before merging.
+Open Study Path has two explicit modes:
 
-The GitHub Issue Form under `.github/ISSUE_TEMPLATE/` and direct editing of `study.config.yml` are fallback intake methods.
+1. **Template mode** — the original reusable repository. It contains instructions, schemas and file templates only.
+2. **Instance mode** — a fork or repository created from this template. Only an instance may contain a learner's configuration, generated roadmap, topics, progress and integration identifiers.
+
+The marker `.open-study-path/template.yml` keeps this repository in template mode. An AI agent must not generate learner data while that marker is active and `.open-study-path/instance.yml` is absent.
+
+## Start a new learning path
+
+1. Fork this repository or create a repository from it.
+2. Connect the new repository to ChatGPT.
+3. Ask: `Set up this fork as an Open Study Path instance. Do not generate the curriculum yet.`
+4. Choose an intake method:
+   - create or duplicate a Jotform using `intake/jotform-form-spec.md`;
+   - open the GitHub Issue Form in your own copy;
+   - fill `study.config.yml` manually after instance setup.
+5. Fill the selected intake method.
+6. Ask the agent to import the latest approved intake and propose the curriculum in a pull request.
+
+The reference Jotform used while developing the template is documented for maintainers, but each user should use a form in their own Jotform account and configure its ID in their own instance.
+
+## What instance setup creates
+
+Instance setup copies or creates the following files only inside the fork or derived repository:
+
+- `.open-study-path/instance.yml`;
+- `study.config.yml`, based on `study.config.example.yml`;
+- `state/intake-summary.json`, based on `templates/state/intake-summary.json`;
+- `state/progress.json`, based on `templates/state/progress.json`;
+- `study/roadmap.md`, based on `templates/roadmap.md`;
+- generated topic files under `study/topics/`.
+
+Setup and curriculum generation are separate operations. Creating an instance must not automatically create a learning path.
 
 ## Core principles
 
-- GitHub is the source of truth.
-- Topics are the primary learning unit; weeks are only scheduling views.
-- Jotform is the default onboarding experience.
+- GitHub is the source of truth for each instance.
+- Topics are the primary learning unit; weeks are scheduling projections only.
+- Jotform, GitHub Issue Forms and YAML are interchangeable intake methods.
 - GitHub Issues, Trello and Markdown are interchangeable task backends.
 - Completion requires evidence of learning, not only activity completion.
 - Raw form submissions and unnecessary personal data must not be committed.
@@ -26,19 +52,17 @@ The GitHub Issue Form under `.github/ISSUE_TEMPLATE/` and direct editing of `stu
 
 ## Repository map
 
+- `.open-study-path/template.yml`: template-mode guard.
 - `AGENTS.md`: operating contract for AI agents.
-- `study.config.yml`: normalized learner, goal and integration settings.
-- `instructions/manifest.yml`: ordered execution phases.
-- `instructions/`: intake, diagnostic, generation, publishing, tracking and replanning rules.
+- `study.config.example.yml`: configuration model copied during instance setup.
+- `instructions/manifest.yml`: lifecycle and phase ordering.
+- `instructions/`: setup, intake, diagnostic, generation, publishing, tracking and replanning rules.
 - `schemas/`: machine-readable validation contracts.
-- `templates/`: reusable topic structure.
-- `study/`: generated roadmap and learning topics.
-- `state/`: normalized intake, progress and external identifiers.
+- `templates/`: files used to initialize instance state and generated content.
+- `intake/`: specifications for supported intake methods.
 
-## First test case
-
-The first validation will migrate and compare the curriculum from `diegomoura/ia-study`, a 16-week AI application engineering curriculum, into this generic topic-based structure.
+The template intentionally does not contain `study.config.yml`, `state/` or `study/` instance artifacts.
 
 ## Privacy
 
-Do not commit raw form submissions, access tokens, API keys, webhook secrets, email addresses or unnecessary personal data. Persist only the normalized fields required to generate and adapt the learning path.
+Do not commit raw form submissions, uploaded reference files, access tokens, API keys, webhook secrets, email addresses or unnecessary personal data. Persist only normalized information required to generate and adapt the learning path. Attachments are optional and should be read only when needed, then represented by safe metadata or summaries rather than copied into the repository by default.
