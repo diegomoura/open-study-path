@@ -31,6 +31,7 @@ REQUIRED_REUSABLE_FILES = [
     "docs/chatgpt-project-setup.md",
     "templates/chatgpt-project-instructions.md",
     "instructions/00-bootstrap.md",
+    "instructions/05-configure-intake.md",
 ]
 
 INSTANCE_ARTIFACTS = [
@@ -112,6 +113,17 @@ def check_reusable_contract(marker: dict[str, Any]) -> None:
         fail("ChatGPT Project setup guide must explain Project Instructions")
     if "OWNER/REPOSITORY" not in project_setup:
         fail("ChatGPT Project setup guide must include the repository placeholder")
+
+    intake_setup = load_text("instructions/05-configure-intake.md")
+    required_issue_handoff_terms = [
+        "https://github.com/OWNER/REPOSITORY/issues/new?template=create-study-path.yml",
+        "explicit_issue",
+        "clickable link",
+        "issue number",
+    ]
+    for term in required_issue_handoff_terms:
+        if term not in intake_setup:
+            fail(f"GitHub Issue Form setup instructions are missing required term: {term}")
 
 
 def check_template_mode(marker: dict[str, Any]) -> None:
