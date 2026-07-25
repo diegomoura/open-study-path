@@ -40,6 +40,26 @@ Set it up as an Open Study Path instance and ask me which intake provider to use
 Do not import a submission, generate the curriculum or publish tasks yet.
 ```
 
+## Guided curriculum generation
+
+The curriculum generation command authorizes the complete proposal workflow inside that phase:
+
+1. create a draft pull request;
+2. review it against intake, diagnostic and repository contracts;
+3. correct issues on the proposal branch;
+4. run all required checks;
+5. self-review the final diff;
+6. mark the curriculum approved and merge when no owner decision remains;
+7. return the task-publication command.
+
+The owner should not need to send a separate curriculum-review command or manually merge a valid proposal. The agent leaves the pull request open only when it needs one specific pedagogical decision.
+
+## Updating an existing ChatGPT Project
+
+Project Instructions are copied text; they do not automatically update when the repository template changes. After a lifecycle-contract update, replace the existing Project Instructions with the latest `templates/chatgpt-project-instructions.md`, preserving the exact instance `OWNER/REPOSITORY` value.
+
+This is a one-time synchronization for each existing ChatGPT Project. Repository contracts in `AGENTS.md` and `instructions/manifest.yml` remain the operational source for each run, but stale Project Instructions can conflict with newer behavior.
+
 ## Identity resolution rules
 
 During the first setup, the repository target comes from the ChatGPT Project Instructions or an explicit repository identifier in the user's message.

@@ -25,15 +25,15 @@ Treat `OWNER/REPOSITORY` as the only learner-instance repository for this ChatGP
 5. After the instance marker exists, treat its `repository` value as the repository source of truth. If it conflicts with these Project Instructions, stop and ask the owner to resolve the mismatch.
 6. Use pull requests for structural changes, generated curricula and material updates.
 7. Never store raw form submissions, credentials, tokens, original uploaded files or unnecessary personal data.
-8. Instance setup, intake import, diagnostic, curriculum generation, curriculum review and task publication are separate operations. Do not combine them unless the owner explicitly requests it.
+8. Instance setup, intake import, diagnostic, curriculum generation and task publication are separate user-facing operations. Internal review, correction, validation and safe merge of a generated curriculum belong to the generation operation and must not require a second owner command.
 9. Use the intake provider and workflow policies configured in the instance. Do not silently switch providers or merge policies.
 10. Respond in the preferred response language unless the owner asks otherwise.
 11. Keep the process guided. At the end of every phase, give a brief result, link the primary artifact, mention only material attention items, identify the next phase and provide one exact command to continue.
 12. Do not repeat every normalized field, diagnostic finding, topic or changed file in chat unless the owner asks for a detailed audit. Put those details in the pull request.
-13. Stop at the requested phase boundary even when recommending the next phase.
-14. Keep curriculum generation as a draft proposal. After generation, guide the owner to an explicit review command containing the exact PR number.
-15. During curriculum review, correct the proposal branch, validate scope, effort, dependencies and precise resource locators, then mark ready and merge only when the configured policy allows it and no pedagogical decision remains unresolved.
-16. Do not publish tasks or create Trello cards, calendar events or notifications until the curriculum proposal has been reviewed and merged.
+13. Stop at the requested phase boundary. Internal validation, review, correction and safe merge required by that phase must be completed before responding.
+14. During curriculum generation, create a draft PR, review it against intake, diagnostic and repository contracts, correct issues, run the required checks, self-review the final diff, mark it ready and merge when `workflow.curriculum_merge_policy` allows it and no pedagogical decision remains unresolved.
+15. Never ask the owner to request a separate curriculum review, correct the branch or merge the PR merely because a PR was created. Ask only one specific question when a genuine pedagogical decision cannot be resolved from existing evidence.
+16. Do not publish tasks or create Trello cards, calendar events or notifications until the curriculum proposal has been validated and merged.
 
 ## Diagnostic limits
 

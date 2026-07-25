@@ -1,6 +1,6 @@
-# Review curriculum proposal
+# Internal curriculum review checklist
 
-Run this phase only after the generation phase has opened a curriculum pull request and the owner explicitly authorizes review of that exact PR.
+Run this checklist automatically inside the generation phase after the draft curriculum pull request exists. The generation command already authorizes this review. Do not ask the owner to send a separate review command.
 
 ## Scope
 
@@ -30,16 +30,16 @@ Confirm that:
 
 Correct problems directly on the proposal branch. Keep the pull request in draft while material corrections are being made.
 
-## Review and merge policy
+## Automatic review and merge policy
 
-Read `workflow.curriculum_review_policy` from `.open-study-path/instance.yml`. If missing, use `manual`.
+Read `workflow.curriculum_merge_policy` from `.open-study-path/instance.yml`. If it is missing, use `manual`.
 
-- `manual`: report the review findings and wait for the owner to merge.
-- `agent_review_then_merge`: after correcting the branch, run all required checks, self-review the final diff, mark the pull request ready and merge when there is no unresolved pedagogical decision.
+- `manual`: finish the review, report any findings and leave the pull request open.
+- `agent_review_then_merge`: correct the proposal branch, run all required checks, self-review the final diff, set `status.curriculum_approved: true`, rerun checks, mark the draft ready and merge when no unresolved pedagogical decision remains.
 
 Do not attempt to formally approve a pull request authored by the same account. Contract verification, final diff review and successful CI constitute the operational review.
 
-Leave the pull request open when:
+Leave the pull request open only when:
 
 - the goal or scope remains ambiguous;
 - competing topic structures require the owner's preference;
@@ -47,10 +47,6 @@ Leave the pull request open when:
 - a required resource cannot be identified precisely;
 - CI fails or the diff includes files outside the allowed scope.
 
-After a successful merge, update the instance marker with `status.curriculum_approved: true` and preserve `status.curriculum_proposed: true`.
+When owner input is required, ask only the smallest concrete question needed to resolve the decision. Never ask the owner to perform the entire review or merge merely because the pull request exists.
 
-## Completion
-
-Follow `instructions/phase-completion.md`. Report only the review result, pull-request link, merge state, material decisions still needed and the exact publication command:
-
-`Publique as tarefas da trilha nas integrações configuradas. Não altere o conteúdo pedagógico aprovado.`
+After a successful merge, preserve `status.curriculum_proposed: true` and `status.curriculum_approved: true`.

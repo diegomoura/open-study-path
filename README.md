@@ -53,7 +53,9 @@ Detailed normalized fields, diagnostic findings and file lists belong in the pul
 
 The standard lifecycle is:
 
-`setup → intake import → diagnostic → curriculum proposal → task publication → progress tracking → replanning`
+`setup → intake import → diagnostic → curriculum generation and approval → task publication → progress tracking → replanning`
+
+Curriculum review is internal to generation. The owner does not need to request a second review, correct the branch or merge the proposal when the configured policy permits safe automation.
 
 ## Safe phase merge policies
 
@@ -64,15 +66,31 @@ workflow:
   guided: true
   intake_merge_policy: auto_when_unambiguous
   diagnostic_merge_policy: auto_when_unambiguous
+  curriculum_merge_policy: agent_review_then_merge
 ```
 
 Available policies:
 
-- `manual` — always wait for owner review and merge;
+- `manual` — leave the phase PR open for a specific required decision or manual merge;
 - `auto_after_ci` — self-review and merge a phase-limited PR after required checks pass;
-- `auto_when_unambiguous` — self-review and merge only after checks pass and no material assumption or contradiction requires review.
+- `auto_when_unambiguous` — self-review and merge only after checks pass and no material assumption or contradiction requires review;
+- `agent_review_then_merge` — for curriculum generation, create a draft PR, review and correct it internally, run checks, self-review the final diff, mark it ready and merge when no pedagogical decision remains unresolved.
 
-The defaults authorize safe automation only for narrowly scoped intake and diagnostic PRs. They do not authorize automatic curriculum generation, external integration creation, destructive changes or task publication.
+The defaults authorize safe automation for intake, diagnostic and curriculum approval. They do not authorize external integration creation, destructive changes or task publication.
+
+## Automatic curriculum review
+
+The generation command is sufficient authorization to complete the curriculum proposal workflow. The agent must:
+
+1. create the proposal as a draft PR;
+2. compare it with the approved intake and diagnostic;
+3. correct scope, dependencies, effort, evidence, mastery criteria and resource references;
+4. run repository and curriculum checks;
+5. self-review the final phase-limited diff;
+6. mark the curriculum approved, rerun checks, mark the PR ready and merge;
+7. return the publication command.
+
+The PR remains open only when a genuine pedagogical choice cannot be resolved from existing evidence. In that case, the agent asks one specific question rather than delegating the whole review to the owner.
 
 ## Bounded proportional diagnostic
 
@@ -131,7 +149,7 @@ Instance setup copies or creates the following files only inside the fork or der
 - `state/progress.json`, based on `templates/state/progress.json`;
 - `study/roadmap.md`, based on `templates/roadmap.md`.
 
-`state/diagnostic-summary.json` is created only when the diagnostic completes. Topic files under `study/topics/` are created only after an approved intake, diagnostic and curriculum proposal.
+`state/diagnostic-summary.json` is created only when the diagnostic completes. Topic files under `study/topics/` are created during curriculum generation and merged only after automatic review succeeds.
 
 ## Core principles
 
@@ -141,7 +159,7 @@ Instance setup copies or creates the following files only inside the fork or der
 - GitHub Issues, Trello and Markdown are interchangeable task backends.
 - Completion requires evidence of learning, not only activity completion.
 - Raw form submissions, diagnostic transcripts and unnecessary personal data must not be committed.
-- Generated changes should be reviewed through pull requests unless a narrowly scoped merge policy explicitly permits safe automation.
+- Generated changes are reviewed through pull requests; narrowly scoped policies allow safe automation after validation.
 
 ## Repository map
 
@@ -153,6 +171,9 @@ Instance setup copies or creates the following files only inside the fork or der
 - `instructions/05-configure-intake.md`: automatic provider setup.
 - `instructions/10-intake.md`: intake normalization and safe merge policy.
 - `instructions/20-diagnostic.md`: bounded placement assessment and diagnostic merge policy.
+- `instructions/30-generate-path.md`: curriculum generation and automatic approval workflow.
+- `instructions/35-review-curriculum.md`: internal curriculum review checklist.
+- `scripts/validate_guided_lifecycle.py`: regression guard for the guided automatic workflow.
 - `intake/jotform-form-spec.yml`: executable form definition.
 - `intake/field-mapping.yml`: provider-independent normalization contract.
 - `.github/ISSUE_TEMPLATE/create-study-path.yml`: zero-config GitHub intake.

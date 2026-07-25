@@ -9,7 +9,7 @@ workflow:
   guided: true
   intake_merge_policy: auto_when_unambiguous
   diagnostic_merge_policy: auto_when_unambiguous
-  curriculum_review_policy: agent_review_then_merge
+  curriculum_merge_policy: agent_review_then_merge
 
 status:
   setup_complete: false
