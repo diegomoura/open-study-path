@@ -5,6 +5,10 @@ source_template: diegomoura/open-study-path
 repository: "OWNER/REPOSITORY"
 initialized_at: null
 
+workflow:
+  guided: true
+  intake_merge_policy: auto_when_unambiguous
+
 status:
   setup_complete: false
   intake_configured: false
