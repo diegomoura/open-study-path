@@ -3,7 +3,7 @@
   "title": "Open Study Path instance configuration",
   "type": "object",
   "additionalProperties": false,
-  "required": ["version", "configured", "path", "learner", "preferences", "intake", "integrations", "planning"],
+  "required": ["version", "configured", "path", "learner", "preferences", "references", "intake", "integrations", "planning"],
   "properties": {
     "version": {"const": 1},
     "configured": {"type": "boolean"},
@@ -36,21 +36,26 @@
     },
     "preferences": {
       "type": "object",
+      "additionalProperties": false,
+      "required": ["formats", "theory_practice_balance", "assessment_style", "notes"],
       "properties": {
         "formats": {"type": "array", "items": {"type": "string"}},
         "theory_practice_balance": {"type": "string"},
-        "assessment_style": {"type": "string"},
+        "assessment_style": {"type": ["string", "array"]},
         "notes": {"type": ["string", "null"]}
       }
     },
     "references": {
       "type": "object",
+      "additionalProperties": false,
+      "required": ["text_or_urls", "attachments"],
       "properties": {
         "text_or_urls": {"type": "array", "items": {"type": "string"}},
         "attachments": {
           "type": "array",
           "items": {
             "type": "object",
+            "additionalProperties": false,
             "required": ["name"],
             "properties": {
               "name": {"type": "string"},
@@ -63,16 +68,121 @@
     },
     "intake": {
       "type": "object",
-      "required": ["provider", "persist_raw_submission"],
+      "additionalProperties": false,
+      "required": [
+        "provider",
+        "setup_status",
+        "form_id",
+        "form_url",
+        "form_spec_id",
+        "form_spec_version",
+        "created_by",
+        "issue_template",
+        "submission_strategy",
+        "attachments_optional",
+        "persist_raw_submission"
+      ],
       "properties": {
         "provider": {"enum": ["unset", "jotform", "github_issue", "manual_yaml"]},
+        "setup_status": {"enum": ["unconfigured", "authorization_required", "ready", "error"]},
         "form_id": {"type": ["string", "null"]},
-        "submission_strategy": {"enum": ["latest_approved", "explicit_submission", "not_applicable"]},
+        "form_url": {"type": ["string", "null"], "format": "uri"},
+        "form_spec_id": {"type": "string", "const": "open-study-path-intake"},
+        "form_spec_version": {"type": "integer", "minimum": 1},
+        "created_by": {"enum": [null, "chatgpt_jotform_app", "reused_existing", "instance_owner"]},
+        "issue_template": {"type": ["string", "null"]},
+        "submission_strategy": {"enum": ["latest_approved", "explicit_submission", "explicit_issue", "not_applicable"]},
         "attachments_optional": {"const": true},
         "persist_raw_submission": {"const": false}
       }
     },
-    "integrations": {"type": "object"},
-    "planning": {"type": "object"}
-  }
+    "integrations": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["task_manager", "calendar", "notifications"],
+      "properties": {
+        "task_manager": {
+          "type": "object",
+          "required": ["provider", "board_or_project"],
+          "properties": {
+            "provider": {"enum": ["github_issues", "trello", "markdown"]},
+            "board_or_project": {"type": ["string", "null"]}
+          }
+        },
+        "calendar": {
+          "type": "object",
+          "required": ["provider", "enabled"],
+          "properties": {
+            "provider": {"enum": ["none", "google_calendar"]},
+            "enabled": {"type": "boolean"}
+          }
+        },
+        "notifications": {
+          "type": "object",
+          "required": ["provider", "email_enabled"],
+          "properties": {
+            "provider": {"enum": ["chat", "gmail", "none"]},
+            "email_enabled": {"type": "boolean"}
+          }
+        }
+      }
+    },
+    "planning": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["unit", "require_evidence", "allow_replanning"],
+      "properties": {
+        "unit": {"const": "topic"},
+        "require_evidence": {"type": "boolean"},
+        "allow_replanning": {"type": "boolean"}
+      }
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "intake": {
+            "properties": {
+              "provider": {"const": "jotform"},
+              "setup_status": {"const": "ready"}
+            },
+            "required": ["provider", "setup_status"]
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "intake": {
+            "properties": {
+              "form_id": {"type": "string", "minLength": 1},
+              "form_url": {"type": "string", "format": "uri"}
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "intake": {
+            "properties": {
+              "provider": {"const": "github_issue"},
+              "setup_status": {"const": "ready"}
+            },
+            "required": ["provider", "setup_status"]
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "intake": {
+            "properties": {
+              "issue_template": {"type": "string", "minLength": 1}
+            }
+          }
+        }
+      }
+    }
+  ]
 }
