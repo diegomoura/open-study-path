@@ -9,6 +9,7 @@ workflow:
   guided: true
   intake_merge_policy: auto_when_unambiguous
   diagnostic_merge_policy: auto_when_unambiguous
+  curriculum_review_policy: agent_review_then_merge
 
 status:
   setup_complete: false
@@ -16,4 +17,6 @@ status:
   intake_provider: unset
   intake_imported: false
   diagnostic_complete: false
+  curriculum_proposed: false
+  curriculum_approved: false
   curriculum_generated: false

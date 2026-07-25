@@ -56,8 +56,21 @@ phases:
     instruction: instructions/30-generate-path.md
     allowed_modes: [instance]
     depends_on: [diagnostic]
-    next_phase: publish
+    next_phase: review_curriculum
     outputs:
+      - .open-study-path/instance.yml
+      - study/roadmap.md
+      - study/topics/
+    stop_after_phase: true
+
+  - id: review_curriculum
+    instruction: instructions/35-review-curriculum.md
+    allowed_modes: [instance]
+    depends_on: [generate]
+    next_phase: publish
+    merge_policy_path: workflow.curriculum_review_policy
+    outputs:
+      - .open-study-path/instance.yml
       - study/roadmap.md
       - study/topics/
     stop_after_phase: true
@@ -65,7 +78,7 @@ phases:
   - id: publish
     instruction: instructions/40-publish-tasks.md
     allowed_modes: [instance]
-    depends_on: [generate]
+    depends_on: [review_curriculum]
     next_phase: track
     stop_after_phase: true
 

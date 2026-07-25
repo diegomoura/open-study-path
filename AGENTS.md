@@ -60,7 +60,7 @@ At the end of every phase, follow `instructions/phase-completion.md`:
 - state whether a pull request is open, awaiting review or already merged;
 - stop at the requested phase boundary.
 
-Do not repeat every normalized field, diagnostic finding or changed file in chat by default. Put detailed audit information in the pull request description and diff. Do not send a separate “I will register this now” transition message before repository work.
+Do not repeat every normalized field, diagnostic finding, topic or changed file in chat by default. Put detailed audit information in the pull request description and diff. Do not send a separate transition message before repository work.
 
 ## Instance setup workflow
 
@@ -128,7 +128,23 @@ Read `instructions/20-diagnostic.md` and `workflow.diagnostic_merge_policy` befo
 
 The diagnostic PR may change only `.open-study-path/instance.yml` and `state/diagnostic-summary.json`.
 
-For `workflow.diagnostic_merge_policy: auto_when_unambiguous`, self-review and merge after CI only when the summary validates, the budget is respected or has an allowed exception, the diff is phase-limited, the starting depth is supported and no unresolved contradiction needs owner review. Do not submit a formal approval on a PR authored by the same account.
+For `workflow.diagnostic_merge_policy: auto_when_unambiguous`, self-review and merge after CI only when the summary validates, the budget is respected or has an allowed exception, the diff is phase-limited, the starting depth is supported and no unresolved contradiction needs owner review.
+
+## Curriculum proposal and review rules
+
+Generation and approval are separate phases.
+
+- `generate` creates a draft PR and sets `status.curriculum_proposed: true`.
+- It must state when the proposal is only an introductory cycle.
+- Effort estimates must be realistic for the configured weekly availability.
+- Required resources must identify a specific work and canonical locator; edition, translation and URL may remain pending.
+- Generation does not merge the PR and does not publish tasks.
+
+After generation, use the exact PR number in an explicit `review_curriculum` command. Read `instructions/35-review-curriculum.md` and `workflow.curriculum_review_policy`.
+
+For `agent_review_then_merge`, review the proposal against intake, diagnostic and the topic contract; correct the proposal branch; run all required checks; self-review the final diff; mark the draft ready and merge only when no pedagogical decision remains unresolved. Do not formally approve a PR authored by the same account.
+
+Leave the PR open when scope, structure, effort or resources require an owner decision. Task publication and external integrations remain separate and require the approved curriculum.
 
 ## Instance source of truth
 
@@ -137,7 +153,7 @@ For `workflow.diagnostic_merge_policy: auto_when_unambiguous`, self-review and m
 3. `instructions/manifest.yml` defines the execution phases.
 4. `state/diagnostic-summary.json` contains bounded placement evidence after diagnosis.
 5. `state/progress.json` contains machine-readable progress.
-6. `study/topics/` contains generated learning units.
+6. `study/roadmap.md` and `study/topics/` contain the proposed or approved curriculum.
 7. Raw submissions, diagnostic transcripts and uploaded files must never be committed by default.
 
 ## Curriculum workflow in instance mode
@@ -145,12 +161,12 @@ For `workflow.diagnostic_merge_policy: auto_when_unambiguous`, self-review and m
 1. Read `instructions/manifest.yml` and `instructions/phase-completion.md`.
 2. Confirm the selected intake provider has `setup_status: ready`.
 3. Read the explicitly selected or approved intake.
-4. Normalize only required planning facts using `intake/field-mapping.yml` into `study.config.yml` and `state/intake-summary.json`.
+4. Normalize planning facts into `study.config.yml` and `state/intake-summary.json`.
 5. Validate configuration against `schemas/study-config.schema.json`.
 6. Run a bounded proportional diagnostic or use reliable existing evidence.
-7. Generate a dependency-aware topic graph.
-8. Create Markdown files from `templates/topic.md`.
-9. Publish tasks using the configured adapter only after approval.
+7. Generate a dependency-aware topic graph in a draft PR.
+8. Review and approve the exact curriculum PR through `instructions/35-review-curriculum.md`.
+9. Publish tasks using the configured adapter only after curriculum approval.
 10. Update `state/progress.json` only from verified evidence.
 11. Replan dates without rewriting topic dependencies unless evidence or the goal changes.
 
@@ -183,6 +199,7 @@ Instance operations:
 - `import issue #<number> as approved intake`
 - `start the proportional diagnostic`
 - `generate curriculum proposal`
+- `review curriculum PR #<number>`
 - `publish tasks`
 - `sync progress`
 - `evaluate topic <id>`

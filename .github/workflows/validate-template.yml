@@ -35,3 +35,6 @@ jobs:
 
       - name: Validate configuration schema
         run: python scripts/validate_template.py schema
+
+      - name: Validate curriculum contract
+        run: python scripts/validate_curriculum.py
