@@ -60,7 +60,7 @@ At the end of every phase, follow `instructions/phase-completion.md`:
 - state whether a pull request is open, awaiting review or already merged;
 - stop at the requested phase boundary.
 
-Do not repeat every normalized field or changed file in chat by default. Put detailed audit information in the pull request description and diff.
+Do not repeat every normalized field, diagnostic finding or changed file in chat by default. Put detailed audit information in the pull request description and diff. Do not send a separate “I will register this now” transition message before repository work.
 
 ## Instance setup workflow
 
@@ -112,14 +112,33 @@ The default for new instances is `auto_when_unambiguous`. If the marker is missi
 
 Never auto-merge curriculum generation, destructive changes or external-resource creation under the intake policy.
 
+## Proportional diagnostic rules
+
+Read `instructions/20-diagnostic.md` and `workflow.diagnostic_merge_policy` before starting.
+
+- Treat the diagnostic as placement, not teaching or an exhaustive exam.
+- Use intake and reliable prior evidence before asking questions.
+- Ask one short question at a time without praising, restating or interpreting every answer.
+- For `none` or `beginner`, target 3–5 questions and never exceed 7 without an explicit comprehensive-assessment request.
+- For `intermediate` or `advanced`, target 4–7 questions and never exceed 10 without an explicit comprehensive-assessment request.
+- Stop early as soon as a responsible starting depth is supported by conceptual and applied evidence.
+- At the hard limit, choose a conservative depth and record limited evidence instead of continuing indefinitely.
+- Create `state/diagnostic-summary.json` from the reusable template and validate it against `schemas/diagnostic-summary.schema.json`.
+- Do not persist the raw transcript or conversational filler.
+
+The diagnostic PR may change only `.open-study-path/instance.yml` and `state/diagnostic-summary.json`.
+
+For `workflow.diagnostic_merge_policy: auto_when_unambiguous`, self-review and merge after CI only when the summary validates, the budget is respected or has an allowed exception, the diff is phase-limited, the starting depth is supported and no unresolved contradiction needs owner review. Do not submit a formal approval on a PR authored by the same account.
+
 ## Instance source of truth
 
 1. `.open-study-path/instance.yml` identifies the repository instance and workflow policy.
 2. `study.config.yml` contains normalized learner and integration preferences.
 3. `instructions/manifest.yml` defines the execution phases.
-4. `state/progress.json` contains machine-readable progress.
-5. `study/topics/` contains generated learning units.
-6. Raw submissions and uploaded files must never be committed by default.
+4. `state/diagnostic-summary.json` contains bounded placement evidence after diagnosis.
+5. `state/progress.json` contains machine-readable progress.
+6. `study/topics/` contains generated learning units.
+7. Raw submissions, diagnostic transcripts and uploaded files must never be committed by default.
 
 ## Curriculum workflow in instance mode
 
@@ -128,7 +147,7 @@ Never auto-merge curriculum generation, destructive changes or external-resource
 3. Read the explicitly selected or approved intake.
 4. Normalize only required planning facts using `intake/field-mapping.yml` into `study.config.yml` and `state/intake-summary.json`.
 5. Validate configuration against `schemas/study-config.schema.json`.
-6. Run a proportional diagnostic or use reliable existing evidence.
+6. Run a bounded proportional diagnostic or use reliable existing evidence.
 7. Generate a dependency-aware topic graph.
 8. Create Markdown files from `templates/topic.md`.
 9. Publish tasks using the configured adapter only after approval.
