@@ -14,7 +14,7 @@ ROOT = Path(__file__).resolve().parents[1]
 INSTANCE_MARKER = ROOT / ".open-study-path/instance.yml"
 TOPICS_DIR = ROOT / "study/topics"
 ROADMAP = ROOT / "study/roadmap.md"
-ALLOWED_REVIEW_POLICIES = {"manual", "agent_review_then_merge"}
+ALLOWED_CURRICULUM_POLICIES = {"manual", "agent_review_then_merge"}
 REQUIRED_HEADINGS = [
     "## Objective",
     "## Why this matters",
@@ -74,21 +74,28 @@ def required_resource_lines(body: str, path: Path) -> list[str]:
 def check_lifecycle_contract() -> None:
     manifest = load_yaml(ROOT / "instructions/manifest.yml")
     phases = {phase.get("id"): phase for phase in manifest.get("phases", []) if isinstance(phase, dict)}
+    if "review_curriculum" in phases:
+        fail("curriculum review must be internal to generation, not a separate phase")
+
     generate = phases.get("generate", {})
-    review = phases.get("review_curriculum", {})
-    if generate.get("next_phase") != "review_curriculum":
-        fail("generation must route to review_curriculum")
-    if review.get("instruction") != "instructions/35-review-curriculum.md":
-        fail("review_curriculum must reference instructions/35-review-curriculum.md")
-    if review.get("next_phase") != "publish":
-        fail("review_curriculum must route to publish")
-    if review.get("merge_policy_path") != "workflow.curriculum_review_policy":
-        fail("review_curriculum must reference workflow.curriculum_review_policy")
+    if generate.get("next_phase") != "publish":
+        fail("generation must route directly to publish after internal review and merge")
+    if generate.get("internal_review") != "instructions/35-review-curriculum.md":
+        fail("generation must reference instructions/35-review-curriculum.md as internal review")
+    if generate.get("merge_policy_path") != "workflow.curriculum_merge_policy":
+        fail("generation must reference workflow.curriculum_merge_policy")
+
+    publish = phases.get("publish", {})
+    if publish.get("depends_on") != ["generate"]:
+        fail("publish must depend directly on completed generation")
 
     template = load_yaml(ROOT / "templates/instance.yml")
-    policy = template.get("workflow", {}).get("curriculum_review_policy")
+    workflow = template.get("workflow", {})
+    if "curriculum_review_policy" in workflow:
+        fail("templates/instance.yml contains deprecated curriculum_review_policy")
+    policy = workflow.get("curriculum_merge_policy")
     if policy != "agent_review_then_merge":
-        fail("new instances must default curriculum review to agent_review_then_merge")
+        fail("new instances must default curriculum merge to agent_review_then_merge")
 
     for required in [
         ROOT / "instructions/30-generate-path.md",
@@ -99,9 +106,12 @@ def check_lifecycle_contract() -> None:
 
     if INSTANCE_MARKER.is_file():
         marker = load_yaml(INSTANCE_MARKER)
-        instance_policy = marker.get("workflow", {}).get("curriculum_review_policy")
-        if instance_policy not in ALLOWED_REVIEW_POLICIES:
-            fail(f"invalid curriculum_review_policy: {instance_policy}")
+        instance_workflow = marker.get("workflow", {})
+        if "curriculum_review_policy" in instance_workflow:
+            fail("instance uses deprecated curriculum_review_policy")
+        instance_policy = instance_workflow.get("curriculum_merge_policy")
+        if instance_policy not in ALLOWED_CURRICULUM_POLICIES:
+            fail(f"invalid curriculum_merge_policy: {instance_policy}")
 
 
 def detect_cycle(prerequisites: dict[str, list[str]]) -> None:
