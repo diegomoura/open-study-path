@@ -1,0 +1,38 @@
+version: 1
+
+phases:
+  - id: bootstrap
+    instruction: instructions/00-bootstrap.md
+    outputs:
+      - study.config.yml
+
+  - id: intake
+    instruction: instructions/10-intake.md
+    depends_on: [bootstrap]
+    outputs:
+      - state/intake-summary.json
+
+  - id: diagnostic
+    instruction: instructions/20-diagnostic.md
+    depends_on: [intake]
+
+  - id: generate
+    instruction: instructions/30-generate-path.md
+    depends_on: [diagnostic]
+    outputs:
+      - study/roadmap.md
+      - study/topics/
+
+  - id: publish
+    instruction: instructions/40-publish-tasks.md
+    depends_on: [generate]
+
+  - id: track
+    instruction: instructions/50-track-progress.md
+    depends_on: [publish]
+    outputs:
+      - state/progress.json
+
+  - id: replan
+    instruction: instructions/60-replan.md
+    depends_on: [track]
