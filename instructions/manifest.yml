@@ -15,12 +15,20 @@ phases:
       - state/intake-summary.json
       - state/progress.json
       - study/roadmap.md
+
+  - id: configure_intake
+    instruction: instructions/05-configure-intake.md
+    allowed_modes: [instance]
+    depends_on: [bootstrap_instance]
+    outputs:
+      - .open-study-path/instance.yml
+      - study.config.yml
     stop_after_phase: true
 
   - id: intake
     instruction: instructions/10-intake.md
     allowed_modes: [instance]
-    depends_on: [bootstrap_instance]
+    depends_on: [configure_intake]
     outputs:
       - study.config.yml
       - state/intake-summary.json
