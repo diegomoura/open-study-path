@@ -1,0 +1,224 @@
+version: 1
+id: open-study-path-intake
+
+form:
+  title_template: "Open Study Path — {repository}"
+  default_language: pt-BR
+  workspace_type: personal
+  description: >-
+    Formulário de onboarding para gerar uma trilha de aprendizagem personalizada.
+    As respostas serão normalizadas no repositório da instância. Não informe
+    segredos ou dados pessoais desnecessários.
+  completion_message: >-
+    Formulário enviado. Volte ao ChatGPT conectado ao seu repositório e peça
+    para importar a submissão mais recente. O envio não gera a trilha automaticamente.
+
+privacy:
+  persist_raw_submission: false
+  attachments_optional: true
+  persist_uploaded_files: false
+  normalized_data_requires_consent: true
+
+sections:
+  - id: goal
+    title: Objetivo
+  - id: context
+    title: Contexto atual
+  - id: availability
+    title: Disponibilidade
+  - id: preferences
+    title: Preferências de aprendizagem
+  - id: integrations
+    title: Integrações
+  - id: consent
+    title: Consentimento
+
+fields:
+  - key: path_name
+    section: goal
+    label: Nome da trilha
+    type: short_text
+    required: false
+
+  - key: subject
+    section: goal
+    label: O que você quer aprender?
+    type: short_text
+    required: true
+
+  - key: objective
+    section: goal
+    label: Descreva detalhadamente seu objetivo
+    type: long_text
+    required: true
+
+  - key: desired_outcome
+    section: goal
+    label: Qual resultado concreto gostaria de alcançar?
+    type: long_text
+    required: false
+
+  - key: motivation
+    section: goal
+    label: Por que deseja estudar isso?
+    type: long_text
+    required: false
+
+  - key: current_level
+    section: context
+    label: Qual é seu nível atual?
+    type: single_choice
+    required: true
+    options:
+      - none
+      - beginner
+      - intermediate
+      - advanced
+
+  - key: prior_knowledge
+    section: context
+    label: Quais conhecimentos ou experiências anteriores são relevantes?
+    type: long_text
+    required: false
+
+  - key: reference_text_or_urls
+    section: context
+    label: Cole textos ou URLs de referência
+    type: long_text
+    required: false
+
+  - key: reference_attachments
+    section: context
+    label: Anexe arquivos de referência
+    help_text: Anexos são opcionais. Exemplos: vaga, currículo, PDF, ementa, imagem ou texto.
+    type: file_upload
+    required: false
+    multiple: true
+
+  - key: preferred_language
+    section: preferences
+    label: Em qual idioma deseja receber o conteúdo?
+    type: short_text
+    required: true
+    default: pt-BR
+
+  - key: weekly_hours
+    section: availability
+    label: Quantas horas por semana você possui?
+    type: number
+    required: true
+    validation:
+      minimum: 1
+
+  - key: deadline
+    section: availability
+    label: Existe uma data limite?
+    type: date
+    required: false
+
+  - key: preferred_days
+    section: availability
+    label: Quais dias prefere estudar?
+    type: multi_choice
+    required: false
+    options:
+      - monday
+      - tuesday
+      - wednesday
+      - thursday
+      - friday
+      - saturday
+      - sunday
+
+  - key: preferred_periods
+    section: availability
+    label: Quais períodos prefere?
+    type: multi_choice
+    required: false
+    options:
+      - morning
+      - afternoon
+      - evening
+
+  - key: learning_formats
+    section: preferences
+    label: Quais formatos de aprendizagem prefere?
+    type: multi_choice
+    required: false
+    options:
+      - documentation
+      - books
+      - videos
+      - courses
+      - exercises
+      - projects
+      - discussions
+      - flashcards
+
+  - key: theory_practice_balance
+    section: preferences
+    label: Qual equilíbrio prefere entre teoria e prática?
+    type: single_choice
+    required: false
+    options:
+      - theory
+      - balanced
+      - practical
+
+  - key: assessment_style
+    section: preferences
+    label: Como prefere ser avaliado?
+    type: multi_choice
+    required: false
+    options:
+      - quizzes
+      - exercises
+      - written_explanation
+      - project
+      - mock_interview
+
+  - key: accessibility_needs
+    section: preferences
+    label: Há alguma necessidade de acessibilidade ou restrição?
+    type: long_text
+    required: false
+
+  - key: task_manager
+    section: integrations
+    label: Onde deseja acompanhar as tarefas?
+    type: single_choice
+    required: true
+    options:
+      - github_issues
+      - trello
+      - markdown
+
+  - key: use_calendar
+    section: integrations
+    label: Deseja integrar com Google Calendar?
+    type: yes_no
+    required: false
+    default: false
+
+  - key: email_summaries
+    section: integrations
+    label: Deseja receber resumos por e-mail?
+    type: yes_no
+    required: false
+    default: false
+
+  - key: additional_notes
+    section: preferences
+    label: Observações adicionais
+    type: long_text
+    required: false
+
+  - key: consent
+    section: consent
+    label: Consentimento
+    type: checkbox
+    required: true
+    text: >-
+      Entendo que informações normalizadas necessárias ao planejamento poderão
+      ser salvas no meu repositório, sem persistir a submissão bruta, anexos
+      originais ou dados pessoais desnecessários.
