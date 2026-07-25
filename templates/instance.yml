@@ -1,0 +1,11 @@
+kind: open-study-path-instance
+version: 1
+
+source_template: diegomoura/open-study-path
+repository: "OWNER/REPOSITORY"
+initialized_at: null
+
+status:
+  setup_complete: false
+  intake_imported: false
+  curriculum_generated: false
