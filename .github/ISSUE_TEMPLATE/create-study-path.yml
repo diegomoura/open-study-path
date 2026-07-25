@@ -182,8 +182,8 @@ body:
   - type: dropdown
     id: email_summaries
     attributes:
-      label: Deseja receber resumos por e-mail?
-      description: Opcional.
+      label: Deseja receber resumos pelo Gmail?
+      description: Opcional. Se escolher Sim, a integração de notificações será configurada como Gmail.
       options:
         - Não
         - Sim
