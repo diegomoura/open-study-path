@@ -5,8 +5,11 @@ Open Study Path separates the reusable engine from each learner's generated cont
 ```mermaid
 flowchart TD
     T[Canonical template repository] --> F[Fork or create from template]
-    F --> B[Bootstrap instance files]
-    B --> P{Select intake provider}
+    F --> CP[Create dedicated ChatGPT Project]
+    CP --> PI[Store OWNER/REPOSITORY in Project Instructions]
+    PI --> B[Bootstrap instance files]
+    B --> IM[Record repository in instance marker]
+    IM --> P{Select intake provider}
     P -->|GitHub Issue Form| GI[Use form already copied with fork]
     P -->|Jotform| JA[Authorize Jotform in ChatGPT]
     JA --> JC[Create form from versioned YAML specification]
@@ -30,6 +33,7 @@ Allowed changes:
 - improve instructions and schemas;
 - improve intake specifications;
 - improve generated-file templates;
+- improve ChatGPT Project onboarding templates;
 - test validation and documentation.
 
 Forbidden changes:
@@ -41,13 +45,27 @@ Forbidden changes:
 - learner task boards and calendar events;
 - progress or achievement state.
 
+## ChatGPT Project setup
+
+Create one dedicated ChatGPT Project for each Open Study Path instance.
+
+Copy `templates/chatgpt-project-instructions.md` into the ChatGPT Project Instructions and replace `OWNER/REPOSITORY` with the exact repository identifier.
+
+The ChatGPT Project name and description are optional human-facing labels. They may include the repository name, but they do not replace the exact identifier in Project Instructions.
+
+Before bootstrap, the Project Instructions are the preferred repository pointer. During bootstrap, the agent records the exact value in `.open-study-path/instance.yml`. After that marker exists, it becomes the persistent repository source of truth.
+
+A mismatch between the marker and the Project Instructions must stop repository writes until the owner resolves it.
+
+See `docs/chatgpt-project-setup.md` for the complete workflow.
+
 ## Fork setup
 
 A fork is not automatically an instance. The owner explicitly asks an agent to set it up.
 
 Setup has two internal phases:
 
-1. bootstrap the empty instance files;
+1. bootstrap the empty instance files and persist the repository identity;
 2. configure one intake provider.
 
 Setup stops when the intake method is ready. It does not import a response or generate a curriculum.

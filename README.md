@@ -16,16 +16,34 @@ The marker `.open-study-path/template.yml` keeps this repository in template mod
 ## Start a new learning path
 
 1. Fork this repository or create a repository from it.
-2. Connect the new repository to ChatGPT.
-3. Ask: `Set up this fork as an Open Study Path instance.`
-4. Choose an intake method when prompted:
+2. Create a dedicated ChatGPT Project for the new learning path.
+3. Connect GitHub to ChatGPT and authorize the new repository.
+4. Copy `templates/chatgpt-project-instructions.md` into the ChatGPT Project Instructions.
+5. Replace `OWNER/REPOSITORY` with the exact repository identifier.
+6. Open the first chat and ask:
+
+   `Use the repository defined in this project's instructions. Set it up as an Open Study Path instance and ask me which intake provider to use. Do not import a submission or generate the curriculum yet.`
+
+7. Choose an intake method when prompted:
    - **GitHub Issue Form** — zero configuration and available immediately in the fork;
    - **Jotform** — ChatGPT creates a new form in your connected Jotform account;
    - **Manual YAML** — edit `study.config.yml` directly.
-5. Fill the selected intake method.
-6. Ask the agent to import the approved intake and propose the curriculum in a pull request.
+8. Fill the selected intake method.
+9. Ask the agent to import the approved intake and propose the curriculum in a pull request.
 
 Instance setup prepares the repository and the intake method. It does not import answers or generate the curriculum.
+
+See `docs/chatgpt-project-setup.md` for the complete ChatGPT Project workflow.
+
+## Repository identity
+
+The ChatGPT Project name and description are optional labels for human organization. They may include the repository name, but they are not the repository source of truth.
+
+Before the first setup, the exact `OWNER/REPOSITORY` identifier must be stored in the ChatGPT Project Instructions or provided explicitly in the first message.
+
+During setup, the agent records the exact identifier in `.open-study-path/instance.yml`. After that marker exists, it becomes the persistent repository source of truth. A mismatch between the instance marker and the ChatGPT Project Instructions must stop write operations until the owner resolves it.
+
+Use one ChatGPT Project per Open Study Path instance to avoid mixing conversations, files and integrations between learning paths.
 
 ## Automatic Jotform setup
 
@@ -80,6 +98,8 @@ Topic files under `study/topics/` are created only after an approved intake and 
 - `intake/jotform-form-spec.yml`: executable form definition.
 - `intake/field-mapping.yml`: provider-independent normalization contract.
 - `.github/ISSUE_TEMPLATE/create-study-path.yml`: zero-config GitHub intake.
+- `templates/chatgpt-project-instructions.md`: copyable ChatGPT Project Instructions.
+- `docs/chatgpt-project-setup.md`: ChatGPT Project onboarding and identity rules.
 - `schemas/`: machine-readable validation contracts.
 - `templates/`: files used to initialize instance state and generated content.
 
