@@ -15,12 +15,23 @@ Do not silently select Jotform, create external resources or fall back to anothe
 ## GitHub Issue Form
 
 1. Confirm `.github/ISSUE_TEMPLATE/create-study-path.yml` exists in the instance.
-2. Set:
+2. Read the exact repository identity from `.open-study-path/instance.yml` and confirm it matches the active repository.
+3. Set:
    - `intake.provider: github_issue`;
    - `intake.setup_status: ready`;
    - `intake.issue_template: .github/ISSUE_TEMPLATE/create-study-path.yml`;
    - `intake.submission_strategy: explicit_issue`.
-3. Do not create or submit an issue on behalf of the owner unless explicitly requested.
+4. Build the direct Issue Form URL from the exact repository identity:
+
+   `https://github.com/OWNER/REPOSITORY/issues/new?template=create-study-path.yml`
+
+   Replace `OWNER/REPOSITORY` with the instance repository. Never return the placeholder URL.
+5. Display the URL as a clickable link. Prefer the label `Preencher o Issue Form de REPOSITORY`, replacing `REPOSITORY` with the repository name. A generic localized label such as `Preencher o formulário da trilha` is also acceptable.
+6. Explain that the Issue Form was inherited from the repository template and was not dynamically created during setup.
+7. Tell the owner to submit the form and return with the created issue number, for example: `Import issue #4 as the approved intake. Do not generate the curriculum yet.`
+8. Stop after presenting the link and next command. Do not create or submit an issue, import answers or generate a curriculum unless explicitly requested.
+
+The completion response for `github_issue` must always contain the direct clickable link and the instruction to return with an explicit issue number.
 
 ## Jotform
 

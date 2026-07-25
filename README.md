@@ -64,7 +64,11 @@ No API key or token is stored in the repository. Re-running setup must not creat
 
 `.github/ISSUE_TEMPLATE/create-study-path.yml` is copied with every fork or repository created from the template. It is the recommended zero-configuration intake method and requires no external account.
 
-The agent must use an issue explicitly selected by the instance owner; it must not assume that the repository's newest issue is the intake response.
+After selecting `github_issue`, the agent must present a clickable direct link built from the exact instance repository:
+
+`https://github.com/OWNER/REPOSITORY/issues/new?template=create-study-path.yml`
+
+The response must explain that the form was inherited from the template, ask the owner to submit it and tell them to return with the created issue number. The agent must use an issue explicitly selected by the instance owner; it must not assume that the repository's newest issue is the intake response.
 
 ## What instance setup creates
 

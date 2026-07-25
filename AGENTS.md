@@ -66,6 +66,17 @@ When explicitly asked to set up a fork as an instance:
 
 If the owner explicitly asks to create only the instance files and postpone intake configuration, stop after step 8 and leave `intake.provider: unset`.
 
+## GitHub Issue Form rules
+
+- Confirm `.github/ISSUE_TEMPLATE/create-study-path.yml` exists before marking `github_issue` ready.
+- Read the exact repository identity from `.open-study-path/instance.yml`.
+- Build the direct URL as `https://github.com/OWNER/REPOSITORY/issues/new?template=create-study-path.yml`, replacing the placeholder with the instance repository.
+- Always return that URL as a clickable link after setup. Prefer a label such as `Preencher o Issue Form de REPOSITORY`.
+- Explain that the Issue Form was inherited from the template and was not dynamically created during setup.
+- Ask the owner to submit the form and return with the explicit issue number.
+- Never assume the newest issue is the approved intake.
+- Do not create or submit an issue, import answers or generate a curriculum during provider setup unless explicitly requested.
+
 ## Automatic Jotform rules
 
 - Never require the owner to duplicate a maintainer-owned form or manually copy its ID.
