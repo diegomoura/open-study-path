@@ -1,12 +1,14 @@
-name: Create a study path
-description: Fallback onboarding form when Jotform is not used
+name: Create a study path in this instance
+description: Fallback onboarding form for a fork or repository created from Open Study Path
 title: "[Study Path]: "
 labels: ["study-request"]
 body:
   - type: markdown
     attributes:
       value: |
-        Provide only information needed to generate your learning path. Do not include secrets or unnecessary personal data.
+        Use this form only in your own fork or derived repository. Do not submit learner data to the canonical template repository.
+
+        Provide only information needed to generate your learning path. Do not include secrets or unnecessary personal data. Reference files are optional.
   - type: input
     id: subject
     attributes:
@@ -22,9 +24,12 @@ body:
   - type: textarea
     id: outcome
     attributes:
-      label: What concrete result do you expect?
-    validations:
-      required: true
+      label: What concrete result do you expect? (optional)
+      description: Leave blank when the objective already provides enough context.
+  - type: textarea
+    id: motivation
+    attributes:
+      label: Why do you want to study this? (optional)
   - type: dropdown
     id: level
     attributes:
@@ -34,6 +39,13 @@ body:
         - Beginner
         - Intermediate
         - Advanced
+    validations:
+      required: true
+  - type: input
+    id: language
+    attributes:
+      label: Preferred content language
+      placeholder: pt-BR
     validations:
       required: true
   - type: input
@@ -49,9 +61,14 @@ body:
       label: Optional deadline
       placeholder: YYYY-MM-DD
   - type: textarea
+    id: prior_knowledge
+    attributes:
+      label: Prior knowledge and experience (optional)
+  - type: textarea
     id: references
     attributes:
-      label: Prior knowledge and reference material
+      label: Reference text, URLs or optional file attachments
+      description: Paste text or links here. GitHub also lets you drag optional files into this field. Do not attach secrets or unnecessary personal data.
   - type: dropdown
     id: task_manager
     attributes:
@@ -62,10 +79,14 @@ body:
         - Markdown only
     validations:
       required: true
+  - type: textarea
+    id: notes
+    attributes:
+      label: Additional notes (optional)
   - type: checkboxes
     id: consent
     attributes:
       label: Consent
       options:
-        - label: I understand that normalized planning data may be saved in this repository, without raw submissions or unnecessary personal data.
+        - label: I understand that normalized planning data may be saved in this repository, without raw submissions, uploaded files or unnecessary personal data.
           required: true
