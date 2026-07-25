@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Validate the reusable Open Study Path template contract."""
+"""Validate an Open Study Path repository in template or instance mode."""
 
 from __future__ import annotations
 
@@ -13,8 +13,9 @@ import yaml
 from jsonschema import Draft202012Validator, FormatChecker
 
 ROOT = Path(__file__).resolve().parents[1]
+INSTANCE_MARKER = ".open-study-path/instance.yml"
 
-YAML_FILES = [
+REUSABLE_YAML_FILES = [
     ".open-study-path/template.yml",
     ".github/ISSUE_TEMPLATE/create-study-path.yml",
     "instructions/manifest.yml",
@@ -24,7 +25,7 @@ YAML_FILES = [
     "templates/instance.yml",
 ]
 
-REQUIRED_TEMPLATE_FILES = [
+REQUIRED_REUSABLE_FILES = [
     "README.md",
     "AGENTS.md",
     "docs/chatgpt-project-setup.md",
@@ -32,8 +33,8 @@ REQUIRED_TEMPLATE_FILES = [
     "instructions/00-bootstrap.md",
 ]
 
-FORBIDDEN_TEMPLATE_ARTIFACTS = [
-    ".open-study-path/instance.yml",
+INSTANCE_ARTIFACTS = [
+    INSTANCE_MARKER,
     "study.config.yml",
     "state/intake-summary.json",
     "state/progress.json",
@@ -65,24 +66,28 @@ def fail(message: str) -> None:
     raise SystemExit(1)
 
 
+def is_instance() -> bool:
+    return (ROOT / INSTANCE_MARKER).is_file()
+
+
 def check_yaml() -> None:
-    for path in YAML_FILES:
+    paths = list(REUSABLE_YAML_FILES)
+    if is_instance():
+        paths.extend([INSTANCE_MARKER, "study.config.yml"])
+
+    for path in paths:
         if not (ROOT / path).is_file():
-            fail(f"missing required file: {path}")
+            fail(f"missing required YAML file: {path}")
         load_yaml(path)
+
     print("YAML parsing passed.")
 
 
-def check_guard() -> None:
-    for path in REQUIRED_TEMPLATE_FILES:
+def check_reusable_contract(marker: dict[str, Any]) -> None:
+    for path in REQUIRED_REUSABLE_FILES:
         if not (ROOT / path).is_file():
-            fail(f"missing required reusable template file: {path}")
+            fail(f"missing required reusable file: {path}")
 
-    for path in FORBIDDEN_TEMPLATE_ARTIFACTS:
-        if (ROOT / path).exists():
-            fail(f"instance artifact must not exist in canonical template: {path}")
-
-    marker = load_yaml(".open-study-path/template.yml")
     if marker.get("generation_allowed") is not False:
         fail("template marker must set generation_allowed: false")
 
@@ -90,7 +95,7 @@ def check_guard() -> None:
     expected_assets = {
         "chatgpt_project_instructions_template": "templates/chatgpt-project-instructions.md",
         "chatgpt_project_setup_guide": "docs/chatgpt-project-setup.md",
-        "instance_marker": ".open-study-path/instance.yml",
+        "instance_marker": INSTANCE_MARKER,
         "configuration_template": "study.config.example.yml",
     }
     for key, expected in expected_assets.items():
@@ -98,12 +103,7 @@ def check_guard() -> None:
             fail(f"template marker {key} must reference {expected}")
 
     project_instructions = load_text("templates/chatgpt-project-instructions.md")
-    required_instruction_terms = [
-        "OWNER/REPOSITORY",
-        ".open-study-path/instance.yml",
-        "diegomoura/open-study-path",
-    ]
-    for term in required_instruction_terms:
+    for term in ["OWNER/REPOSITORY", INSTANCE_MARKER, "diegomoura/open-study-path"]:
         if term not in project_instructions:
             fail(f"ChatGPT Project Instructions template is missing required term: {term}")
 
@@ -113,7 +113,47 @@ def check_guard() -> None:
     if "OWNER/REPOSITORY" not in project_setup:
         fail("ChatGPT Project setup guide must include the repository placeholder")
 
-    print("Template guard passed.")
+
+def check_template_mode(marker: dict[str, Any]) -> None:
+    for path in INSTANCE_ARTIFACTS:
+        if (ROOT / path).exists():
+            fail(f"instance artifact must not exist before instance setup: {path}")
+
+    print("Template-mode guard passed.")
+
+
+def check_instance_mode(marker: dict[str, Any]) -> None:
+    for path in INSTANCE_ARTIFACTS:
+        if not (ROOT / path).exists():
+            fail(f"required instance artifact is missing: {path}")
+
+    instance = load_yaml(INSTANCE_MARKER)
+    canonical_repository = marker.get("canonical_repository")
+    repository = instance.get("repository")
+    source_template = instance.get("source_template")
+
+    if instance.get("kind") != "open-study-path-instance":
+        fail("instance marker kind must be open-study-path-instance")
+    if not isinstance(repository, str) or not repository.strip():
+        fail("instance marker must contain a repository identifier")
+    if repository == "OWNER/REPOSITORY":
+        fail("instance marker repository placeholder must be replaced")
+    if repository == canonical_repository:
+        fail("canonical template repository cannot be configured as an instance")
+    if source_template != canonical_repository:
+        fail("instance source_template must match the canonical repository")
+
+    print(f"Instance-mode guard passed for {repository}.")
+
+
+def check_guard() -> None:
+    marker = load_yaml(".open-study-path/template.yml")
+    check_reusable_contract(marker)
+
+    if is_instance():
+        check_instance_mode(marker)
+    else:
+        check_template_mode(marker)
 
 
 def check_intake() -> None:
@@ -157,21 +197,29 @@ def check_intake() -> None:
     missing_issue_fields = REQUIRED_INTAKE_KEYS.difference(issue_ids)
     if missing_issue_fields:
         fail(f"GitHub Issue Form is missing required fields: {sorted(missing_issue_fields)}")
+
     print("Intake contract passed.")
 
 
+def validate_config(path: str, validator: Draft202012Validator) -> None:
+    config = load_yaml(path)
+    errors = list(validator.iter_errors(config))
+    if errors:
+        for error in errors:
+            location = ".".join(str(part) for part in error.path) or "<root>"
+            print(f"SCHEMA ERROR in {path} at {location}: {error.message}", file=sys.stderr)
+        raise SystemExit(1)
+
+
 def check_schema() -> None:
-    example = load_yaml("study.config.example.yml")
     with (ROOT / "schemas/study-config.schema.json").open("r", encoding="utf-8") as handle:
         schema = json.load(handle)
 
     validator = Draft202012Validator(schema, format_checker=FormatChecker())
-    errors = list(validator.iter_errors(example))
-    if errors:
-        for error in errors:
-            location = ".".join(str(part) for part in error.path) or "<root>"
-            print(f"SCHEMA ERROR at {location}: {error.message}", file=sys.stderr)
-        raise SystemExit(1)
+    validate_config("study.config.example.yml", validator)
+    if is_instance():
+        validate_config("study.config.yml", validator)
+
     print("Configuration schema passed.")
 
 
@@ -192,7 +240,7 @@ def main() -> None:
     for check in selected:
         check()
 
-    print("Open Study Path template validation passed.")
+    print("Open Study Path repository validation passed.")
 
 
 if __name__ == "__main__":
