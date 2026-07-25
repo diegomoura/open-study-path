@@ -148,6 +148,22 @@ Generation is one user-facing phase that includes proposal creation, internal re
 - Leave the PR open only when scope, structure, effort or resources require a genuine owner decision; ask one concise, specific question.
 - Do not publish tasks or create external integrations during generation.
 
+## Integration preflight and task publication
+
+Task publication is one user-facing phase. Connection verification is an internal prerequisite, not a separate confirmation phase.
+
+- Read `instructions/40-publish-tasks.md` and `instructions/42-integration-preflight.md` before any external write.
+- Derive required connections only from enabled providers in `study.config.yml`.
+- Verify actual authorization through one harmless read-only operation per required connector. A configuration value, installed app or available tool definition is not sufficient proof of access.
+- GitHub Issues require repository access; Trello requires a Trello read; enabled Google Calendar requires a Calendar read; enabled Gmail requires a Gmail read. Markdown, chat and disabled providers require no external probe.
+- Complete all required probes before creating any board, card, issue, event, email or integration-state write.
+- If any probe fails, create no external resources and do not partially publish through connected providers unless the owner explicitly requests partial publication.
+- Name only the unavailable providers, tell the owner to connect or authorize them in the current ChatGPT Project and provide: `Conectei <providers> ao ChatGPT. Verifique novamente e continue a publicação das tarefas sem alterar o currículo.`
+- Never request API keys, tokens, passwords or copied credentials.
+- When the owner sends the standard return command, re-run the probes rather than trusting the statement. If every probe passes, continue the pending publication automatically under the original authorization, without another confirmation or an intermediate connection-success response.
+- Before writes, reuse valid identifiers from `state/integrations.json` and exact matching provider resources to prevent duplicates.
+- If publication fails after writes begin, report exactly which resources were created and which remain pending. Do not claim rollback unless it actually occurred.
+
 ## Instance source of truth
 
 1. `.open-study-path/instance.yml` identifies the repository instance and workflow policy.
@@ -168,9 +184,10 @@ Generation is one user-facing phase that includes proposal creation, internal re
 6. Run a bounded proportional diagnostic or use reliable existing evidence.
 7. Generate a dependency-aware topic graph in a draft PR.
 8. Automatically review, correct, validate and safely merge the curriculum PR using `instructions/35-review-curriculum.md`.
-9. Publish tasks using the configured adapter only after curriculum approval.
-10. Update `state/progress.json` only from verified evidence.
-11. Replan dates without rewriting topic dependencies unless evidence or the goal changes.
+9. During publication, run the integration preflight and continue automatically when every required connection is available.
+10. Publish tasks using the configured adapter only after curriculum approval.
+11. Update `state/progress.json` only from verified evidence.
+12. Replan dates without rewriting topic dependencies unless evidence or the goal changes.
 
 ## Optional intake fields and attachments
 

@@ -58,6 +58,22 @@ Generation includes draft creation, internal review, corrections, validation and
 
 Do not instruct the owner to request another review, correct files or merge the pull request. When a material pedagogical decision remains unresolved, leave the PR open and ask only one concise question that resolves that decision.
 
+### When publication is blocked by integration access
+
+Connection verification is part of the publication phase. Follow `instructions/42-integration-preflight.md` before any external write.
+
+When one or more required connections fail their read-only probes:
+
+- state that publication was paused before creating external resources;
+- name only the unavailable providers;
+- omit the artifact section because nothing was published;
+- tell the owner to connect or authorize those apps in the current ChatGPT Project;
+- provide exactly one dynamic return command:
+
+`Conectei <providers> ao ChatGPT. Verifique novamente e continue a publicação das tarefas sem alterar o currículo.`
+
+Do not claim the integrations are configured merely because the owner sent that sentence. Re-run the probes. When all probes pass, continue the pending publication automatically without another confirmation or an intermediate connection-success response.
+
 ### After task publication
 
 The next phase is `track`. Explain how the owner should report or synchronize evidence of progress.

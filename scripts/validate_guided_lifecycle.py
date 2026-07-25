@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Validate the guided lifecycle and automatic curriculum review contract."""
+"""Validate the guided lifecycle and automatic phase contracts."""
 
 from __future__ import annotations
 
@@ -29,6 +29,8 @@ def load_text(path: str) -> str:
 
 
 def require_terms(path: str, terms: list[str]) -> None:
+    if not (ROOT / path).is_file():
+        fail(f"missing guided lifecycle file: {path}")
     text = load_text(path)
     for term in terms:
         if term not in text:
@@ -76,6 +78,8 @@ def main() -> None:
     publish = phases.get("publish", {})
     if publish.get("depends_on") != ["generate"]:
         fail("publish must depend directly on completed generation")
+    if publish.get("internal_preflight") != "instructions/42-integration-preflight.md":
+        fail("publish must reference the internal integration preflight")
 
     validate_workflow(load_yaml("templates/instance.yml"), "templates/instance.yml", default_required=True)
     if INSTANCE_MARKER.is_file():
@@ -102,11 +106,39 @@ def main() -> None:
         ],
     )
     require_terms(
+        "instructions/40-publish-tasks.md",
+        [
+            "Before any external write",
+            "instructions/42-integration-preflight.md",
+            "harmless read-only probe",
+            "create no board, card, issue, event, email or integration-state write",
+            "continue publication immediately",
+            "do not ask for another confirmation",
+        ],
+    )
+    require_terms(
+        "instructions/42-integration-preflight.md",
+        [
+            "A provider name in `study.config.yml`, an installed app, or an available tool definition does not prove",
+            "harmless read-only operation",
+            "create no external resources",
+            "do not partially publish",
+            "Conectei <providers> ao ChatGPT. Verifique novamente e continue a publicação das tarefas sem alterar o currículo.",
+            "Run the read-only probes again",
+            "do not send an intermediate",
+            "Never request API keys, tokens or passwords",
+        ],
+    )
+    require_terms(
         "instructions/phase-completion.md",
         [
             "Internal validation, review, correction and safe merge",
             "Generation includes draft creation, internal review, corrections, validation and safe merge",
             "Do not instruct the owner to request another review",
+            "When publication is blocked by integration access",
+            "Conectei <providers> ao ChatGPT. Verifique novamente e continue a publicação das tarefas sem alterar o currículo.",
+            "Re-run the probes",
+            "continue the pending publication automatically",
         ],
     )
     require_terms(
@@ -115,6 +147,11 @@ def main() -> None:
             "must not require a second owner command",
             "workflow.curriculum_merge_policy",
             "Never ask the owner to request a separate curriculum review",
+            "instructions/42-integration-preflight.md",
+            "harmless read-only connector operation",
+            "create no external resources and do not partially publish",
+            "re-run every required probe",
+            "without another confirmation",
         ],
     )
     require_terms(
@@ -123,6 +160,11 @@ def main() -> None:
             "Automatic curriculum generation, review and merge",
             "Do not ask the owner to send a separate review command",
             "Automatically review, correct, validate and safely merge",
+            "Integration preflight and task publication",
+            "Connection verification is an internal prerequisite",
+            "one harmless read-only operation per required connector",
+            "Conectei <providers> ao ChatGPT. Verifique novamente e continue a publicação das tarefas sem alterar o currículo.",
+            "re-run the probes rather than trusting the statement",
         ],
     )
 
@@ -135,7 +177,7 @@ def main() -> None:
         if "review curriculum PR #<number>" in load_text(path):
             fail(f"{path} still exposes a separate review command")
 
-    print("Guided lifecycle and automatic curriculum review contract passed.")
+    print("Guided lifecycle, automatic curriculum review and integration preflight contracts passed.")
 
 
 if __name__ == "__main__":
