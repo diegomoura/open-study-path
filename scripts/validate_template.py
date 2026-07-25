@@ -14,6 +14,8 @@ from jsonschema import Draft202012Validator, FormatChecker
 
 ROOT = Path(__file__).resolve().parents[1]
 INSTANCE_MARKER = ".open-study-path/instance.yml"
+COMPLETION_CONTRACT = "instructions/phase-completion.md"
+MERGE_POLICIES = {"manual", "auto_after_ci", "auto_when_unambiguous"}
 
 REUSABLE_YAML_FILES = [
     ".open-study-path/template.yml",
@@ -32,6 +34,9 @@ REQUIRED_REUSABLE_FILES = [
     "templates/chatgpt-project-instructions.md",
     "instructions/00-bootstrap.md",
     "instructions/05-configure-intake.md",
+    "instructions/10-intake.md",
+    "instructions/20-diagnostic.md",
+    COMPLETION_CONTRACT,
 ]
 
 INSTANCE_ARTIFACTS = [
@@ -84,6 +89,21 @@ def check_yaml() -> None:
     print("YAML parsing passed.")
 
 
+def validate_workflow_policy(document: dict[str, Any], *, required: bool) -> None:
+    workflow = document.get("workflow")
+    if workflow is None:
+        if required:
+            fail("instance marker template must define workflow defaults")
+        return
+    if not isinstance(workflow, dict):
+        fail("instance marker workflow must be an object")
+    if workflow.get("guided") is not True:
+        fail("instance workflow must set guided: true")
+    policy = workflow.get("intake_merge_policy")
+    if policy not in MERGE_POLICIES:
+        fail(f"invalid intake merge policy: {policy}")
+
+
 def check_reusable_contract(marker: dict[str, Any]) -> None:
     for path in REQUIRED_REUSABLE_FILES:
         if not (ROOT / path).is_file():
@@ -103,8 +123,32 @@ def check_reusable_contract(marker: dict[str, Any]) -> None:
         if setup.get(key) != expected:
             fail(f"template marker {key} must reference {expected}")
 
+    manifest = load_yaml("instructions/manifest.yml")
+    if manifest.get("completion_contract") != COMPLETION_CONTRACT:
+        fail(f"lifecycle manifest must reference {COMPLETION_CONTRACT}")
+    phases = {
+        phase.get("id"): phase
+        for phase in manifest.get("phases", [])
+        if isinstance(phase, dict) and phase.get("id")
+    }
+    if phases.get("intake", {}).get("next_phase") != "diagnostic":
+        fail("intake phase must guide to diagnostic")
+    if phases.get("diagnostic", {}).get("next_phase") != "generate":
+        fail("diagnostic phase must guide to generation")
+
+    instance_template = load_yaml("templates/instance.yml")
+    validate_workflow_policy(instance_template, required=True)
+    if instance_template.get("workflow", {}).get("intake_merge_policy") != "auto_when_unambiguous":
+        fail("new instances must default to auto_when_unambiguous")
+
     project_instructions = load_text("templates/chatgpt-project-instructions.md")
-    for term in ["OWNER/REPOSITORY", INSTANCE_MARKER, "diegomoura/open-study-path"]:
+    for term in [
+        "OWNER/REPOSITORY",
+        INSTANCE_MARKER,
+        "diegomoura/open-study-path",
+        "Keep the process guided",
+        "exact command to continue",
+    ]:
         if term not in project_instructions:
             fail(f"ChatGPT Project Instructions template is missing required term: {term}")
 
@@ -124,6 +168,20 @@ def check_reusable_contract(marker: dict[str, Any]) -> None:
     for term in required_issue_handoff_terms:
         if term not in intake_setup:
             fail(f"GitHub Issue Form setup instructions are missing required term: {term}")
+
+    intake_instruction = load_text("instructions/10-intake.md")
+    for term in [
+        "workflow.intake_merge_policy",
+        "auto_when_unambiguous",
+        "Inicie o diagnóstico proporcional desta trilha",
+    ]:
+        if term not in intake_instruction:
+            fail(f"intake instructions are missing required guided-flow term: {term}")
+
+    completion = load_text(COMPLETION_CONTRACT)
+    for term in ["Next step", "Continue command", "Concision rule", "auto_when_unambiguous"]:
+        if term not in completion:
+            fail(f"phase completion contract is missing required term: {term}")
 
 
 def check_template_mode(marker: dict[str, Any]) -> None:
@@ -155,6 +213,7 @@ def check_instance_mode(marker: dict[str, Any]) -> None:
     if source_template != canonical_repository:
         fail("instance source_template must match the canonical repository")
 
+    validate_workflow_policy(instance, required=False)
     print(f"Instance-mode guard passed for {repository}.")
 
 
@@ -188,6 +247,10 @@ def check_intake() -> None:
     if spec.get("privacy", {}).get("persist_raw_submission") is not False:
         fail("jotform specification must prohibit raw-submission persistence")
 
+    email_field = next((field for field in fields if field.get("key") == "email_summaries"), None)
+    if not email_field or "Gmail" not in str(email_field.get("label", "")):
+        fail("Jotform email summaries field must name Gmail explicitly")
+
     if mapping.get("spec_id") != spec.get("id"):
         fail("field mapping spec_id does not match jotform specification id")
 
@@ -201,14 +264,16 @@ def check_intake() -> None:
     if intake.get("persist_raw_submission") is not False:
         fail("configuration example must prohibit raw-submission persistence")
 
-    issue_ids = {
-        block.get("id")
-        for block in issue_form.get("body", [])
-        if isinstance(block, dict) and block.get("id")
-    }
+    issue_blocks = [block for block in issue_form.get("body", []) if isinstance(block, dict)]
+    issue_ids = {block.get("id") for block in issue_blocks if block.get("id")}
     missing_issue_fields = REQUIRED_INTAKE_KEYS.difference(issue_ids)
     if missing_issue_fields:
         fail(f"GitHub Issue Form is missing required fields: {sorted(missing_issue_fields)}")
+
+    issue_email = next((block for block in issue_blocks if block.get("id") == "email_summaries"), None)
+    issue_email_label = (issue_email or {}).get("attributes", {}).get("label", "")
+    if "Gmail" not in str(issue_email_label):
+        fail("GitHub Issue Form email summaries field must name Gmail explicitly")
 
     print("Intake contract passed.")
 

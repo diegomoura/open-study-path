@@ -46,22 +46,35 @@ After `.open-study-path/instance.yml` exists, its `repository` field is the pers
 
 Do not manage multiple unrelated Open Study Path instances from the same ChatGPT Project unless the repository explicitly implements a multi-instance extension.
 
+## Guided lifecycle
+
+Read `instructions/manifest.yml` and its `completion_contract` before executing a lifecycle phase.
+
+At the end of every phase, follow `instructions/phase-completion.md`:
+
+- keep the response brief and action-oriented;
+- link the primary artifact;
+- mention only material assumptions or blockers;
+- identify the next lifecycle phase;
+- provide one exact command the owner can send to continue;
+- state whether a pull request is open, awaiting review or already merged;
+- stop at the requested phase boundary.
+
+Do not repeat every normalized field or changed file in chat by default. Put detailed audit information in the pull request description and diff.
+
 ## Instance setup workflow
 
 When explicitly asked to set up a fork as an instance:
 
 1. Resolve and verify the repository target using the rules above.
 2. Confirm the repository is not the canonical template repository named in `.open-study-path/template.yml`.
-3. Create `.open-study-path/instance.yml` with the source template, exact repository and setup timestamp.
+3. Create `.open-study-path/instance.yml` with the source template, exact repository, setup timestamp and workflow defaults from `templates/instance.yml`.
 4. Copy `study.config.example.yml` to `study.config.yml` without inventing learner answers.
 5. Copy `templates/state/intake-summary.json` to `state/intake-summary.json`.
 6. Copy `templates/state/progress.json` to `state/progress.json`.
 7. Copy `templates/roadmap.md` to `study/roadmap.md`.
 8. Create `study/topics/` only when the first topic is generated.
-9. Configure the intake method using `instructions/05-configure-intake.md`:
-   - GitHub Issue Form is the zero-configuration default;
-   - Jotform is created automatically in the owner's connected Jotform account from `intake/jotform-form-spec.yml`;
-   - manual YAML remains available.
+9. Configure the intake method using `instructions/05-configure-intake.md`.
 10. Stop after the intake method is ready. Do not import answers or generate a curriculum unless explicitly requested.
 
 If the owner explicitly asks to create only the instance files and postpone intake configuration, stop after step 8 and leave `intake.provider: unset`.
@@ -71,8 +84,8 @@ If the owner explicitly asks to create only the instance files and postpone inta
 - Confirm `.github/ISSUE_TEMPLATE/create-study-path.yml` exists before marking `github_issue` ready.
 - Read the exact repository identity from `.open-study-path/instance.yml`.
 - Build the direct URL as `https://github.com/OWNER/REPOSITORY/issues/new?template=create-study-path.yml`, replacing the placeholder with the instance repository.
-- Always return that URL as a clickable link after setup. Prefer a label such as `Preencher o Issue Form de REPOSITORY`.
-- Explain that the Issue Form was inherited from the template and was not dynamically created during setup.
+- Always return that URL as a clickable link after setup.
+- Explain that the Issue Form was inherited from the template.
 - Ask the owner to submit the form and return with the explicit issue number.
 - Never assume the newest issue is the approved intake.
 - Do not create or submit an issue, import answers or generate a curriculum during provider setup unless explicitly requested.
@@ -87,20 +100,32 @@ If the owner explicitly asks to create only the instance files and postpone inta
 - Save only the created form ID, URL and specification version in the instance.
 - Do not create a submission or import answers during form setup.
 
+## Intake pull-request policy
+
+Read `workflow.intake_merge_policy` from `.open-study-path/instance.yml`.
+
+- `manual`: open the intake PR and wait for the owner to review and merge it.
+- `auto_after_ci`: merge after required checks pass and the diff contains only files allowed by the intake phase.
+- `auto_when_unambiguous`: merge only after required checks pass, the diff is phase-limited, all required facts are present, no material assumptions exist, and no attachment or conflicting response requires interpretation.
+
+The default for new instances is `auto_when_unambiguous`. If the marker is missing this setting, use `manual` rather than guessing.
+
+Never auto-merge curriculum generation, destructive changes or external-resource creation under the intake policy.
+
 ## Instance source of truth
 
-1. `.open-study-path/instance.yml` identifies the repository instance.
+1. `.open-study-path/instance.yml` identifies the repository instance and workflow policy.
 2. `study.config.yml` contains normalized learner and integration preferences.
 3. `instructions/manifest.yml` defines the execution phases.
 4. `state/progress.json` contains machine-readable progress.
 5. `study/topics/` contains generated learning units.
-6. Raw Jotform submissions and uploaded files must never be committed by default.
+6. Raw submissions and uploaded files must never be committed by default.
 
 ## Curriculum workflow in instance mode
 
-1. Read `instructions/manifest.yml`.
+1. Read `instructions/manifest.yml` and `instructions/phase-completion.md`.
 2. Confirm the selected intake provider has `setup_status: ready`.
-3. Read the explicitly selected or latest approved intake.
+3. Read the explicitly selected or approved intake.
 4. Normalize only required planning facts using `intake/field-mapping.yml` into `study.config.yml` and `state/intake-summary.json`.
 5. Validate configuration against `schemas/study-config.schema.json`.
 6. Run a proportional diagnostic or use reliable existing evidence.
@@ -136,7 +161,8 @@ Template or fork setup:
 
 Instance operations:
 
-- `import latest approved intake`
+- `import issue #<number> as approved intake`
+- `start the proportional diagnostic`
 - `generate curriculum proposal`
 - `publish tasks`
 - `sync progress`

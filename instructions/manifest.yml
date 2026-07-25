@@ -1,5 +1,7 @@
 version: 1
 
+completion_contract: instructions/phase-completion.md
+
 template_guard:
   template_marker: .open-study-path/template.yml
   instance_marker: .open-study-path/instance.yml
@@ -9,6 +11,7 @@ phases:
   - id: bootstrap_instance
     instruction: instructions/00-bootstrap.md
     allowed_modes: [fork_unconfigured, instance]
+    next_phase: configure_intake
     outputs:
       - .open-study-path/instance.yml
       - study.config.yml
@@ -20,6 +23,7 @@ phases:
     instruction: instructions/05-configure-intake.md
     allowed_modes: [instance]
     depends_on: [bootstrap_instance]
+    next_phase: intake
     outputs:
       - .open-study-path/instance.yml
       - study.config.yml
@@ -29,32 +33,42 @@ phases:
     instruction: instructions/10-intake.md
     allowed_modes: [instance]
     depends_on: [configure_intake]
+    next_phase: diagnostic
     outputs:
+      - .open-study-path/instance.yml
       - study.config.yml
       - state/intake-summary.json
+    stop_after_phase: true
 
   - id: diagnostic
     instruction: instructions/20-diagnostic.md
     allowed_modes: [instance]
     depends_on: [intake]
+    next_phase: generate
+    stop_after_phase: true
 
   - id: generate
     instruction: instructions/30-generate-path.md
     allowed_modes: [instance]
     depends_on: [diagnostic]
+    next_phase: publish
     outputs:
       - study/roadmap.md
       - study/topics/
+    stop_after_phase: true
 
   - id: publish
     instruction: instructions/40-publish-tasks.md
     allowed_modes: [instance]
     depends_on: [generate]
+    next_phase: track
+    stop_after_phase: true
 
   - id: track
     instruction: instructions/50-track-progress.md
     allowed_modes: [instance]
     depends_on: [publish]
+    next_phase: replan
     outputs:
       - state/progress.json
 
@@ -62,3 +76,4 @@ phases:
     instruction: instructions/60-replan.md
     allowed_modes: [instance]
     depends_on: [track]
+    next_phase: track

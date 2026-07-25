@@ -29,11 +29,49 @@ The marker `.open-study-path/template.yml` keeps this repository in template mod
    - **Jotform** — ChatGPT creates a new form in your connected Jotform account;
    - **Manual YAML** — edit `study.config.yml` directly.
 8. Fill the selected intake method.
-9. Ask the agent to import the approved intake and propose the curriculum in a pull request.
+9. Ask the agent to import the approved intake.
+10. Follow the exact next-step command returned by the agent for diagnostic, curriculum generation, publication and tracking.
 
 Instance setup prepares the repository and the intake method. It does not import answers or generate the curriculum.
 
 See `docs/chatgpt-project-setup.md` for the complete ChatGPT Project workflow.
+
+## Guided lifecycle
+
+The process is designed to be guided rather than requiring the owner to remember the lifecycle.
+
+Every phase must end with:
+
+- one brief result;
+- a link to the primary artifact when one exists;
+- material assumptions or blockers only;
+- the current pull-request state;
+- the next lifecycle phase;
+- one exact command to continue.
+
+Detailed normalized fields and file lists belong in the pull request, not in the default chat response. The shared response contract is `instructions/phase-completion.md` and is referenced by `instructions/manifest.yml`.
+
+The standard lifecycle is:
+
+`setup → intake import → diagnostic → curriculum proposal → task publication → progress tracking → replanning`
+
+## Intake merge policy
+
+New instances store operational policy in `.open-study-path/instance.yml`:
+
+```yaml
+workflow:
+  guided: true
+  intake_merge_policy: auto_when_unambiguous
+```
+
+Available policies:
+
+- `manual` — always wait for owner review and merge;
+- `auto_after_ci` — merge a phase-limited intake PR after required checks pass;
+- `auto_when_unambiguous` — merge only after checks pass and no material assumption, attachment or conflicting response requires review.
+
+The default is `auto_when_unambiguous`. This policy applies only to intake import. It does not authorize automatic curriculum generation, external integration creation, destructive changes or task publication.
 
 ## Repository identity
 
@@ -70,6 +108,8 @@ After selecting `github_issue`, the agent must present a clickable direct link b
 
 The response must explain that the form was inherited from the template, ask the owner to submit it and tell them to return with the created issue number. The agent must use an issue explicitly selected by the instance owner; it must not assume that the repository's newest issue is the intake response.
 
+Integration questions name their provider explicitly. For example, selecting email summaries means Gmail because both the GitHub Issue Form and Jotform ask specifically about Gmail.
+
 ## What instance setup creates
 
 Instance setup copies or creates the following files only inside the fork or derived repository:
@@ -90,7 +130,7 @@ Topic files under `study/topics/` are created only after an approved intake and 
 - GitHub Issues, Trello and Markdown are interchangeable task backends.
 - Completion requires evidence of learning, not only activity completion.
 - Raw form submissions and unnecessary personal data must not be committed.
-- Generated changes should be reviewed through pull requests.
+- Generated changes should be reviewed through pull requests unless a narrowly scoped merge policy explicitly permits safe automation.
 
 ## Repository map
 
@@ -98,7 +138,9 @@ Topic files under `study/topics/` are created only after an approved intake and 
 - `AGENTS.md`: operating contract for AI agents.
 - `study.config.example.yml`: configuration model copied during instance setup.
 - `instructions/manifest.yml`: lifecycle and phase ordering.
+- `instructions/phase-completion.md`: guided response and next-step contract.
 - `instructions/05-configure-intake.md`: automatic provider setup.
+- `instructions/10-intake.md`: intake normalization and safe merge policy.
 - `intake/jotform-form-spec.yml`: executable form definition.
 - `intake/field-mapping.yml`: provider-independent normalization contract.
 - `.github/ISSUE_TEMPLATE/create-study-path.yml`: zero-config GitHub intake.
