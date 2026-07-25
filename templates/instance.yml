@@ -7,5 +7,7 @@ initialized_at: null
 
 status:
   setup_complete: false
+  intake_configured: false
+  intake_provider: unset
   intake_imported: false
   curriculum_generated: false
