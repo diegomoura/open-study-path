@@ -1,23 +1,38 @@
 version: 1
 
+template_guard:
+  template_marker: .open-study-path/template.yml
+  instance_marker: .open-study-path/instance.yml
+  generation_allowed_in_template: false
+
 phases:
-  - id: bootstrap
+  - id: bootstrap_instance
     instruction: instructions/00-bootstrap.md
+    allowed_modes: [fork_unconfigured, instance]
     outputs:
+      - .open-study-path/instance.yml
       - study.config.yml
+      - state/intake-summary.json
+      - state/progress.json
+      - study/roadmap.md
+    stop_after_phase: true
 
   - id: intake
     instruction: instructions/10-intake.md
-    depends_on: [bootstrap]
+    allowed_modes: [instance]
+    depends_on: [bootstrap_instance]
     outputs:
+      - study.config.yml
       - state/intake-summary.json
 
   - id: diagnostic
     instruction: instructions/20-diagnostic.md
+    allowed_modes: [instance]
     depends_on: [intake]
 
   - id: generate
     instruction: instructions/30-generate-path.md
+    allowed_modes: [instance]
     depends_on: [diagnostic]
     outputs:
       - study/roadmap.md
@@ -25,14 +40,17 @@ phases:
 
   - id: publish
     instruction: instructions/40-publish-tasks.md
+    allowed_modes: [instance]
     depends_on: [generate]
 
   - id: track
     instruction: instructions/50-track-progress.md
+    allowed_modes: [instance]
     depends_on: [publish]
     outputs:
       - state/progress.json
 
   - id: replan
     instruction: instructions/60-replan.md
+    allowed_modes: [instance]
     depends_on: [track]
