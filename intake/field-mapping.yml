@@ -25,6 +25,22 @@ mappings:
   email_summaries: integrations.notifications.email_enabled
   additional_notes: preferences.notes
 
+provider_rules:
+  use_calendar:
+    true:
+      integrations.calendar.provider: google_calendar
+      integrations.calendar.enabled: true
+    false:
+      integrations.calendar.provider: none
+      integrations.calendar.enabled: false
+  email_summaries:
+    true:
+      integrations.notifications.provider: gmail
+      integrations.notifications.email_enabled: true
+    false:
+      integrations.notifications.provider: chat
+      integrations.notifications.email_enabled: false
+
 normalization:
   trim_strings: true
   discard_empty_optional_fields: true
