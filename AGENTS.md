@@ -57,10 +57,10 @@ At the end of every phase, follow `instructions/phase-completion.md`:
 - mention only material assumptions or blockers;
 - identify the next lifecycle phase;
 - provide one exact command the owner can send to continue;
-- state whether a pull request is open, awaiting review or already merged;
+- state whether a pull request was merged or remains open for one specific decision;
 - stop at the requested phase boundary.
 
-Do not repeat every normalized field, diagnostic finding, topic or changed file in chat by default. Put detailed audit information in the pull request description and diff. Do not send a separate transition message before repository work.
+Internal validation, review, correction and safe merge required by the current phase are part of that phase and must be completed before responding. Do not repeat every normalized field, diagnostic finding, topic or changed file in chat by default. Put detailed audit information in the pull request description and diff. Do not send a separate transition message before repository work.
 
 ## Instance setup workflow
 
@@ -130,27 +130,29 @@ The diagnostic PR may change only `.open-study-path/instance.yml` and `state/dia
 
 For `workflow.diagnostic_merge_policy: auto_when_unambiguous`, self-review and merge after CI only when the summary validates, the budget is respected or has an allowed exception, the diff is phase-limited, the starting depth is supported and no unresolved contradiction needs owner review.
 
-## Curriculum proposal and review rules
+## Automatic curriculum generation, review and merge
 
-Generation and approval are separate phases.
+Generation is one user-facing phase that includes proposal creation, internal review, correction, validation and safe merge.
 
-- `generate` creates a draft PR and sets `status.curriculum_proposed: true`.
-- It must state when the proposal is only an introductory cycle.
-- Effort estimates must be realistic for the configured weekly availability.
+- Read `instructions/30-generate-path.md`, `instructions/35-review-curriculum.md` and `workflow.curriculum_merge_policy` before starting.
+- Create the curriculum PR as a draft and set `status.curriculum_proposed: true` with `status.curriculum_approved: false` while drafting.
+- State when the proposal is only an introductory cycle.
+- Use realistic effort for the configured weekly availability.
 - Required resources must identify a specific work and canonical locator; edition, translation and URL may remain pending.
-- Generation does not merge the PR and does not publish tasks.
-
-After generation, use the exact PR number in an explicit `review_curriculum` command. Read `instructions/35-review-curriculum.md` and `workflow.curriculum_review_policy`.
-
-For `agent_review_then_merge`, review the proposal against intake, diagnostic and the topic contract; correct the proposal branch; run all required checks; self-review the final diff; mark the draft ready and merge only when no pedagogical decision remains unresolved. Do not formally approve a PR authored by the same account.
-
-Leave the PR open when scope, structure, effort or resources require an owner decision. Task publication and external integrations remain separate and require the approved curriculum.
+- Review the proposal automatically against intake, diagnostic and the topic contract.
+- Correct every issue that can be resolved from existing evidence.
+- Run all required checks, self-review the final diff and keep the diff limited to `.open-study-path/instance.yml`, `study/roadmap.md` and `study/topics/`.
+- For `workflow.curriculum_merge_policy: agent_review_then_merge`, set `status.curriculum_approved: true`, rerun checks, mark the draft ready and merge when no pedagogical decision remains unresolved.
+- Do not formally approve a PR authored by the same account.
+- Do not ask the owner to send a separate review command, correct the branch or merge the PR merely because it exists.
+- Leave the PR open only when scope, structure, effort or resources require a genuine owner decision; ask one concise, specific question.
+- Do not publish tasks or create external integrations during generation.
 
 ## Instance source of truth
 
 1. `.open-study-path/instance.yml` identifies the repository instance and workflow policy.
 2. `study.config.yml` contains normalized learner and integration preferences.
-3. `instructions/manifest.yml` defines the execution phases.
+3. `instructions/manifest.yml` defines the user-facing phases and internal review contracts.
 4. `state/diagnostic-summary.json` contains bounded placement evidence after diagnosis.
 5. `state/progress.json` contains machine-readable progress.
 6. `study/roadmap.md` and `study/topics/` contain the proposed or approved curriculum.
@@ -165,7 +167,7 @@ Leave the PR open when scope, structure, effort or resources require an owner de
 5. Validate configuration against `schemas/study-config.schema.json`.
 6. Run a bounded proportional diagnostic or use reliable existing evidence.
 7. Generate a dependency-aware topic graph in a draft PR.
-8. Review and approve the exact curriculum PR through `instructions/35-review-curriculum.md`.
+8. Automatically review, correct, validate and safely merge the curriculum PR using `instructions/35-review-curriculum.md`.
 9. Publish tasks using the configured adapter only after curriculum approval.
 10. Update `state/progress.json` only from verified evidence.
 11. Replan dates without rewriting topic dependencies unless evidence or the goal changes.
@@ -199,7 +201,6 @@ Instance operations:
 - `import issue #<number> as approved intake`
 - `start the proportional diagnostic`
 - `generate curriculum proposal`
-- `review curriculum PR #<number>`
 - `publish tasks`
 - `sync progress`
 - `evaluate topic <id>`
