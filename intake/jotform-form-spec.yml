@@ -90,7 +90,8 @@ fields:
   - key: reference_attachments
     section: context
     label: Anexe arquivos de referência
-    help_text: Anexos são opcionais. Exemplos: vaga, currículo, PDF, ementa, imagem ou texto.
+    help_text: >-
+      Anexos são opcionais. Exemplos: vaga, currículo, PDF, ementa, imagem ou texto.
     type: file_upload
     required: false
     multiple: true
