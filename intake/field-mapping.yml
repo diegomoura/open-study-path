@@ -1,0 +1,38 @@
+version: 1
+spec_id: open-study-path-intake
+
+mappings:
+  path_name: path.name
+  subject: path.subject
+  objective: path.objective
+  desired_outcome: path.desired_outcome
+  motivation: path.motivation
+  current_level: learner.current_level
+  prior_knowledge: learner.prior_knowledge
+  preferred_language: learner.preferred_language
+  weekly_hours: learner.weekly_hours
+  deadline: path.deadline
+  preferred_days: learner.preferred_days
+  preferred_periods: learner.preferred_periods
+  learning_formats: preferences.formats
+  theory_practice_balance: preferences.theory_practice_balance
+  assessment_style: preferences.assessment_style
+  accessibility_needs: learner.accessibility_needs
+  reference_text_or_urls: references.text_or_urls
+  reference_attachments: references.attachments
+  task_manager: integrations.task_manager.provider
+  use_calendar: integrations.calendar.enabled
+  email_summaries: integrations.notifications.email_enabled
+  additional_notes: preferences.notes
+
+normalization:
+  trim_strings: true
+  discard_empty_optional_fields: true
+  split_multiline_prior_knowledge: true
+  attachments:
+    persist_original_files: false
+    persist_safe_metadata_only: true
+  personal_data:
+    discard_unnecessary_identifiers: true
+  assumptions:
+    record_in: state/intake-summary.json
