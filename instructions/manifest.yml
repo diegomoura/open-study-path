@@ -34,6 +34,7 @@ phases:
     allowed_modes: [instance]
     depends_on: [configure_intake]
     next_phase: diagnostic
+    merge_policy_path: workflow.intake_merge_policy
     outputs:
       - .open-study-path/instance.yml
       - study.config.yml
@@ -45,6 +46,10 @@ phases:
     allowed_modes: [instance]
     depends_on: [intake]
     next_phase: generate
+    merge_policy_path: workflow.diagnostic_merge_policy
+    outputs:
+      - .open-study-path/instance.yml
+      - state/diagnostic-summary.json
     stop_after_phase: true
 
   - id: generate
