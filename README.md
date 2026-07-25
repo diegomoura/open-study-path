@@ -49,13 +49,13 @@ Every phase must end with:
 - the next lifecycle phase;
 - one exact command to continue.
 
-Detailed normalized fields and file lists belong in the pull request, not in the default chat response. The shared response contract is `instructions/phase-completion.md` and is referenced by `instructions/manifest.yml`.
+Detailed normalized fields, diagnostic findings and file lists belong in the pull request, not in the default chat response. The shared response contract is `instructions/phase-completion.md` and is referenced by `instructions/manifest.yml`.
 
 The standard lifecycle is:
 
 `setup → intake import → diagnostic → curriculum proposal → task publication → progress tracking → replanning`
 
-## Intake merge policy
+## Safe phase merge policies
 
 New instances store operational policy in `.open-study-path/instance.yml`:
 
@@ -63,15 +63,26 @@ New instances store operational policy in `.open-study-path/instance.yml`:
 workflow:
   guided: true
   intake_merge_policy: auto_when_unambiguous
+  diagnostic_merge_policy: auto_when_unambiguous
 ```
 
 Available policies:
 
 - `manual` — always wait for owner review and merge;
-- `auto_after_ci` — merge a phase-limited intake PR after required checks pass;
-- `auto_when_unambiguous` — merge only after checks pass and no material assumption, attachment or conflicting response requires review.
+- `auto_after_ci` — self-review and merge a phase-limited PR after required checks pass;
+- `auto_when_unambiguous` — self-review and merge only after checks pass and no material assumption or contradiction requires review.
 
-The default is `auto_when_unambiguous`. This policy applies only to intake import. It does not authorize automatic curriculum generation, external integration creation, destructive changes or task publication.
+The defaults authorize safe automation only for narrowly scoped intake and diagnostic PRs. They do not authorize automatic curriculum generation, external integration creation, destructive changes or task publication.
+
+## Bounded proportional diagnostic
+
+The diagnostic is a placement step, not a comprehensive exam or a teaching session.
+
+For learners declared as `none` or `beginner`, the normal target is 3–5 questions with a hard maximum of 7. Intermediate or advanced diagnostics normally use 4–7 questions with a hard maximum of 10. The agent must stop earlier when conceptual and applied evidence already support a responsible starting depth.
+
+The hard maximum may be exceeded only when the owner explicitly requests a comprehensive assessment. The exception and total question count are recorded in `state/diagnostic-summary.json`. If uncertainty remains at the hard limit, the agent records limited evidence and chooses a conservative starting depth instead of continuing indefinitely.
+
+Diagnostic results are validated against `schemas/diagnostic-summary.schema.json`. Raw dialogue is not committed.
 
 ## Repository identity
 
@@ -120,7 +131,7 @@ Instance setup copies or creates the following files only inside the fork or der
 - `state/progress.json`, based on `templates/state/progress.json`;
 - `study/roadmap.md`, based on `templates/roadmap.md`.
 
-Topic files under `study/topics/` are created only after an approved intake and curriculum proposal.
+`state/diagnostic-summary.json` is created only when the diagnostic completes. Topic files under `study/topics/` are created only after an approved intake, diagnostic and curriculum proposal.
 
 ## Core principles
 
@@ -129,7 +140,7 @@ Topic files under `study/topics/` are created only after an approved intake and 
 - GitHub Issue Forms, automatically created Jotforms and YAML are interchangeable intake methods.
 - GitHub Issues, Trello and Markdown are interchangeable task backends.
 - Completion requires evidence of learning, not only activity completion.
-- Raw form submissions and unnecessary personal data must not be committed.
+- Raw form submissions, diagnostic transcripts and unnecessary personal data must not be committed.
 - Generated changes should be reviewed through pull requests unless a narrowly scoped merge policy explicitly permits safe automation.
 
 ## Repository map
@@ -141,9 +152,12 @@ Topic files under `study/topics/` are created only after an approved intake and 
 - `instructions/phase-completion.md`: guided response and next-step contract.
 - `instructions/05-configure-intake.md`: automatic provider setup.
 - `instructions/10-intake.md`: intake normalization and safe merge policy.
+- `instructions/20-diagnostic.md`: bounded placement assessment and diagnostic merge policy.
 - `intake/jotform-form-spec.yml`: executable form definition.
 - `intake/field-mapping.yml`: provider-independent normalization contract.
 - `.github/ISSUE_TEMPLATE/create-study-path.yml`: zero-config GitHub intake.
+- `templates/state/diagnostic-summary.json`: reusable diagnostic artifact template.
+- `schemas/diagnostic-summary.schema.json`: diagnostic artifact validation contract.
 - `templates/chatgpt-project-instructions.md`: copyable ChatGPT Project Instructions.
 - `docs/chatgpt-project-setup.md`: ChatGPT Project onboarding and identity rules.
 - `schemas/`: machine-readable validation contracts.
@@ -153,4 +167,4 @@ The template intentionally does not contain `study.config.yml`, `state/` or `stu
 
 ## Privacy
 
-Do not commit raw form submissions, uploaded reference files, access tokens, API keys, webhook secrets, email addresses or unnecessary personal data. Persist only normalized information required to generate and adapt the learning path. Attachments are optional and should be read only when needed, then represented by safe metadata or summaries rather than copied into the repository by default.
+Do not commit raw form submissions, diagnostic transcripts, uploaded reference files, access tokens, API keys, webhook secrets, email addresses or unnecessary personal data. Persist only normalized information required to generate and adapt the learning path. Attachments are optional and should be read only when needed, then represented by safe metadata or summaries rather than copied into the repository by default.
