@@ -33,7 +33,13 @@ references:
 
 intake:
   provider: unset
+  setup_status: unconfigured
   form_id: null
+  form_url: null
+  form_spec_id: open-study-path-intake
+  form_spec_version: 1
+  created_by: null
+  issue_template: .github/ISSUE_TEMPLATE/create-study-path.yml
   submission_strategy: not_applicable
   attachments_optional: true
   persist_raw_submission: false
@@ -44,8 +50,10 @@ integrations:
     board_or_project: null
   calendar:
     provider: none
+    enabled: false
   notifications:
     provider: chat
+    email_enabled: false
 
 planning:
   unit: topic

@@ -14,14 +14,14 @@ In template mode, the agent may improve documentation, schemas, instructions and
 - create `study.config.yml`;
 - create `state/` or `study/` instance artifacts;
 - generate a curriculum;
-- create GitHub Issues, Trello cards or calendar events for a learner;
+- create a learner's Jotform, GitHub Issues, Trello cards or calendar events;
 - store learner-specific integration identifiers.
 
 When asked to initialize a learning path in template mode, explain that the user must first fork or create a repository from the template. Never turn the original template repository into an instance.
 
 ### Instance mode
 
-The repository is in instance mode only when `.open-study-path/instance.yml` exists. Instance setup must happen in a fork or derived repository and is separate from curriculum generation.
+The repository is in instance mode only when `.open-study-path/instance.yml` exists. Instance setup must happen in a fork or derived repository and is separate from intake import and curriculum generation.
 
 ## Instance setup workflow
 
@@ -34,7 +34,23 @@ When explicitly asked to set up a fork as an instance:
 5. Copy `templates/state/progress.json` to `state/progress.json`.
 6. Copy `templates/roadmap.md` to `study/roadmap.md`.
 7. Create `study/topics/` only when the first topic is generated.
-8. Stop. Do not import intake or generate a curriculum unless the user explicitly requests the next operation.
+8. Configure the intake method using `instructions/05-configure-intake.md`:
+   - GitHub Issue Form is the zero-configuration default;
+   - Jotform is created automatically in the owner's connected Jotform account from `intake/jotform-form-spec.yml`;
+   - manual YAML remains available.
+9. Stop after the intake method is ready. Do not import answers or generate a curriculum unless explicitly requested.
+
+If the owner explicitly asks to create only the instance files and postpone intake configuration, stop after step 7 and leave `intake.provider: unset`.
+
+## Automatic Jotform rules
+
+- Never require the owner to duplicate a maintainer-owned form or manually copy its ID.
+- Confirm Jotform access in ChatGPT before attempting creation.
+- If Jotform is not connected, instruct the owner to authorize the app and stop; never request an API key.
+- Before creating a form, verify whether the instance already has a valid `form_id` or an exact matching form in the owner's account.
+- Create the form from the versioned specification in `intake/jotform-form-spec.yml`.
+- Save only the created form ID, URL and specification version in the instance.
+- Do not create a submission or import answers during form setup.
 
 ## Instance source of truth
 
@@ -47,9 +63,9 @@ When explicitly asked to set up a fork as an instance:
 ## Curriculum workflow in instance mode
 
 1. Read `instructions/manifest.yml`.
-2. Resolve the selected intake provider and its instance-specific identifier.
-3. Read the latest approved intake.
-4. Normalize only required planning facts into `study.config.yml` and `state/intake-summary.json`.
+2. Confirm the selected intake provider has `setup_status: ready`.
+3. Read the explicitly selected or latest approved intake.
+4. Normalize only required planning facts using `intake/field-mapping.yml` into `study.config.yml` and `state/intake-summary.json`.
 5. Validate configuration against `schemas/study-config.schema.json`.
 6. Run a proportional diagnostic or use reliable existing evidence.
 7. Generate a dependency-aware topic graph.
@@ -78,6 +94,8 @@ When explicitly asked to set up a fork as an instance:
 Template or fork setup:
 
 - `set up this fork as an Open Study Path instance`
+- `set up this instance using Jotform`
+- `set up this instance using the GitHub Issue Form`
 - `validate this repository as a reusable template`
 
 Instance operations:

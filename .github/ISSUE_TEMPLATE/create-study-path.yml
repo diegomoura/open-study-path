@@ -1,92 +1,203 @@
-name: Create a study path in this instance
-description: Fallback onboarding form for a fork or repository created from Open Study Path
+name: Criar trilha de estudos
+description: Onboarding zero-config para uma instância do Open Study Path
 title: "[Study Path]: "
 labels: ["study-request"]
 body:
   - type: markdown
     attributes:
       value: |
-        Use this form only in your own fork or derived repository. Do not submit learner data to the canonical template repository.
+        Use este formulário somente em um fork ou repositório criado a partir do template.
+        Informe apenas dados necessários ao planejamento. Não inclua segredos ou dados pessoais desnecessários.
+        Campos e anexos indicados como opcionais não bloqueiam a geração da trilha.
 
-        Provide only information needed to generate your learning path. Do not include secrets or unnecessary personal data. Reference files are optional.
+  - type: input
+    id: path_name
+    attributes:
+      label: Nome da trilha
+      description: Opcional.
+
   - type: input
     id: subject
     attributes:
-      label: What do you want to learn?
+      label: O que você quer aprender?
+      placeholder: "Exemplo: engenharia de aplicações com IA"
     validations:
       required: true
+
   - type: textarea
     id: objective
     attributes:
-      label: What is your detailed objective?
+      label: Descreva detalhadamente seu objetivo
+      description: Inclua escopo, contexto e assuntos que deseja incluir ou excluir.
     validations:
       required: true
+
   - type: textarea
-    id: outcome
+    id: desired_outcome
     attributes:
-      label: What concrete result do you expect? (optional)
-      description: Leave blank when the objective already provides enough context.
+      label: Qual resultado concreto gostaria de alcançar?
+      description: Opcional.
+
   - type: textarea
     id: motivation
     attributes:
-      label: Why do you want to study this? (optional)
+      label: Por que deseja estudar isso?
+      description: Opcional.
+
   - type: dropdown
-    id: level
+    id: current_level
     attributes:
-      label: Current level
+      label: Qual é seu nível atual?
       options:
-        - No knowledge
-        - Beginner
-        - Intermediate
-        - Advanced
+        - Nenhum conhecimento
+        - Iniciante
+        - Intermediário
+        - Avançado
     validations:
       required: true
-  - type: input
-    id: language
-    attributes:
-      label: Preferred content language
-      placeholder: pt-BR
-    validations:
-      required: true
-  - type: input
-    id: weekly_hours
-    attributes:
-      label: Available hours per week
-      placeholder: "5"
-    validations:
-      required: true
-  - type: input
-    id: deadline
-    attributes:
-      label: Optional deadline
-      placeholder: YYYY-MM-DD
+
   - type: textarea
     id: prior_knowledge
     attributes:
-      label: Prior knowledge and experience (optional)
+      label: Conhecimentos e experiências anteriores
+      description: Opcional. Liste apenas o que for relevante para esta trilha.
+
   - type: textarea
     id: references
     attributes:
-      label: Reference text, URLs or optional file attachments
-      description: Paste text or links here. GitHub also lets you drag optional files into this field. Do not attach secrets or unnecessary personal data.
+      label: Textos, URLs ou anexos de referência
+      description: Opcional. Cole textos e URLs ou arraste arquivos para este campo. Não anexe arquivos sensíveis.
+
+  - type: input
+    id: preferred_language
+    attributes:
+      label: Em qual idioma deseja receber o conteúdo?
+      value: pt-BR
+    validations:
+      required: true
+
+  - type: input
+    id: weekly_hours
+    attributes:
+      label: Quantas horas por semana você possui?
+      placeholder: "6"
+      description: Informe um número positivo.
+    validations:
+      required: true
+
+  - type: input
+    id: deadline
+    attributes:
+      label: Existe uma data limite?
+      placeholder: YYYY-MM-DD
+      description: Opcional.
+
+  - type: checkboxes
+    id: preferred_days
+    attributes:
+      label: Quais dias prefere estudar?
+      description: Opcional.
+      options:
+        - label: Segunda-feira
+        - label: Terça-feira
+        - label: Quarta-feira
+        - label: Quinta-feira
+        - label: Sexta-feira
+        - label: Sábado
+        - label: Domingo
+
+  - type: checkboxes
+    id: preferred_periods
+    attributes:
+      label: Quais períodos prefere?
+      description: Opcional.
+      options:
+        - label: Manhã
+        - label: Tarde
+        - label: Noite
+
+  - type: checkboxes
+    id: learning_formats
+    attributes:
+      label: Quais formatos de aprendizagem prefere?
+      description: Opcional.
+      options:
+        - label: Documentação
+        - label: Livros
+        - label: Vídeos
+        - label: Cursos
+        - label: Exercícios
+        - label: Projetos
+        - label: Discussões
+        - label: Flashcards
+
+  - type: dropdown
+    id: theory_practice_balance
+    attributes:
+      label: Qual equilíbrio prefere entre teoria e prática?
+      description: Opcional.
+      options:
+        - Mais teoria
+        - Equilibrado
+        - Mais prática
+
+  - type: checkboxes
+    id: assessment_style
+    attributes:
+      label: Como prefere ser avaliado?
+      description: Opcional.
+      options:
+        - label: Quizzes
+        - label: Exercícios
+        - label: Explicação escrita
+        - label: Projeto
+        - label: Entrevista simulada
+
+  - type: textarea
+    id: accessibility_needs
+    attributes:
+      label: Necessidades de acessibilidade ou restrições
+      description: Opcional.
+
   - type: dropdown
     id: task_manager
     attributes:
-      label: Task manager
+      label: Onde deseja acompanhar as tarefas?
       options:
         - GitHub Issues
         - Trello
-        - Markdown only
+        - Somente Markdown
     validations:
       required: true
-  - type: textarea
-    id: notes
+
+  - type: dropdown
+    id: use_calendar
     attributes:
-      label: Additional notes (optional)
+      label: Deseja integrar com Google Calendar?
+      description: Opcional.
+      options:
+        - Não
+        - Sim
+
+  - type: dropdown
+    id: email_summaries
+    attributes:
+      label: Deseja receber resumos por e-mail?
+      description: Opcional.
+      options:
+        - Não
+        - Sim
+
+  - type: textarea
+    id: additional_notes
+    attributes:
+      label: Observações adicionais
+      description: Opcional.
+
   - type: checkboxes
     id: consent
     attributes:
-      label: Consent
+      label: Consentimento
       options:
-        - label: I understand that normalized planning data may be saved in this repository, without raw submissions, uploaded files or unnecessary personal data.
+        - label: Entendo que informações normalizadas necessárias ao planejamento poderão ser salvas neste repositório, sem persistir a submissão bruta, anexos originais ou dados pessoais desnecessários.
           required: true
