@@ -9,3 +9,7 @@ Create:
 - a schedule projection derived from total effort and weekly availability.
 
 Prefer official and primary resources. Distinguish required resources from optional enrichment. Do not claim a resource was verified when it was not checked.
+
+Open a pull request for the curriculum proposal. Do not auto-merge curriculum generation under the intake merge policy. Do not publish tasks, create Trello cards, calendar events or notifications during this phase.
+
+Complete the phase using `instructions/phase-completion.md`. Link the curriculum PR, surface only material assumptions or unresolved choices, instruct the owner to review and merge it, and provide the exact command for task publication after approval.
