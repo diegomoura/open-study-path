@@ -67,6 +67,7 @@ phases:
 
   - id: publish
     instruction: instructions/40-publish-tasks.md
+    internal_preflight: instructions/42-integration-preflight.md
     allowed_modes: [instance]
     depends_on: [generate]
     next_phase: track
