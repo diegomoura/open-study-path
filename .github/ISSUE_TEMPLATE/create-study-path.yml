@@ -20,7 +20,7 @@ body:
     id: subject
     attributes:
       label: O que você quer aprender?
-      placeholder: Exemplo: engenharia de aplicações com IA
+      placeholder: "Exemplo: engenharia de aplicações com IA"
     validations:
       required: true
 
