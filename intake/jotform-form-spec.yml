@@ -203,7 +203,8 @@ fields:
 
   - key: email_summaries
     section: integrations
-    label: Deseja receber resumos por e-mail?
+    label: Deseja receber resumos pelo Gmail?
+    help_text: Se escolher sim, a integração de notificações será configurada como Gmail.
     type: yes_no
     required: false
     default: false
