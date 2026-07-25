@@ -23,24 +23,48 @@ When asked to initialize a learning path in template mode, explain that the user
 
 The repository is in instance mode only when `.open-study-path/instance.yml` exists. Instance setup must happen in a fork or derived repository and is separate from intake import and curriculum generation.
 
+## Resolve the repository target
+
+A ChatGPT Project should manage one Open Study Path instance.
+
+Before the instance marker exists, resolve the target repository from one of these explicit sources:
+
+1. the exact `OWNER/REPOSITORY` value in the ChatGPT Project Instructions;
+2. an exact repository identifier supplied by the owner in the current message.
+
+The ChatGPT Project name and description are human-facing labels only. Do not infer the repository target from them when an exact identifier is absent.
+
+Before writing files:
+
+1. confirm the repository is accessible through the connected GitHub account;
+2. confirm it is not the canonical template repository;
+3. confirm the repository being modified matches the explicit `OWNER/REPOSITORY` identifier.
+
+During bootstrap, write the exact repository identifier to `.open-study-path/instance.yml`.
+
+After `.open-study-path/instance.yml` exists, its `repository` field is the persistent repository source of truth. If it conflicts with the ChatGPT Project Instructions or the current request, stop all write operations and ask the owner to resolve the mismatch.
+
+Do not manage multiple unrelated Open Study Path instances from the same ChatGPT Project unless the repository explicitly implements a multi-instance extension.
+
 ## Instance setup workflow
 
 When explicitly asked to set up a fork as an instance:
 
-1. Confirm the repository is not the canonical template repository named in `.open-study-path/template.yml`.
-2. Create `.open-study-path/instance.yml` with the source template, repository and setup timestamp.
-3. Copy `study.config.example.yml` to `study.config.yml` without inventing learner answers.
-4. Copy `templates/state/intake-summary.json` to `state/intake-summary.json`.
-5. Copy `templates/state/progress.json` to `state/progress.json`.
-6. Copy `templates/roadmap.md` to `study/roadmap.md`.
-7. Create `study/topics/` only when the first topic is generated.
-8. Configure the intake method using `instructions/05-configure-intake.md`:
+1. Resolve and verify the repository target using the rules above.
+2. Confirm the repository is not the canonical template repository named in `.open-study-path/template.yml`.
+3. Create `.open-study-path/instance.yml` with the source template, exact repository and setup timestamp.
+4. Copy `study.config.example.yml` to `study.config.yml` without inventing learner answers.
+5. Copy `templates/state/intake-summary.json` to `state/intake-summary.json`.
+6. Copy `templates/state/progress.json` to `state/progress.json`.
+7. Copy `templates/roadmap.md` to `study/roadmap.md`.
+8. Create `study/topics/` only when the first topic is generated.
+9. Configure the intake method using `instructions/05-configure-intake.md`:
    - GitHub Issue Form is the zero-configuration default;
    - Jotform is created automatically in the owner's connected Jotform account from `intake/jotform-form-spec.yml`;
    - manual YAML remains available.
-9. Stop after the intake method is ready. Do not import answers or generate a curriculum unless explicitly requested.
+10. Stop after the intake method is ready. Do not import answers or generate a curriculum unless explicitly requested.
 
-If the owner explicitly asks to create only the instance files and postpone intake configuration, stop after step 7 and leave `intake.provider: unset`.
+If the owner explicitly asks to create only the instance files and postpone intake configuration, stop after step 8 and leave `intake.provider: unset`.
 
 ## Automatic Jotform rules
 
@@ -54,11 +78,12 @@ If the owner explicitly asks to create only the instance files and postpone inta
 
 ## Instance source of truth
 
-1. `study.config.yml` contains normalized learner and integration preferences.
-2. `instructions/manifest.yml` defines the execution phases.
-3. `state/progress.json` contains machine-readable progress.
-4. `study/topics/` contains generated learning units.
-5. Raw Jotform submissions and uploaded files must never be committed by default.
+1. `.open-study-path/instance.yml` identifies the repository instance.
+2. `study.config.yml` contains normalized learner and integration preferences.
+3. `instructions/manifest.yml` defines the execution phases.
+4. `state/progress.json` contains machine-readable progress.
+5. `study/topics/` contains generated learning units.
+6. Raw Jotform submissions and uploaded files must never be committed by default.
 
 ## Curriculum workflow in instance mode
 
