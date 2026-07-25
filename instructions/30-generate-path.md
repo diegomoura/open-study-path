@@ -1,4 +1,4 @@
-# Generate learning path
+# Generate and approve learning path
 
 Generate a dependency-aware set of topics instead of fixed weeks. Each topic must include an objective, prerequisites, estimated effort, learning activities, deliverable, evidence and mastery criteria.
 
@@ -20,7 +20,7 @@ Prefer primary or official resources. Every required resource must name a specif
 
 Edition, translation and URL selection may remain pending, but say so explicitly and preserve the canonical locator. Do not claim a resource, edition, translation or link was verified when it was not checked.
 
-## Pull request
+## Pull request and automatic review
 
 Open a draft pull request for the curriculum proposal. Limit the diff to:
 
@@ -28,14 +28,34 @@ Open a draft pull request for the curriculum proposal. Limit the diff to:
 - `study/roadmap.md`;
 - `study/topics/`.
 
-Set `status.curriculum_proposed: true`. Do not mark the curriculum approved during generation.
+Set `status.curriculum_proposed: true` and keep `status.curriculum_approved: false` while drafting.
 
-Do not merge the proposal during this phase. Do not publish tasks, create Trello cards, calendar events or notifications.
+Before completing this phase, automatically execute the internal checklist in `instructions/35-review-curriculum.md`. Do not ask the owner to request a separate review. Correct every issue that can be resolved from the approved intake, diagnostic evidence and repository contracts.
+
+Read `workflow.curriculum_merge_policy` from `.open-study-path/instance.yml`. If it is missing, use `manual`.
+
+For `agent_review_then_merge`:
+
+1. review and correct the proposal branch;
+2. run all required checks, including the curriculum validator;
+3. self-review the final diff against the allowed scope;
+4. set `status.curriculum_approved: true` only when the review has passed;
+5. rerun required checks after the final status change;
+6. mark the draft pull request ready;
+7. merge it when no pedagogical decision remains unresolved.
+
+Do not attempt to formally approve a pull request authored by the same account. Contract verification, final diff review and successful CI constitute the operational review.
+
+Leave the pull request open only when a material decision genuinely requires the owner. In that case, ask only the specific decision needed; do not give a generic instruction to review, correct or merge the pull request.
+
+Do not publish tasks, create Trello cards, calendar events or notifications during this phase.
 
 ## Completion
 
-Complete the phase using `instructions/phase-completion.md`. Link the curriculum PR and surface only material assumptions or unresolved choices.
+Complete the phase using `instructions/phase-completion.md`.
 
-Guide the owner to the explicit review phase with a command equivalent to:
+After a successful merge, report the approved curriculum and merged pull request, then guide directly to publication with:
 
-`Revise o PR #<number> contra o intake, o diagnóstico e o contrato da trilha. Corrija problemas encontrados. Se o CI passar e não houver decisão pedagógica pendente, marque o PR como pronto e faça merge. Não publique tarefas ainda.`
+`Publique as tarefas da trilha nas integrações configuradas. Não altere o conteúdo pedagógico aprovado.`
+
+When blocked by an unresolved pedagogical decision, report the pull request and ask one concise, concrete question that enables the agent to finish review and merge.
