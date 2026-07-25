@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import argparse
 import json
 import sys
 from pathlib import Path
@@ -52,12 +53,15 @@ def fail(message: str) -> None:
     raise SystemExit(1)
 
 
-def main() -> None:
+def check_yaml() -> None:
     for path in YAML_FILES:
         if not (ROOT / path).is_file():
             fail(f"missing required file: {path}")
         load_yaml(path)
+    print("YAML parsing passed.")
 
+
+def check_guard() -> None:
     for path in FORBIDDEN_TEMPLATE_ARTIFACTS:
         if (ROOT / path).exists():
             fail(f"instance artifact must not exist in canonical template: {path}")
@@ -65,7 +69,10 @@ def main() -> None:
     marker = load_yaml(".open-study-path/template.yml")
     if marker.get("generation_allowed") is not False:
         fail("template marker must set generation_allowed: false")
+    print("Template guard passed.")
 
+
+def check_intake() -> None:
     spec = load_yaml("intake/jotform-form-spec.yml")
     mapping = load_yaml("intake/field-mapping.yml")
     example = load_yaml("study.config.example.yml")
@@ -106,17 +113,40 @@ def main() -> None:
     missing_issue_fields = REQUIRED_INTAKE_KEYS.difference(issue_ids)
     if missing_issue_fields:
         fail(f"GitHub Issue Form is missing required fields: {sorted(missing_issue_fields)}")
+    print("Intake contract passed.")
 
+
+def check_schema() -> None:
+    example = load_yaml("study.config.example.yml")
     with (ROOT / "schemas/study-config.schema.json").open("r", encoding="utf-8") as handle:
         schema = json.load(handle)
 
     validator = Draft202012Validator(schema, format_checker=FormatChecker())
-    errors = sorted(validator.iter_errors(example), key=lambda error: list(error.path))
+    errors = list(validator.iter_errors(example))
     if errors:
         for error in errors:
             location = ".".join(str(part) for part in error.path) or "<root>"
             print(f"SCHEMA ERROR at {location}: {error.message}", file=sys.stderr)
         raise SystemExit(1)
+    print("Configuration schema passed.")
+
+
+CHECKS = {
+    "yaml": check_yaml,
+    "guard": check_guard,
+    "intake": check_intake,
+    "schema": check_schema,
+}
+
+
+def main() -> None:
+    parser = argparse.ArgumentParser()
+    parser.add_argument("check", choices=[*CHECKS, "all"])
+    args = parser.parse_args()
+
+    selected = CHECKS.values() if args.check == "all" else [CHECKS[args.check]]
+    for check in selected:
+        check()
 
     print("Open Study Path template validation passed.")
 
