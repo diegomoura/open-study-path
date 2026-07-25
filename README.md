@@ -2,7 +2,7 @@
 
 Open-source, AI-assisted template for creating, managing and adapting personalized learning paths.
 
-> **This repository is the template, not a learning-path instance.** Do not generate a curriculum, learner configuration, progress state, Trello board or study tasks in this repository.
+> **This repository is the template, not a learning-path instance.** Do not generate a curriculum, learner configuration, progress state, Jotform, Trello board or study tasks in this repository.
 
 ## How it works
 
@@ -17,15 +17,36 @@ The marker `.open-study-path/template.yml` keeps this repository in template mod
 
 1. Fork this repository or create a repository from it.
 2. Connect the new repository to ChatGPT.
-3. Ask: `Set up this fork as an Open Study Path instance. Do not generate the curriculum yet.`
-4. Choose an intake method:
-   - create or duplicate a Jotform using `intake/jotform-form-spec.md`;
-   - open the GitHub Issue Form in your own copy;
-   - fill `study.config.yml` manually after instance setup.
+3. Ask: `Set up this fork as an Open Study Path instance.`
+4. Choose an intake method when prompted:
+   - **GitHub Issue Form** — zero configuration and available immediately in the fork;
+   - **Jotform** — ChatGPT creates a new form in your connected Jotform account;
+   - **Manual YAML** — edit `study.config.yml` directly.
 5. Fill the selected intake method.
-6. Ask the agent to import the latest approved intake and propose the curriculum in a pull request.
+6. Ask the agent to import the approved intake and propose the curriculum in a pull request.
 
-The reference Jotform used while developing the template is documented for maintainers, but each user should use a form in their own Jotform account and configure its ID in their own instance.
+Instance setup prepares the repository and the intake method. It does not import answers or generate the curriculum.
+
+## Automatic Jotform setup
+
+The template does not contain a maintainer-owned form ID. Instead, it contains an executable, versioned specification in `intake/jotform-form-spec.yml`.
+
+When the instance owner selects Jotform, the agent must:
+
+1. confirm that the Jotform app is connected to ChatGPT;
+2. ask the owner to authorize it when access is unavailable;
+3. verify that the instance does not already have a valid form;
+4. create a form in the owner's Jotform account from the specification;
+5. save only the form ID, URL and specification version in `study.config.yml`;
+6. present the form URL and stop before importing a submission.
+
+No API key or token is stored in the repository. Re-running setup must not create duplicate forms when the configured form is still valid.
+
+## GitHub Issue Form fallback
+
+`.github/ISSUE_TEMPLATE/create-study-path.yml` is copied with every fork or repository created from the template. It is the recommended zero-configuration intake method and requires no external account.
+
+The agent must use an issue explicitly selected by the instance owner; it must not assume that the repository's newest issue is the intake response.
 
 ## What instance setup creates
 
@@ -35,16 +56,15 @@ Instance setup copies or creates the following files only inside the fork or der
 - `study.config.yml`, based on `study.config.example.yml`;
 - `state/intake-summary.json`, based on `templates/state/intake-summary.json`;
 - `state/progress.json`, based on `templates/state/progress.json`;
-- `study/roadmap.md`, based on `templates/roadmap.md`;
-- generated topic files under `study/topics/`.
+- `study/roadmap.md`, based on `templates/roadmap.md`.
 
-Setup and curriculum generation are separate operations. Creating an instance must not automatically create a learning path.
+Topic files under `study/topics/` are created only after an approved intake and curriculum proposal.
 
 ## Core principles
 
 - GitHub is the source of truth for each instance.
 - Topics are the primary learning unit; weeks are scheduling projections only.
-- Jotform, GitHub Issue Forms and YAML are interchangeable intake methods.
+- GitHub Issue Forms, automatically created Jotforms and YAML are interchangeable intake methods.
 - GitHub Issues, Trello and Markdown are interchangeable task backends.
 - Completion requires evidence of learning, not only activity completion.
 - Raw form submissions and unnecessary personal data must not be committed.
@@ -56,10 +76,12 @@ Setup and curriculum generation are separate operations. Creating an instance mu
 - `AGENTS.md`: operating contract for AI agents.
 - `study.config.example.yml`: configuration model copied during instance setup.
 - `instructions/manifest.yml`: lifecycle and phase ordering.
-- `instructions/`: setup, intake, diagnostic, generation, publishing, tracking and replanning rules.
+- `instructions/05-configure-intake.md`: automatic provider setup.
+- `intake/jotform-form-spec.yml`: executable form definition.
+- `intake/field-mapping.yml`: provider-independent normalization contract.
+- `.github/ISSUE_TEMPLATE/create-study-path.yml`: zero-config GitHub intake.
 - `schemas/`: machine-readable validation contracts.
 - `templates/`: files used to initialize instance state and generated content.
-- `intake/`: specifications for supported intake methods.
 
 The template intentionally does not contain `study.config.yml`, `state/` or `study/` instance artifacts.
 
