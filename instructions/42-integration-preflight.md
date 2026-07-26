@@ -35,13 +35,15 @@ When one or more required connections are unavailable:
 4. tell the owner to connect or authorize those apps in the current ChatGPT Project;
 5. provide the exact return command below, replacing `<providers>` with the missing provider names:
 
-`Conectei <providers> ao ChatGPT. Verifique novamente e continue a publicação das tarefas sem alterar o currículo.`
+`Conectei <providers> ao ChatGPT. Verifique novamente e continue a publicação.`
 
 The return command does not prove access. Run the read-only probes again. If a connection is still unavailable, report only the providers that still fail.
 
 The original publication request plus the return command authorize continuation of the same publication operation. Do not request another confirmation after all required probes pass.
 
 When every required connection is available, do not send an intermediate “connections verified” response. Continue directly with the configured publication adapters.
+
+The approved-curriculum immutability rule from `instructions/40-publish-tasks.md` remains active throughout preflight and resumed publication. It never needs to be repeated in an owner command.
 
 ## Idempotency before writes
 
@@ -59,6 +61,6 @@ Use a brief response equivalent to:
 >
 > Depois, envie:
 >
-> `Conectei <providers> ao ChatGPT. Verifique novamente e continue a publicação das tarefas sem alterar o currículo.`
+> `Conectei <providers> ao ChatGPT. Verifique novamente e continue a publicação.`
 
 Do not include a success artifact or claim that integrations were configured while the probes are failing.

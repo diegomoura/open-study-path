@@ -12,6 +12,7 @@ import yaml
 ROOT = Path(__file__).resolve().parents[1]
 INSTANCE_MARKER = ROOT / ".open-study-path/instance.yml"
 ALLOWED_CURRICULUM_POLICIES = {"manual", "agent_review_then_merge"}
+DEPRECATED_PUBLICATION_SUFFIX = "Não altere o conteúdo pedagógico aprovado"
 
 
 def fail(message: str) -> None:
@@ -108,6 +109,11 @@ def main() -> None:
     require_terms(
         "instructions/40-publish-tasks.md",
         [
+            "Approved curriculum invariant",
+            "immutable inputs during publication",
+            "must not add, remove, rewrite or reinterpret pedagogical",
+            "The owner does not need to restate this invariant",
+            "`Publique as tarefas da trilha nas integrações configuradas.`",
             "Before any external write",
             "instructions/42-integration-preflight.md",
             "harmless read-only probe",
@@ -123,10 +129,11 @@ def main() -> None:
             "harmless read-only operation",
             "create no external resources",
             "do not partially publish",
-            "Conectei <providers> ao ChatGPT. Verifique novamente e continue a publicação das tarefas sem alterar o currículo.",
+            "Conectei <providers> ao ChatGPT. Verifique novamente e continue a publicação.",
             "Run the read-only probes again",
             "do not send an intermediate",
             "Never request API keys, tokens or passwords",
+            "immutability rule",
         ],
     )
     require_terms(
@@ -135,8 +142,10 @@ def main() -> None:
             "Internal validation, review, correction and safe merge",
             "Generation includes draft creation, internal review, corrections, validation and safe merge",
             "Do not instruct the owner to request another review",
+            "`Publique as tarefas da trilha nas integrações configuradas.`",
+            "immutability rule is internal to `publish`",
             "When publication is blocked by integration access",
-            "Conectei <providers> ao ChatGPT. Verifique novamente e continue a publicação das tarefas sem alterar o currículo.",
+            "Conectei <providers> ao ChatGPT. Verifique novamente e continue a publicação.",
             "Re-run the probes",
             "continue the pending publication automatically",
         ],
@@ -147,9 +156,12 @@ def main() -> None:
             "must not require a second owner command",
             "workflow.curriculum_merge_policy",
             "Never ask the owner to request a separate curriculum review",
+            "immutable approved inputs",
+            "Do not require the owner to repeat this rule",
             "instructions/42-integration-preflight.md",
             "harmless read-only connector operation",
             "create no external resources and do not partially publish",
+            "Conectei <providers> ao ChatGPT. Verifique novamente e continue a publicação.",
             "re-run every required probe",
             "without another confirmation",
         ],
@@ -163,10 +175,22 @@ def main() -> None:
             "Integration preflight and task publication",
             "Connection verification is an internal prerequisite",
             "one harmless read-only operation per required connector",
-            "Conectei <providers> ao ChatGPT. Verifique novamente e continue a publicação das tarefas sem alterar o currículo.",
+            "immutable approved inputs",
+            "Conectei <providers> ao ChatGPT. Verifique novamente e continue a publicação.",
             "re-run the probes rather than trusting the statement",
         ],
     )
+
+    checked_paths = [
+        "instructions/40-publish-tasks.md",
+        "instructions/42-integration-preflight.md",
+        "instructions/phase-completion.md",
+        "templates/chatgpt-project-instructions.md",
+        "AGENTS.md",
+    ]
+    for path in checked_paths:
+        if DEPRECATED_PUBLICATION_SUFFIX in load_text(path):
+            fail(f"{path} still requires the owner to restate curriculum immutability")
 
     for path in [
         "instructions/manifest.yml",
@@ -177,7 +201,7 @@ def main() -> None:
         if "review curriculum PR #<number>" in load_text(path):
             fail(f"{path} still exposes a separate review command")
 
-    print("Guided lifecycle, automatic curriculum review and integration preflight contracts passed.")
+    print("Guided lifecycle, automatic curriculum review, immutable publication and integration preflight contracts passed.")
 
 
 if __name__ == "__main__":

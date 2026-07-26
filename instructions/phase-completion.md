@@ -54,7 +54,9 @@ Do not list all confirmed competencies, knowledge gaps or misconceptions in chat
 
 Generation includes draft creation, internal review, corrections, validation and safe merge. When successful, the next phase is `publish`. Link the merged curriculum PR and provide:
 
-`Publique as tarefas da trilha nas integrações configuradas. Não altere o conteúdo pedagógico aprovado.`
+`Publique as tarefas da trilha nas integrações configuradas.`
+
+The approved-curriculum immutability rule is internal to `publish`; never append a reminder asking the owner not to alter the curriculum.
 
 Do not instruct the owner to request another review, correct files or merge the pull request. When a material pedagogical decision remains unresolved, leave the PR open and ask only one concise question that resolves that decision.
 
@@ -70,7 +72,7 @@ When one or more required connections fail their read-only probes:
 - tell the owner to connect or authorize those apps in the current ChatGPT Project;
 - provide exactly one dynamic return command:
 
-`Conectei <providers> ao ChatGPT. Verifique novamente e continue a publicação das tarefas sem alterar o currículo.`
+`Conectei <providers> ao ChatGPT. Verifique novamente e continue a publicação.`
 
 Do not claim the integrations are configured merely because the owner sent that sentence. Re-run the probes. When all probes pass, continue the pending publication automatically without another confirmation or an intermediate connection-success response.
 
