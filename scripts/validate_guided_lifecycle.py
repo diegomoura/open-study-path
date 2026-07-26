@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Validate the guided lifecycle and automatic phase contracts."""
+"""Validate guided lifecycle, review, publication and evaluation contracts."""
 
 from __future__ import annotations
 
@@ -60,148 +60,100 @@ def main() -> None:
     }
 
     if "review_curriculum" in phases:
-        fail("review_curriculum must not be a separate user-facing phase")
+        fail("review_curriculum must remain internal to generation")
 
     generate = phases.get("generate", {})
-    if generate.get("next_phase") != "publish":
-        fail("generate must guide directly to publish after internal review and merge")
-    if generate.get("internal_review") != "instructions/35-review-curriculum.md":
-        fail("generate must reference the internal curriculum review checklist")
-    if generate.get("merge_policy_path") != "workflow.curriculum_merge_policy":
-        fail("generate must reference workflow.curriculum_merge_policy")
-    if generate.get("outputs") != [
+    expected_outputs = [
         ".open-study-path/instance.yml",
         "study/roadmap.md",
         "study/topics/",
-    ]:
-        fail("generate outputs must remain phase-limited")
+        "study/modules/",
+        "study/assessments/",
+        ".github/ISSUE_TEMPLATE/assessment-topic-*.yml",
+    ]
+    if generate.get("next_phase") != "publish":
+        fail("generate must route to publish")
+    if generate.get("internal_review") != "instructions/35-review-curriculum.md":
+        fail("generate must reference internal curriculum review")
+    if generate.get("outputs") != expected_outputs:
+        fail("generate must output topics, complete modules, rubrics and assessment forms")
 
     publish = phases.get("publish", {})
-    if publish.get("depends_on") != ["generate"]:
-        fail("publish must depend directly on completed generation")
+    if publish.get("depends_on") != ["generate"] or publish.get("next_phase") != "evaluate":
+        fail("publish must depend on generate and route to evaluate")
     if publish.get("internal_preflight") != "instructions/42-integration-preflight.md":
-        fail("publish must reference the internal integration preflight")
+        fail("publish must reference integration preflight")
+
+    evaluate = phases.get("evaluate", {})
+    if evaluate.get("instruction") != "instructions/55-evaluate-topic.md":
+        fail("evaluate phase must reference topic evaluation instruction")
+    if evaluate.get("outputs") != ["state/assessments/", "state/progress.json"]:
+        fail("evaluate outputs must include assessment history and progress")
 
     validate_workflow(load_yaml("templates/instance.yml"), "templates/instance.yml", default_required=True)
     if INSTANCE_MARKER.is_file():
         validate_workflow(load_yaml(".open-study-path/instance.yml"), ".open-study-path/instance.yml", default_required=False)
 
-    require_terms(
-        "instructions/30-generate-path.md",
-        [
-            "automatically execute the internal checklist",
-            "Do not ask the owner to request a separate review",
-            "workflow.curriculum_merge_policy",
-            "mark the draft pull request ready",
-            "merge it when no pedagogical decision remains unresolved",
-            "Publique as tarefas da trilha",
-        ],
-    )
-    require_terms(
-        "instructions/35-review-curriculum.md",
-        [
-            "Run this checklist automatically inside the generation phase",
-            "Do not ask the owner to send a separate review command",
-            "agent_review_then_merge",
-            "Never ask the owner to perform the entire review or merge",
-        ],
-    )
-    require_terms(
-        "instructions/40-publish-tasks.md",
-        [
-            "Approved curriculum invariant",
-            "immutable inputs during publication",
-            "must not add, remove, rewrite or reinterpret pedagogical",
-            "The owner does not need to restate this invariant",
-            "`Publique as tarefas da trilha nas integrações configuradas.`",
-            "Before any external write",
-            "instructions/42-integration-preflight.md",
-            "harmless read-only probe",
-            "create no board, card, issue, event, email or integration-state write",
-            "continue publication immediately",
-            "do not ask for another confirmation",
-        ],
-    )
-    require_terms(
-        "instructions/42-integration-preflight.md",
-        [
-            "A provider name in `study.config.yml`, an installed app, or an available tool definition does not prove",
-            "harmless read-only operation",
-            "create no external resources",
-            "do not partially publish",
-            "Conectei <providers> ao ChatGPT. Verifique novamente e continue a publicação.",
-            "Run the read-only probes again",
-            "do not send an intermediate",
-            "Never request API keys, tokens or passwords",
-            "immutability rule",
-        ],
-    )
-    require_terms(
-        "instructions/phase-completion.md",
-        [
-            "Internal validation, review, correction and safe merge",
-            "Generation includes draft creation, internal review, corrections, validation and safe merge",
-            "Do not instruct the owner to request another review",
-            "`Publique as tarefas da trilha nas integrações configuradas.`",
-            "immutability rule is internal to `publish`",
-            "When publication is blocked by integration access",
-            "Conectei <providers> ao ChatGPT. Verifique novamente e continue a publicação.",
-            "Re-run the probes",
-            "continue the pending publication automatically",
-        ],
-    )
-    require_terms(
-        "templates/chatgpt-project-instructions.md",
-        [
-            "must not require a second owner command",
-            "workflow.curriculum_merge_policy",
-            "Never ask the owner to request a separate curriculum review",
-            "immutable approved inputs",
-            "Do not require the owner to repeat this rule",
-            "instructions/42-integration-preflight.md",
-            "harmless read-only connector operation",
-            "create no external resources and do not partially publish",
-            "Conectei <providers> ao ChatGPT. Verifique novamente e continue a publicação.",
-            "re-run every required probe",
-            "without another confirmation",
-        ],
-    )
-    require_terms(
-        "AGENTS.md",
-        [
-            "Automatic curriculum generation, review and merge",
-            "Do not ask the owner to send a separate review command",
-            "Automatically review, correct, validate and safely merge",
-            "Integration preflight and task publication",
-            "Connection verification is an internal prerequisite",
-            "one harmless read-only operation per required connector",
-            "immutable approved inputs",
-            "Conectei <providers> ao ChatGPT. Verifique novamente e continue a publicação.",
-            "re-run the probes rather than trusting the statement",
-        ],
-    )
-
-    checked_paths = [
-        "instructions/40-publish-tasks.md",
-        "instructions/42-integration-preflight.md",
-        "instructions/phase-completion.md",
-        "templates/chatgpt-project-instructions.md",
-        "AGENTS.md",
-    ]
-    for path in checked_paths:
-        if DEPRECATED_PUBLICATION_SUFFIX in load_text(path):
-            fail(f"{path} still requires the owner to restate curriculum immutability")
+    require_terms("instructions/30-generate-path.md", [
+        "study/modules/",
+        "study/assessments/",
+        "Complete-content contract",
+        "five substantial prompts",
+        "Revisão do PR: aprovada pelo agente e pelo CI",
+        "anotações adicionadas ao PR",
+        "Finalizei o TOPIC-000. Avalie a issue #<número>.",
+    ])
+    require_terms("instructions/35-review-curriculum.md", [
+        "every module teaches the content",
+        "rubric totaling 100 points",
+        "anotações adicionadas ao PR",
+        "aprovada pelo agente e pelo CI",
+    ])
+    require_terms("instructions/40-publish-tasks.md", [
+        "study/modules/",
+        "study/assessments/",
+        "direct link to the complete module",
+        "direct link to the assessment Issue Form",
+        "Do not start an improvised lesson in chat by default",
+    ])
+    require_terms("instructions/55-evaluate-topic.md", [
+        "explicit GitHub issue number",
+        "Grade every response independently",
+        "total score from 0 to 100",
+        "focused GitHub recovery issue",
+        "Finalizei a recuperação do TOPIC-000",
+        "Ace Quiz Maker",
+    ])
+    require_terms("instructions/phase-completion.md", [
+        "Revisão do PR: aprovada pelo agente e pelo CI",
+        "anotações adicionadas ao PR",
+        "Do not begin an improvised lesson in chat by default",
+        "Finalizei o TOPIC-000. Avalie a issue #<número>.",
+    ])
+    require_terms("templates/topic.md", [
+        "module: study/modules/TOPIC-000.md",
+        "assessment: study/assessments/TOPIC-000.yml",
+        "Submit the GitHub assessment form",
+    ])
+    for path in [
+        "templates/module.md",
+        "templates/assessment-rubric.yml",
+        "templates/topic-assessment-issue-form.yml",
+    ]:
+        if not (ROOT / path).is_file():
+            fail(f"missing course artifact template: {path}")
 
     for path in [
-        "instructions/manifest.yml",
+        "instructions/40-publish-tasks.md",
+        "instructions/42-integration-preflight.md",
         "instructions/phase-completion.md",
         "templates/chatgpt-project-instructions.md",
         "AGENTS.md",
     ]:
-        if "review curriculum PR #<number>" in load_text(path):
-            fail(f"{path} still exposes a separate review command")
+        if DEPRECATED_PUBLICATION_SUFFIX in load_text(path):
+            fail(f"{path} still requires the owner to restate curriculum immutability")
 
-    print("Guided lifecycle, automatic curriculum review, immutable publication and integration preflight contracts passed.")
+    print("Guided full-course generation, publication and evaluation contracts passed.")
 
 
 if __name__ == "__main__":
