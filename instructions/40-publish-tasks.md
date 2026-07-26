@@ -2,6 +2,16 @@
 
 Use the task manager and optional integrations configured in `study.config.yml`. Run this phase only after the generated roadmap and topics have been validated, approved and merged.
 
+## Approved curriculum invariant
+
+Treat `study/roadmap.md` and every file under `study/topics/` as immutable inputs during publication. The `publish` phase may transform the approved curriculum into tasks, cards, checklists, events, notifications and integration state, but it must not add, remove, rewrite or reinterpret pedagogical objectives, activities, prerequisites, effort estimates, deliverables, evidence, resources or mastery criteria.
+
+The owner does not need to restate this invariant in the publication command. The standard command is:
+
+`Publique as tarefas da trilha nas integrações configuradas.`
+
+If a provider requires a choice that would change approved pedagogical content, create no affected resource and ask one concise, specific question. Operational formatting choices that preserve the content do not require confirmation.
+
 ## Connection preflight
 
 Before any external write, read and execute `instructions/42-integration-preflight.md`.
