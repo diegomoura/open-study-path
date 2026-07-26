@@ -56,6 +56,8 @@ Complete the phase using `instructions/phase-completion.md`.
 
 After a successful merge, report the approved curriculum and merged pull request, then guide directly to publication with:
 
-`Publique as tarefas da trilha nas integrações configuradas. Não altere o conteúdo pedagógico aprovado.`
+`Publique as tarefas da trilha nas integrações configuradas.`
+
+Curriculum immutability during publication is enforced by `instructions/40-publish-tasks.md`; do not ask the owner to repeat that invariant.
 
 When blocked by an unresolved pedagogical decision, report the pull request and ask one concise, concrete question that enables the agent to finish review and merge.
