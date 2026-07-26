@@ -63,6 +63,9 @@ phases:
       - .open-study-path/instance.yml
       - study/roadmap.md
       - study/topics/
+      - study/modules/
+      - study/assessments/
+      - .github/ISSUE_TEMPLATE/assessment-topic-*.yml
     stop_after_phase: true
 
   - id: publish
@@ -70,7 +73,17 @@ phases:
     internal_preflight: instructions/42-integration-preflight.md
     allowed_modes: [instance]
     depends_on: [generate]
+    next_phase: evaluate
+    stop_after_phase: true
+
+  - id: evaluate
+    instruction: instructions/55-evaluate-topic.md
+    allowed_modes: [instance]
+    depends_on: [publish]
     next_phase: track
+    outputs:
+      - state/assessments/
+      - state/progress.json
     stop_after_phase: true
 
   - id: track
