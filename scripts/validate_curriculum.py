@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Validate curriculum lifecycle contracts and generated topic files."""
+"""Validate curriculum lifecycle contracts, modules and assessments."""
 
 from __future__ import annotations
 
@@ -13,18 +13,36 @@ import yaml
 ROOT = Path(__file__).resolve().parents[1]
 INSTANCE_MARKER = ROOT / ".open-study-path/instance.yml"
 TOPICS_DIR = ROOT / "study/topics"
+MODULES_DIR = ROOT / "study/modules"
+ASSESSMENTS_DIR = ROOT / "study/assessments"
+ISSUE_FORMS_DIR = ROOT / ".github/ISSUE_TEMPLATE"
 ROADMAP = ROOT / "study/roadmap.md"
 ALLOWED_CURRICULUM_POLICIES = {"manual", "agent_review_then_merge"}
-REQUIRED_HEADINGS = [
+TOPIC_HEADINGS = [
     "## Objective",
     "## Why this matters",
     "## Prerequisites",
     "## Learning activities",
+    "## Complete module",
+    "## Assessment",
     "## Deliverable",
     "## Evidence",
     "## Mastery criteria",
     "## Resources",
-    "## Prompt to start a study chat",
+]
+MODULE_HEADINGS = [
+    "## Como usar este módulo",
+    "## Objetivos de aprendizagem",
+    "## Verificação de pré-requisitos",
+    "## Conteúdo essencial",
+    "## Exemplos trabalhados",
+    "## Erros comuns e como corrigi-los",
+    "## Prática guiada",
+    "## Prática independente",
+    "## Síntese por recuperação ativa",
+    "## Entregável e evidência",
+    "## Avaliação do tópico",
+    "## Referências",
 ]
 VAGUE_REQUIRED_RESOURCE = re.compile(
     r"(?:a selecionar|passagem curta|uma introdução|trecho e tradução a revisar|"
@@ -32,6 +50,11 @@ VAGUE_REQUIRED_RESOURCE = re.compile(
     re.IGNORECASE,
 )
 CANONICAL_LOCATOR = re.compile(r"(?:§|\b\d+\b|\b[IVXLCDM]+\.)")
+PLACEHOLDER_CONTENT = re.compile(
+    r"(?:replace me|substitua por|estude o conceito|study the core concept|"
+    r"descreva o|inclua exercícios|apresente ao menos)",
+    re.IGNORECASE,
+)
 
 
 def fail(message: str) -> None:
@@ -43,17 +66,17 @@ def load_yaml(path: Path) -> Any:
     return yaml.safe_load(path.read_text(encoding="utf-8"))
 
 
-def parse_topic(path: Path) -> tuple[dict[str, Any], str]:
+def parse_frontmatter(path: Path) -> tuple[dict[str, Any], str]:
     text = path.read_text(encoding="utf-8")
     if not text.startswith("---\n"):
-        fail(f"topic is missing YAML frontmatter: {path.relative_to(ROOT)}")
+        fail(f"missing YAML frontmatter: {path.relative_to(ROOT)}")
     try:
         _, frontmatter, body = text.split("---", 2)
     except ValueError:
-        fail(f"topic frontmatter is malformed: {path.relative_to(ROOT)}")
+        fail(f"malformed frontmatter: {path.relative_to(ROOT)}")
     document = yaml.safe_load(frontmatter)
     if not isinstance(document, dict):
-        fail(f"topic frontmatter must be an object: {path.relative_to(ROOT)}")
+        fail(f"frontmatter must be an object: {path.relative_to(ROOT)}")
     return document, body
 
 
@@ -64,10 +87,10 @@ def required_resource_lines(body: str, path: Path) -> list[str]:
         re.DOTALL,
     )
     if not match:
-        fail(f"topic is missing a Required resources subsection: {path.relative_to(ROOT)}")
+        fail(f"missing Required resources subsection: {path.relative_to(ROOT)}")
     lines = [line.strip()[2:].strip() for line in match.group(1).splitlines() if line.strip().startswith("- ")]
     if not lines:
-        fail(f"topic must contain at least one required resource: {path.relative_to(ROOT)}")
+        fail(f"must contain at least one required resource: {path.relative_to(ROOT)}")
     return lines
 
 
@@ -75,43 +98,53 @@ def check_lifecycle_contract() -> None:
     manifest = load_yaml(ROOT / "instructions/manifest.yml")
     phases = {phase.get("id"): phase for phase in manifest.get("phases", []) if isinstance(phase, dict)}
     if "review_curriculum" in phases:
-        fail("curriculum review must be internal to generation, not a separate phase")
+        fail("curriculum review must be internal to generation")
 
     generate = phases.get("generate", {})
     if generate.get("next_phase") != "publish":
-        fail("generation must route directly to publish after internal review and merge")
+        fail("generation must route to publish")
     if generate.get("internal_review") != "instructions/35-review-curriculum.md":
-        fail("generation must reference instructions/35-review-curriculum.md as internal review")
+        fail("generation must reference the internal review checklist")
     if generate.get("merge_policy_path") != "workflow.curriculum_merge_policy":
         fail("generation must reference workflow.curriculum_merge_policy")
+    if generate.get("outputs") != [
+        ".open-study-path/instance.yml",
+        "study/roadmap.md",
+        "study/topics/",
+        "study/modules/",
+        "study/assessments/",
+        ".github/ISSUE_TEMPLATE/assessment-topic-*.yml",
+    ]:
+        fail("generation outputs must include topics, complete modules, rubrics and assessment forms")
 
     publish = phases.get("publish", {})
-    if publish.get("depends_on") != ["generate"]:
-        fail("publish must depend directly on completed generation")
+    if publish.get("depends_on") != ["generate"] or publish.get("next_phase") != "evaluate":
+        fail("publish must depend on generation and route to evaluate")
+    evaluate = phases.get("evaluate", {})
+    if evaluate.get("instruction") != "instructions/55-evaluate-topic.md":
+        fail("evaluate phase must reference instructions/55-evaluate-topic.md")
 
     template = load_yaml(ROOT / "templates/instance.yml")
     workflow = template.get("workflow", {})
-    if "curriculum_review_policy" in workflow:
-        fail("templates/instance.yml contains deprecated curriculum_review_policy")
-    policy = workflow.get("curriculum_merge_policy")
-    if policy != "agent_review_then_merge":
+    if workflow.get("curriculum_merge_policy") != "agent_review_then_merge":
         fail("new instances must default curriculum merge to agent_review_then_merge")
 
     for required in [
-        ROOT / "instructions/30-generate-path.md",
-        ROOT / "instructions/35-review-curriculum.md",
+        "instructions/30-generate-path.md",
+        "instructions/35-review-curriculum.md",
+        "instructions/55-evaluate-topic.md",
+        "templates/module.md",
+        "templates/assessment-rubric.yml",
+        "templates/topic-assessment-issue-form.yml",
     ]:
-        if not required.is_file():
-            fail(f"missing curriculum instruction: {required.relative_to(ROOT)}")
+        if not (ROOT / required).is_file():
+            fail(f"missing curriculum file: {required}")
 
     if INSTANCE_MARKER.is_file():
         marker = load_yaml(INSTANCE_MARKER)
-        instance_workflow = marker.get("workflow", {})
-        if "curriculum_review_policy" in instance_workflow:
-            fail("instance uses deprecated curriculum_review_policy")
-        instance_policy = instance_workflow.get("curriculum_merge_policy")
-        if instance_policy not in ALLOWED_CURRICULUM_POLICIES:
-            fail(f"invalid curriculum_merge_policy: {instance_policy}")
+        policy = marker.get("workflow", {}).get("curriculum_merge_policy")
+        if policy not in ALLOWED_CURRICULUM_POLICIES:
+            fail(f"invalid curriculum_merge_policy: {policy}")
 
 
 def detect_cycle(prerequisites: dict[str, list[str]]) -> None:
@@ -133,6 +166,61 @@ def detect_cycle(prerequisites: dict[str, list[str]]) -> None:
         visit(topic_id)
 
 
+def check_module(topic_id: str, path: Path) -> None:
+    metadata, body = parse_frontmatter(path)
+    if metadata.get("topic_id") != topic_id:
+        fail(f"module topic_id mismatch for {topic_id}")
+    for heading in MODULE_HEADINGS:
+        if heading not in body:
+            fail(f"module {topic_id} is missing heading: {heading}")
+    words = re.findall(r"\b\w+\b", body, flags=re.UNICODE)
+    if len(words) < 500:
+        fail(f"module {topic_id} is too short to be complete: {len(words)} words")
+    if PLACEHOLDER_CONTENT.search(body):
+        fail(f"module {topic_id} contains template placeholder content")
+    if body.count("### Exemplo") + body.count("**Exemplo") < 2:
+        fail(f"module {topic_id} must contain at least two worked examples")
+    if f"Finalizei o {topic_id}. Avalie a issue #<número>." not in body:
+        fail(f"module {topic_id} is missing the explicit assessment completion command")
+
+
+def check_rubric(topic_id: str, path: Path) -> None:
+    rubric = load_yaml(path)
+    if not isinstance(rubric, dict) or rubric.get("topic_id") != topic_id:
+        fail(f"invalid rubric topic_id for {topic_id}")
+    passing = rubric.get("passing_score")
+    if not isinstance(passing, int) or not 1 <= passing <= 100:
+        fail(f"invalid passing_score for {topic_id}")
+    questions = rubric.get("questions")
+    if not isinstance(questions, list) or len(questions) != 5:
+        fail(f"rubric {topic_id} must define exactly five questions")
+    ids = [item.get("id") for item in questions if isinstance(item, dict)]
+    if ids != ["q1", "q2", "q3", "q4", "q5"]:
+        fail(f"rubric {topic_id} question ids must be q1..q5")
+    points = [item.get("max_points") for item in questions]
+    if not all(isinstance(point, int) and point > 0 for point in points) or sum(points) != 100:
+        fail(f"rubric {topic_id} must total 100 points")
+    for item in questions:
+        for key in ["evaluates", "full_credit", "partial_credit", "no_credit"]:
+            if not isinstance(item.get(key), str) or not item[key].strip():
+                fail(f"rubric {topic_id} question {item.get('id')} is missing {key}")
+
+
+def check_issue_form(topic_id: str, path: Path) -> None:
+    form = load_yaml(path)
+    if not isinstance(form, dict):
+        fail(f"invalid assessment Issue Form for {topic_id}")
+    if topic_id not in str(form.get("name", "")) or topic_id not in str(form.get("title", "")):
+        fail(f"assessment Issue Form does not identify {topic_id}")
+    body = form.get("body")
+    if not isinstance(body, list):
+        fail(f"assessment Issue Form body must be a list for {topic_id}")
+    ids = [entry.get("id") for entry in body if isinstance(entry, dict)]
+    for question_id in ["q1", "q2", "q3", "q4", "q5", "confirmation"]:
+        if question_id not in ids:
+            fail(f"assessment Issue Form {topic_id} is missing {question_id}")
+
+
 def check_topics() -> None:
     topic_paths = sorted(TOPICS_DIR.glob("*.md")) if TOPICS_DIR.is_dir() else []
     if not topic_paths:
@@ -146,8 +234,11 @@ def check_topics() -> None:
     roadmap = ROADMAP.read_text(encoding="utf-8")
 
     for path in topic_paths:
-        metadata, body = parse_topic(path)
-        for key in ["id", "title", "status", "difficulty", "estimated_hours", "prerequisites"]:
+        metadata, body = parse_frontmatter(path)
+        for key in [
+            "id", "title", "status", "difficulty", "estimated_hours", "prerequisites",
+            "module", "assessment", "assessment_form",
+        ]:
             if key not in metadata:
                 fail(f"topic is missing frontmatter key {key}: {path.relative_to(ROOT)}")
         topic_id = metadata["id"]
@@ -161,7 +252,7 @@ def check_topics() -> None:
         topic_prerequisites = metadata["prerequisites"]
         if not isinstance(topic_prerequisites, list) or not all(isinstance(item, str) for item in topic_prerequisites):
             fail(f"prerequisites must be a string array for {topic_id}")
-        for heading in REQUIRED_HEADINGS:
+        for heading in TOPIC_HEADINGS:
             if heading not in body:
                 fail(f"topic {topic_id} is missing heading: {heading}")
         for resource in required_resource_lines(body, path):
@@ -171,6 +262,23 @@ def check_topics() -> None:
                 fail(f"required resource needs a canonical locator in {topic_id}: {resource}")
         if topic_id not in roadmap:
             fail(f"roadmap does not reference topic {topic_id}")
+
+        expected_module = f"study/modules/{topic_id}.md"
+        expected_rubric = f"study/assessments/{topic_id}.yml"
+        suffix = topic_id.split("-")[-1].lower()
+        expected_form = f".github/ISSUE_TEMPLATE/assessment-topic-{suffix}.yml"
+        if metadata["module"] != expected_module or metadata["assessment"] != expected_rubric or metadata["assessment_form"] != expected_form:
+            fail(f"topic {topic_id} artifact paths are inconsistent")
+        module_path = ROOT / expected_module
+        rubric_path = ROOT / expected_rubric
+        form_path = ROOT / expected_form
+        for artifact in [module_path, rubric_path, form_path]:
+            if not artifact.is_file():
+                fail(f"missing artifact for {topic_id}: {artifact.relative_to(ROOT)}")
+        check_module(topic_id, module_path)
+        check_rubric(topic_id, rubric_path)
+        check_issue_form(topic_id, form_path)
+
         topics[topic_id] = path
         prerequisites[topic_id] = topic_prerequisites
 
@@ -182,7 +290,7 @@ def check_topics() -> None:
                 fail(f"topic {topic_id} cannot depend on itself")
 
     detect_cycle(prerequisites)
-    print(f"Curriculum contract passed for {len(topics)} topics.")
+    print(f"Complete curriculum contract passed for {len(topics)} topics.")
 
 
 def main() -> None:
