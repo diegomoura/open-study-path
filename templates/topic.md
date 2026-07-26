@@ -5,6 +5,9 @@ status: planned
 difficulty: beginner
 estimated_hours: 0
 prerequisites: []
+module: study/modules/TOPIC-000.md
+assessment: study/assessments/TOPIC-000.yml
+assessment_form: .github/ISSUE_TEMPLATE/assessment-topic-000.yml
 ---
 
 # TOPIC-000 — Replace me
@@ -23,11 +26,22 @@ Connect the topic to the learner's final goal or a diagnostic gap.
 
 ## Learning activities
 
-- [ ] Study the core concept
-- [ ] Create concise notes
-- [ ] Complete a guided exercise
-- [ ] Produce the deliverable
-- [ ] Complete the assessment
+- [ ] Complete the prerequisite check in the module
+- [ ] Study the complete lesson
+- [ ] Work through the examples
+- [ ] Complete guided practice
+- [ ] Complete independent practice and the deliverable
+- [ ] Submit the GitHub assessment form
+
+## Complete module
+
+- [Study module](../modules/TOPIC-000.md)
+
+## Assessment
+
+- [Scoring rubric](../assessments/TOPIC-000.yml)
+- Issue Form: `.github/ISSUE_TEMPLATE/assessment-topic-000.yml`
+- Completion command: `Finalizei o TOPIC-000. Avalie a issue #<número>.`
 
 ## Deliverable
 
@@ -42,6 +56,7 @@ Add links, files, explanations or assessment results.
 - [ ] Explain the concept without relying on notes
 - [ ] Apply it in a new situation
 - [ ] Identify common mistakes and tradeoffs
+- [ ] Meet the rubric passing score without a critical misconception
 
 ## Resources
 
@@ -55,4 +70,4 @@ Add links, files, explanations or assessment results.
 
 ## Prompt to start a study chat
 
-Act as a teacher, reviewer and practical coach for this topic. Use the objective, prerequisites, deliverable and mastery criteria above. Diagnose my understanding before teaching, prefer active recall and practical work, and do not consider the topic complete until I provide evidence.
+Use the complete module as the teaching source. The default flow is self-study followed by submission through the topic Issue Form. Chat guidance may supplement the module, but it must not replace the durable assessment issue and rubric.
