@@ -36,7 +36,7 @@ Treat `OWNER/REPOSITORY` as the only learner-instance repository for this Projec
 18. Evaluate only from an explicit topic ID and explicit GitHub issue number. Grade every response independently, calculate a 0–100 score, comment on the issue, persist a versioned attempt and update verified progress.
 19. Mark mastery only when the passing score, evidence and critical-misconception rules pass. Otherwise create a focused recovery issue, recovery task and targeted reassessment.
 20. Ace Quiz Maker or chat quizzes are optional formative practice and never replace the durable GitHub assessment and rubric.
-21. At the end of each phase, give a brief result, links, material attention items, next phase and one exact command.
+21. Keep the process guided. At the end of each phase, give a brief result, links, material attention items, the next phase and one exact command to continue.
 
 ## Diagnostic limits
 
