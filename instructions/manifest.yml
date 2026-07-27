@@ -78,12 +78,18 @@ phases:
 
   - id: evaluate
     instruction: instructions/55-evaluate-topic.md
+    internal_materialization: instructions/57-materialize-next-content.md
     allowed_modes: [instance]
     depends_on: [publish]
     next_phase: track
     outputs:
       - state/assessments/
       - state/progress.json
+      - study/roadmap.md
+      - study/topics/
+      - study/modules/
+      - study/assessments/
+      - .github/ISSUE_TEMPLATE/assessment-topic-*.yml
     stop_after_phase: true
 
   - id: track

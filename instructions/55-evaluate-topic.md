@@ -1,22 +1,49 @@
 # Evaluate a completed topic
 
-Evaluate a topic only from an explicit topic ID and an explicit GitHub issue number. Never assume that the newest issue belongs to the learner or to the requested topic.
+Evaluate a materialized topic from an explicit topic ID. The assessment issue number is optional when the correct submission can be resolved deterministically.
 
 The standard command is:
 
+`Finalizei o TOPIC-000. Avalie minhas respostas.`
+
+The explicit fallback remains supported:
+
 `Finalizei o TOPIC-000. Avalie a issue #<número>.`
+
+## Resolve the assessment issue
+
+When an issue number is provided, read it and validate that it matches the requested topic.
+
+When no issue number is provided, search the instance repository for candidate issues that satisfy all of these conditions:
+
+1. label `assessment`;
+2. label `assessment:submitted`;
+3. title beginning with `[Avaliação] TOPIC-000`;
+4. body containing `open-study-path:assessment topic_id=TOPIC-000`;
+5. not already recorded as an evaluated attempt under `state/assessments/TOPIC-000/`;
+6. not labeled `assessment:graded`;
+7. created after the last recorded attempt when an earlier attempt exists.
+
+Use the issue author as an additional filter when the learner identity is known from the active authenticated context. Do not persist unnecessary identity data solely for this lookup.
+
+- Exactly one valid candidate: evaluate it automatically.
+- No candidate: state that no submitted assessment was found and provide the direct topic form link.
+- More than one candidate: show only the candidate issue numbers and links and ask which one should be evaluated.
+
+Never choose an arbitrary newest repository issue.
 
 ## Required inputs
 
 Before scoring:
 
-1. read the approved topic contract in `study/topics/TOPIC-000.md`;
-2. read the complete lesson in `study/modules/TOPIC-000.md`;
-3. read the rubric in `study/assessments/TOPIC-000.yml`;
-4. read the full assessment issue and confirm that its title and questions match the topic;
-5. read existing attempts for the topic under `state/assessments/TOPIC-000/` when present.
+1. read the approved topic contract;
+2. confirm `content_status: materialized`;
+3. read the complete module;
+4. read the scoring rubric;
+5. read the full resolved assessment issue;
+6. read existing topic attempts when present.
 
-If the issue is missing answers, belongs to another topic or is ambiguous, do not grade it. Ask one specific question or request the correct issue number.
+If answers are incomplete, the issue belongs to another topic or deterministic resolution is ambiguous, do not grade.
 
 ## Response-by-response grading
 
@@ -30,61 +57,58 @@ Grade every response independently against the matching rubric item. For each qu
 Calculate a total score from 0 to 100. A topic is mastered only when:
 
 - the score meets or exceeds `passing_score`;
-- no critical misconception listed in the rubric remains;
-- the required deliverable or evidence is present and usable.
+- no critical misconception remains;
+- required deliverable or evidence is present and usable.
 
-Do not treat checklist completion, time spent, a Trello card state or a multiple-choice quiz score as sufficient mastery evidence by itself.
+Checklist completion, time spent, task state or a multiple-choice quiz score is not sufficient mastery evidence by itself.
 
-## Persist the result
+## Persist and label the result
 
-Post the detailed evaluation as a comment on the assessment issue. Create a versioned assessment result under:
+Post the detailed evaluation as a comment on the assessment issue. Create the next versioned result under:
 
 `state/assessments/TOPIC-000/attempt-001.json`
 
-Record at least:
+Record topic ID, issue number and URL, attempt, timestamp, per-question score and feedback, total, mastery, critical misconceptions, recovery actions and evaluator method.
 
-- topic ID;
-- issue number and URL;
-- attempt number;
-- evaluated timestamp;
-- per-question scores and feedback summary;
-- total score;
-- mastery status;
-- critical misconceptions;
-- required recovery actions;
-- evaluator method.
+Update `state/progress.json` through a pull request. After evaluation:
 
-Update `state/progress.json` from the verified result. Use a pull request for repository-state changes and follow the configured safe merge policy for progress updates.
+- remove `assessment:submitted` from the issue;
+- add `assessment:graded` when mastered;
+- add `assessment:recovery-required` when recovery is required.
 
 ## When the topic is mastered
 
-- comment on the issue with the final score and mastery decision;
-- move the corresponding Trello card to `Concluído` when Trello is configured;
-- move newly unblocked dependent topics to `Pronto para estudar`;
-- identify the next available topic;
-- return one exact command using the next topic's assessment flow.
+1. complete or move the configured task card to `Concluído`;
+2. unlock eligible dependent topics;
+3. automatically execute `instructions/57-materialize-next-content.md` to restore the configured content window;
+4. update newly materialized task cards and calendar descriptions after connector probes;
+5. return the next ready materialized topic with module, task and form links.
+
+The learner must not send a separate command to generate the next topic.
 
 ## Recovery and focused reassessment
 
 When the topic is not mastered:
 
-1. identify only the failed rubric dimensions and critical misconceptions;
-2. create a focused GitHub recovery issue with a short explanation, targeted study tasks and a new assessment containing only the weak areas;
-3. create or update a Trello recovery card named `RECOVERY-TOPIC-000-A<attempt>` when Trello is configured;
-4. link the recovery issue, original assessment issue, module and topic card;
+1. identify only failed rubric dimensions and critical misconceptions;
+2. create a focused GitHub recovery issue with targeted study tasks and a reassessment covering only weak areas;
+3. create or update `RECOVERY-TOPIC-000-A<attempt>` in the configured task backend;
+4. link the recovery issue, original assessment, module and topic task;
 5. keep the topic out of `Concluído`;
 6. require a new evidence attempt.
 
-The recovery issue should ask the learner to answer in one numbered comment. After completion, the standard command is:
+The standard recovery command is:
 
-`Finalizei a recuperação do TOPIC-000. Avalie a issue #<número>.`
+`Finalizei a recuperação do TOPIC-000. Avalie minhas respostas.`
 
-Do not repeat already-mastered questions unless they are necessary to verify that a critical misconception was actually corrected.
+Resolve the recovery issue deterministically using its topic, attempt marker and unresolved recovery status. Request an issue number only when more than one valid recovery submission remains.
+
+Do not repeat mastered questions unless necessary to confirm correction of a critical misconception.
 
 ## Optional formative quizzes
 
-Ace Quiz Maker or a chat-generated multiple-choice quiz may be used as optional formative practice. It is not the source of truth for mastery, because the durable assessment, rubric, evidence and feedback history belong in GitHub.
+Ace Quiz Maker or chat-generated quizzes may supplement practice. They never replace the durable GitHub assessment, rubric, evidence and response-by-response evaluation.
 
 ## Completion response
 
-Report the score, mastery decision, assessment issue, meaningful feedback and either the next unlocked topic or the focused recovery issue. Do not dump the entire JSON state into chat.
+Report the score, mastery decision, resolved assessment issue and either the focused recovery path or the next ready materialized topic. Include any automatic materialization PR as an artifact, but do not require another command before study continues.

@@ -11,6 +11,15 @@ estimated_minutes: 60
 
 Explique a sequência de estudo, o tempo sugerido e o que o estudante deverá produzir. Este arquivo deve ser uma aula autocontida, não apenas uma lista de tarefas.
 
+## Plano de execução
+
+Divida a experiência em três a sete ações pequenas e verificáveis. Cada ação deve normalmente durar entre 10 e 25 minutos. Evite uma única linha que misture leitura, exercício, entrega e avaliação.
+
+- [ ] Recuperar pré-requisitos (10 min)
+- [ ] Estudar o primeiro bloco conceitual (20 min)
+- [ ] Refazer exemplos e prática guiada (15 min)
+- [ ] Produzir a evidência independente (15 min)
+
 ## Objetivos de aprendizagem
 
 Ao final, o estudante deverá conseguir:
@@ -56,7 +65,9 @@ Descreva exatamente o que deve ser produzido e como vincular ou transcrever a ev
 
 Use o Issue Form específico do tópico. Depois de enviar as respostas, retorne ao chat com:
 
-`Finalizei o TOPIC-000. Avalie a issue #<número>.`
+`Finalizei o TOPIC-000. Avalie minhas respostas.`
+
+O número da issue só deve ser solicitado quando a busca determinística encontrar mais de uma submissão candidata.
 
 ## Referências
 

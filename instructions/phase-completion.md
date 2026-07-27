@@ -4,107 +4,88 @@ Use this contract at the end of every lifecycle phase.
 
 ## Response goals
 
-Keep the completion response brief and action-oriented. Do not repeat the full intake, diagnostic, diff or generated content unless the owner asks for details.
+Keep the completion response brief and action-oriented. Do not repeat full intake, diagnostic, curriculum or state unless requested.
 
-Do not send a separate transition message immediately before repository work. Complete the requested operation and send one final completion response.
+Do not send a separate transition message immediately before repository work. Complete the active operation and send one final completion response.
 
 The response must contain, in this order:
 
-1. **Result** — one sentence stating what completed and whether it was validated.
-2. **Artifact** — clickable links to the primary artifact or artifacts.
-3. **Review status** — when a pull request was involved, state whether it was approved and merged or contains specific annotations requiring owner input.
-4. **Attention** — include only material assumptions, ambiguities, validation failures or actions requiring review. Omit when empty.
-5. **Next step** — name the next lifecycle phase.
-6. **Continue command** — provide one exact, copyable command.
+1. **Result** — what completed and whether it was validated.
+2. **Artifact** — primary links.
+3. **Review status** — PR approved/merged or annotated for one concrete decision.
+4. **Attention** — only material assumptions, failures or required actions.
+5. **Next step** — the next lifecycle action.
+6. **Continue command** — one exact copyable command.
 
-Always stop at the requested phase boundary. Internal validation, review, correction and safe merge required by the current phase are part of that phase and must be completed before responding.
+Internal validation, review, correction, safe merge and automatic rolling-window materialization required by the active operation must finish before responding.
 
 ## Pull-request state
 
-When a phase creates a pull request, read the phase-specific merge policy from `.open-study-path/instance.yml`.
+Follow the configured phase-specific policy. `auto_when_unambiguous` permits merge only when checks, evidence, scope, privacy and consistency rules pass without a material interpretation decision. For `workflow.curriculum_merge_policy: agent_review_then_merge`, review, correct, validate, mark ready and merge when no pedagogical decision remains.
 
-- `manual`: keep the PR open and explain the specific action required.
-- `auto_after_ci`: self-review scope and merge only after all required checks pass.
-- `auto_when_unambiguous`: merge only when checks, evidence, scope and privacy rules pass without a material interpretation decision.
-- `workflow.curriculum_merge_policy: agent_review_then_merge`: create the curriculum PR as a draft, review and correct it internally, run checks, self-review the final diff, set approved status, rerun checks, mark ready and merge when no pedagogical decision remains unresolved.
+Use one review status:
 
-Do not attempt to formally approve a PR authored by the same account. Contract verification plus successful checks are the automated review.
+- `Revisão do PR: aprovada pelo agente e pelo CI; PR #<número> mesclado.`
+- `Revisão do PR: anotações adicionadas ao PR #<número>. Avalie somente os pontos marcados e responda no PR.`
 
-Use one of these review statuses:
-
-- successful: `Revisão do PR: aprovada pelo agente e pelo CI; PR #<número> mesclado.`
-- owner decision required: `Revisão do PR: anotações adicionadas ao PR #<número>. Avalie somente os pontos marcados e responda no PR.`
-
-Never ask the owner to review the entire PR when no unresolved decision exists.
+Never ask for whole-PR review when no unresolved decision exists.
 
 ## Phase guidance
 
 ### After intake setup
 
-Tell the owner how to fill the selected provider and return the approved submission or issue reference.
+Tell the owner how to submit the configured intake and return its explicit reference.
 
 ### After intake import
-
-Use:
 
 `Inicie o diagnóstico proporcional desta trilha. Faça perguntas curtas, uma por vez. Não gere a trilha ainda.`
 
 ### After diagnostic
 
-Report only starting depth, artifact, merge state and material caveats. Use:
-
 `Gere uma proposta de trilha com base no intake e no diagnóstico. Não publique tarefas ainda.`
 
 ### After curriculum generation
 
-Generation includes complete modules, assessments, draft creation, internal review, corrections, validation and safe merge. Link the merged PR and the first module. Use:
+State whether the configured strategy generated all modules or an initial rolling window. Link the roadmap and first materialized module. Use:
 
 `Publique as tarefas da trilha nas integrações configuradas.`
 
-Do not instruct the owner to request another generic review or merge.
+### When publication is blocked
 
-### When publication is blocked by integration access
-
-Follow `instructions/42-integration-preflight.md`. When required connections fail:
-
-- state that publication paused before external creation;
-- name only unavailable providers;
-- tell the owner to connect them in the current Project;
-- provide exactly:
+Name only unavailable providers and use:
 
 `Conectei <providers> ao ChatGPT. Verifique novamente e continue a publicação.`
 
-Re-run probes after the message and continue automatically when all pass.
+Re-run probes and continue automatically when they pass.
 
 ### After task publication
 
-Do not begin an improvised lesson in chat by default. Link:
+Do not begin an improvised lesson in chat by default. Link the first complete module, task and assessment form.
 
-- the first complete module;
-- its task card or task artifact;
-- its assessment Issue Form.
+Use:
 
-Use a handoff equivalent to:
+`Ao concluir o TOPIC-000 e enviar o formulário, escreva: "Finalizei o TOPIC-000. Avalie minhas respostas."`
 
-`Ao concluir o TOPIC-000 e enviar o formulário, escreva: "Finalizei o TOPIC-000. Avalie a issue #<número>."`
-
-The next phase is `evaluate` after the learner submits the explicit assessment issue.
+Do not require the learner to copy the issue number by default.
 
 ### After topic evaluation
 
-Report the total score, mastery decision, assessment issue and either:
+Report the resolved assessment issue, score and mastery.
 
-- the next unlocked topic and its module/form; or
-- the focused recovery issue and recovery task.
+When mastered, automatically materialize enough eligible planned topics to restore the configured lookahead window. Link the automatic materialization PR when one was needed and give the next ready module without asking for a generation command.
 
-For a normal completed topic, the standard command is:
+When recovery is required, link the focused recovery issue and task.
 
-`Finalizei o TOPIC-000. Avalie a issue #<número>.`
+Normal command:
 
-For recovery:
+`Finalizei o TOPIC-000. Avalie minhas respostas.`
 
-`Finalizei a recuperação do TOPIC-000. Avalie a issue #<número>.`
+Recovery command:
+
+`Finalizei a recuperação do TOPIC-000. Avalie minhas respostas.`
+
+Only request an explicit issue number when deterministic lookup finds more than one valid candidate.
 
 ## Concision rule
 
-Do not list every field, finding, topic, question or changed file in chat by default. Detailed content belongs in the module, assessment issue, evaluation comment, PR and repository state.
+Detailed questions, scores, state and diffs belong in issues, pull requests and repository artifacts. Surface only meaningful results and next actions in chat.

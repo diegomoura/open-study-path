@@ -1,11 +1,18 @@
 name: Avaliação TOPIC-000 — Replace me
 description: Envie as evidências e respostas para avaliação deste tópico.
 title: "[Avaliação] TOPIC-000 — "
+labels:
+  - assessment
+  - assessment:submitted
 body:
   - type: markdown
     attributes:
       value: |
+        <!-- open-study-path:assessment topic_id=TOPIC-000 version=1 -->
         Responda com suas próprias palavras. O objetivo é demonstrar compreensão e aplicação, não apenas reproduzir definições.
+
+        Depois de enviar, retorne ao chat com: `Finalizei o TOPIC-000. Avalie minhas respostas.`
+        Você não precisa copiar o número da issue, exceto quando houver mais de uma submissão candidata.
 
   - type: input
     id: evidence

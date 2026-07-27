@@ -2,190 +2,114 @@
 
 Open-source, AI-assisted template for creating, managing and adapting personalized learning paths.
 
-> **This repository is the template, not a learning-path instance.** Do not generate a curriculum, learner configuration, progress state, Jotform, Trello board or study tasks in this repository.
+> **This repository is the template, not a learning-path instance.** Learner curricula, progress and external resources belong only in a fork or repository created from this template.
 
-## How it works
+## Core model
 
-Open Study Path has two explicit modes:
+Open Study Path separates four concerns:
 
-1. **Template mode** — the original reusable repository. It contains instructions, schemas and file templates only.
-2. **Instance mode** — a fork or repository created from this template. Only an instance may contain a learner's configuration, generated roadmap, topics, progress and integration identifiers.
+1. **Roadmap** — the complete dependency-aware learning path.
+2. **Topic contracts** — concise approved definitions of capability, effort, evidence and mastery.
+3. **Materialized content** — complete lessons, rubrics and assessment forms for the active study window.
+4. **Execution integrations** — Trello, Calendar, Gmail, GitHub Issues or Markdown representations.
 
-The marker `.open-study-path/template.yml` keeps this repository in template mode. An AI agent must not generate learner data while that marker is active and `.open-study-path/instance.yml` is absent.
+GitHub is the source of truth. Trello is an execution index, not the course-content repository.
+
+## Adaptive rolling generation
+
+Initial curriculum generation always creates the full roadmap and every topic contract. Detailed content follows `content_generation` in `.open-study-path/instance.yml`.
+
+The default strategy is:
+
+```yaml
+content_generation:
+  strategy: adaptive_rolling_window
+  lookahead_topics: 2
+  full_upfront_max_topics: 4
+  full_upfront_max_hours: 4
+  adapt_future_modules_from_assessments: true
+```
+
+A small curriculum within both thresholds may be generated completely upfront. A larger curriculum materializes only the first two topics. After a topic is mastered, the agent automatically materializes the next eligible content in the same evaluation operation, validates and merges the small PR, and updates existing task integrations.
+
+The learner does not need to request generation of each next topic.
+
+## Topic and task granularity
+
+A topic is one coherent independently assessable capability. It should not be a large chapter, but it should also not be a single administrative action.
+
+Default planning targets:
+
+- three to seven focused activities per topic;
+- 10–25 minutes per activity;
+- 45–90 minutes per topic;
+- split above 120 minutes when the capability can be separated responsibly.
+
+This keeps tasks approachable while avoiding dozens of trivial assessments.
+
+## Assessment workflow
+
+Every materialized topic has:
+
+- a complete module in `study/modules/`;
+- a 100-point rubric in `study/assessments/`;
+- a GitHub Issue Form with five open-response prompts;
+- deterministic assessment metadata and labels.
+
+After submitting the form, the normal command is:
+
+`Finalizei o TOPIC-001. Avalie minhas respostas.`
+
+The learner does not normally copy the issue number. The agent resolves exactly one valid submission using the topic title, labels, hidden marker and assessment history. It asks for an issue number only when multiple valid candidates remain.
+
+When mastery is insufficient, the agent creates focused recovery and targeted reassessment. Ace Quiz Maker or chat quizzes may supplement practice but are not the durable source of mastery evidence.
 
 ## Start a new learning path
 
 1. Fork this repository or create a repository from it.
-2. Create a dedicated ChatGPT Project for the new learning path.
-3. Connect GitHub to ChatGPT and authorize the new repository.
-4. Copy `templates/chatgpt-project-instructions.md` into the ChatGPT Project Instructions.
+2. Create a dedicated ChatGPT Project.
+3. Connect GitHub and authorize the instance repository.
+4. Copy `templates/chatgpt-project-instructions.md` into the Project Instructions.
 5. Replace `OWNER/REPOSITORY` with the exact repository identifier.
-6. Open the first chat and ask:
-
-   `Use the repository defined in this project's instructions. Set it up as an Open Study Path instance and ask me which intake provider to use. Do not import a submission or generate the curriculum yet.`
-
-7. Choose an intake method when prompted:
-   - **GitHub Issue Form** — zero configuration and available immediately in the fork;
-   - **Jotform** — ChatGPT creates a new form in your connected Jotform account;
-   - **Manual YAML** — edit `study.config.yml` directly.
-8. Fill the selected intake method.
-9. Ask the agent to import the approved intake.
-10. Follow the exact next-step command returned by the agent for diagnostic, curriculum generation, publication and tracking.
-
-Instance setup prepares the repository and the intake method. It does not import answers or generate the curriculum.
-
-See `docs/chatgpt-project-setup.md` for the complete ChatGPT Project workflow.
+6. Ask the first chat to set up the instance and configure an intake provider.
+7. Complete intake, bounded diagnostic and curriculum generation using the exact commands returned by the agent.
+8. Authorize task publication only after the curriculum PR is approved and merged.
 
 ## Guided lifecycle
 
-The process is designed to be guided rather than requiring the owner to remember the lifecycle.
+`setup → intake → diagnostic → roadmap and initial content generation → publication → evaluation → automatic next-content materialization or recovery → tracking and replanning`
 
-Every phase must end with:
+Each operation ends with a brief result, primary artifact links, material attention items, PR status and one exact command.
 
-- one brief result;
-- a link to the primary artifact when one exists;
-- material assumptions or blockers only;
-- the current pull-request state;
-- the next lifecycle phase;
-- one exact command to continue.
+Curriculum review, correction, CI validation and safe merge are internal to generation and materialization. The owner is asked only about a genuine unresolved pedagogical decision.
 
-Detailed normalized fields, diagnostic findings and file lists belong in the pull request, not in the default chat response. The shared response contract is `instructions/phase-completion.md` and is referenced by `instructions/manifest.yml`.
+## Integration safety
 
-The standard lifecycle is:
+Before initial publication, the agent verifies every configured connector with a harmless read-only operation. If one required provider is unavailable, initial publication is paused before external writes. No API key or token is requested or stored.
 
-`setup → intake import → diagnostic → curriculum generation and approval → task publication → progress tracking → replanning`
+Publication creates one task per topic:
 
-Curriculum review is internal to generation. The owner does not need to request a second review, correct the branch or merge the proposal when the configured policy permits safe automation.
-
-## Safe phase merge policies
-
-New instances store operational policy in `.open-study-path/instance.yml`:
-
-```yaml
-workflow:
-  guided: true
-  intake_merge_policy: auto_when_unambiguous
-  diagnostic_merge_policy: auto_when_unambiguous
-  curriculum_merge_policy: agent_review_then_merge
-```
-
-Available policies:
-
-- `manual` — leave the phase PR open for a specific required decision or manual merge;
-- `auto_after_ci` — self-review and merge a phase-limited PR after required checks pass;
-- `auto_when_unambiguous` — self-review and merge only after checks pass and no material assumption or contradiction requires review;
-- `agent_review_then_merge` — for curriculum generation, create a draft PR, review and correct it internally, run checks, self-review the final diff, mark it ready and merge when no pedagogical decision remains unresolved.
-
-The defaults authorize safe automation for intake, diagnostic and curriculum approval. They do not authorize external integration creation, destructive changes or task publication.
-
-## Automatic curriculum review
-
-The generation command is sufficient authorization to complete the curriculum proposal workflow. The agent must:
-
-1. create the proposal as a draft PR;
-2. compare it with the approved intake and diagnostic;
-3. correct scope, dependencies, effort, evidence, mastery criteria and resource references;
-4. run repository and curriculum checks;
-5. self-review the final phase-limited diff;
-6. mark the curriculum approved, rerun checks, mark the PR ready and merge;
-7. return the publication command.
-
-The PR remains open only when a genuine pedagogical choice cannot be resolved from existing evidence. In that case, the agent asks one specific question rather than delegating the whole review to the owner.
-
-## Bounded proportional diagnostic
-
-The diagnostic is a placement step, not a comprehensive exam or a teaching session.
-
-For learners declared as `none` or `beginner`, the normal target is 3–5 questions with a hard maximum of 7. Intermediate or advanced diagnostics normally use 4–7 questions with a hard maximum of 10. The agent must stop earlier when conceptual and applied evidence already support a responsible starting depth.
-
-The hard maximum may be exceeded only when the owner explicitly requests a comprehensive assessment. The exception and total question count are recorded in `state/diagnostic-summary.json`. If uncertainty remains at the hard limit, the agent records limited evidence and chooses a conservative starting depth instead of continuing indefinitely.
-
-Diagnostic results are validated against `schemas/diagnostic-summary.schema.json`. Raw dialogue is not committed.
-
-## Repository identity
-
-The ChatGPT Project name and description are optional labels for human organization. They may include the repository name, but they are not the repository source of truth.
-
-Before the first setup, the exact `OWNER/REPOSITORY` identifier must be stored in the ChatGPT Project Instructions or provided explicitly in the first message.
-
-During setup, the agent records the exact identifier in `.open-study-path/instance.yml`. After that marker exists, it becomes the persistent repository source of truth. A mismatch between the instance marker and the ChatGPT Project Instructions must stop write operations until the owner resolves it.
-
-Use one ChatGPT Project per Open Study Path instance to avoid mixing conversations, files and integrations between learning paths.
-
-## Automatic Jotform setup
-
-The template does not contain a maintainer-owned form ID. Instead, it contains an executable, versioned specification in `intake/jotform-form-spec.yml`.
-
-When the instance owner selects Jotform, the agent must:
-
-1. confirm that the Jotform app is connected to ChatGPT;
-2. ask the owner to authorize it when access is unavailable;
-3. verify that the instance does not already have a valid form;
-4. create a form in the owner's Jotform account from the specification;
-5. save only the form ID, URL and specification version in `study.config.yml`;
-6. present the form URL and stop before importing a submission.
-
-No API key or token is stored in the repository. Re-running setup must not create duplicate forms when the configured form is still valid.
-
-## GitHub Issue Form fallback
-
-`.github/ISSUE_TEMPLATE/create-study-path.yml` is copied with every fork or repository created from the template. It is the recommended zero-configuration intake method and requires no external account.
-
-After selecting `github_issue`, the agent must present a clickable direct link built from the exact instance repository:
-
-`https://github.com/OWNER/REPOSITORY/issues/new?template=create-study-path.yml`
-
-The response must explain that the form was inherited from the template, ask the owner to submit it and tell them to return with the created issue number. The agent must use an issue explicitly selected by the instance owner; it must not assume that the repository's newest issue is the intake response.
-
-Integration questions name their provider explicitly. For example, selecting email summaries means Gmail because both the GitHub Issue Form and Jotform ask specifically about Gmail.
-
-## What instance setup creates
-
-Instance setup copies or creates the following files only inside the fork or derived repository:
-
-- `.open-study-path/instance.yml`;
-- `study.config.yml`, based on `study.config.example.yml`;
-- `state/intake-summary.json`, based on `templates/state/intake-summary.json`;
-- `state/progress.json`, based on `templates/state/progress.json`;
-- `study/roadmap.md`, based on `templates/roadmap.md`.
-
-`state/diagnostic-summary.json` is created only when the diagnostic completes. Topic files under `study/topics/` are created during curriculum generation and merged only after automatic review succeeds.
-
-## Core principles
-
-- GitHub is the source of truth for each instance.
-- Topics are the primary learning unit; weeks are scheduling projections only.
-- GitHub Issue Forms, automatically created Jotforms and YAML are interchangeable intake methods.
-- GitHub Issues, Trello and Markdown are interchangeable task backends.
-- Completion requires evidence of learning, not only activity completion.
-- Raw form submissions, diagnostic transcripts and unnecessary personal data must not be committed.
-- Generated changes are reviewed through pull requests; narrowly scoped policies allow safe automation after validation.
+- materialized topics receive module, assessment and granular execution links;
+- planned topics show their approved objective, prerequisites and future-materialization state;
+- only dependency-ready materialized topics are ready to study.
 
 ## Repository map
 
-- `.open-study-path/template.yml`: template-mode guard.
-- `AGENTS.md`: operating contract for AI agents.
-- `study.config.example.yml`: configuration model copied during instance setup.
-- `instructions/manifest.yml`: lifecycle and phase ordering.
-- `instructions/phase-completion.md`: guided response and next-step contract.
-- `instructions/05-configure-intake.md`: automatic provider setup.
-- `instructions/10-intake.md`: intake normalization and safe merge policy.
-- `instructions/20-diagnostic.md`: bounded placement assessment and diagnostic merge policy.
-- `instructions/30-generate-path.md`: curriculum generation and automatic approval workflow.
-- `instructions/35-review-curriculum.md`: internal curriculum review checklist.
-- `scripts/validate_guided_lifecycle.py`: regression guard for the guided automatic workflow.
-- `intake/jotform-form-spec.yml`: executable form definition.
-- `intake/field-mapping.yml`: provider-independent normalization contract.
-- `.github/ISSUE_TEMPLATE/create-study-path.yml`: zero-config GitHub intake.
-- `templates/state/diagnostic-summary.json`: reusable diagnostic artifact template.
-- `schemas/diagnostic-summary.schema.json`: diagnostic artifact validation contract.
-- `templates/chatgpt-project-instructions.md`: copyable ChatGPT Project Instructions.
-- `docs/chatgpt-project-setup.md`: ChatGPT Project onboarding and identity rules.
-- `schemas/`: machine-readable validation contracts.
-- `templates/`: files used to initialize instance state and generated content.
-
-The template intentionally does not contain `study.config.yml`, `state/` or `study/` instance artifacts.
+- `.open-study-path/template.yml` — template-mode guard.
+- `AGENTS.md` — operating contract.
+- `templates/instance.yml` — instance workflow and rolling-generation defaults.
+- `instructions/manifest.yml` — lifecycle ordering and internal operations.
+- `instructions/30-generate-path.md` — complete roadmap and initial content window.
+- `instructions/35-review-curriculum.md` — automatic pedagogical review.
+- `instructions/40-publish-tasks.md` — integration publication.
+- `instructions/55-evaluate-topic.md` — deterministic assessment resolution and grading.
+- `instructions/57-materialize-next-content.md` — automatic rolling materialization.
+- `templates/topic.md` — concise topic contract.
+- `templates/module.md` — complete teaching module with granular execution plan.
+- `templates/topic-assessment-issue-form.yml` — discoverable assessment submission.
+- `scripts/validate_curriculum.py` — rolling curriculum and content validator.
+- `scripts/validate_guided_lifecycle.py` — lifecycle regression guard.
 
 ## Privacy
 
-Do not commit raw form submissions, diagnostic transcripts, uploaded reference files, access tokens, API keys, webhook secrets, email addresses or unnecessary personal data. Persist only normalized information required to generate and adapt the learning path. Attachments are optional and should be read only when needed, then represented by safe metadata or summaries rather than copied into the repository by default.
+Do not commit raw form submissions, diagnostic transcripts, uploaded reference files, credentials, email addresses or unnecessary personal data. Persist only normalized information and durable assessment results needed to generate and adapt the learning path.
