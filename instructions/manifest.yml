@@ -56,6 +56,7 @@ phases:
 
   - id: generate
     instruction: instructions/30-generate-path.md
+    execution_contract: instructions/32-generation-execution.md
     internal_review: instructions/35-review-curriculum.md
     allowed_modes: [instance]
     depends_on: [diagnostic]
