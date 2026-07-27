@@ -35,6 +35,7 @@ phases:
     allowed_modes: [instance]
     depends_on: [configure_intake]
     next_phase: diagnostic
+    allow_explicit_chain_to: diagnostic
     merge_policy_path: workflow.intake_merge_policy
     outputs:
       - .open-study-path/instance.yml

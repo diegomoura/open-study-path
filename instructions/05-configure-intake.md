@@ -20,7 +20,7 @@ Do not silently select Jotform, create external resources or fall back to anothe
    - `intake.provider: github_issue`;
    - `intake.setup_status: ready`;
    - `intake.issue_template: .github/ISSUE_TEMPLATE/create-study-path.yml`;
-   - `intake.submission_strategy: explicit_issue`.
+   - `intake.submission_strategy: explicit_submission`.
 4. Build the direct Issue Form URL from the exact repository identity:
 
    `https://github.com/OWNER/REPOSITORY/issues/new?template=create-study-path.yml`
@@ -28,10 +28,17 @@ Do not silently select Jotform, create external resources or fall back to anothe
    Replace `OWNER/REPOSITORY` with the instance repository. Never return the placeholder URL.
 5. Display the URL as a clickable link. Prefer the label `Preencher o Issue Form de REPOSITORY`, replacing `REPOSITORY` with the repository name.
 6. Explain that the Issue Form was inherited from the repository template and was not dynamically created during setup.
-7. Tell the owner to submit the form and return with the created issue number, using a command equivalent to: `Importe a issue #4 como intake aprovado. Não gere a trilha ainda.`
-8. Stop after presenting the link and next command. Do not create or submit an issue, import answers or generate a curriculum unless explicitly requested.
+7. Ensure the repository can use the labels `study-request` and `intake:imported`. Reuse existing labels and create only missing labels. The form's `study-request` label is a discovery signal; `intake:imported` is applied only after a successful import.
+8. Tell the owner to submit the form and return with this exact command:
 
-The completion response for `github_issue` must always contain the direct clickable link and the instruction to return with an explicit issue number.
+   `Enviei o formulário. Localize e importe a única submissão válida. Conclua e valide esta etapa; depois, inicie o diagnóstico proporcional com perguntas curtas, uma por vez.`
+9. Stop after presenting the direct link and command. Do not create or submit an issue, import answers, run the diagnostic or generate a curriculum during setup.
+
+The completion response for `github_issue` must always contain the direct clickable link and the exact continuation command above. Do not require the owner to copy an issue number.
+
+### Backward compatibility
+
+An explicit issue number remains accepted when the owner supplies one or deterministic lookup finds multiple valid candidates. Older instances storing `intake.submission_strategy: explicit_issue` must be interpreted as deterministic issue lookup with an explicit-number fallback, not as a requirement to copy the number every time.
 
 ## Jotform
 
@@ -61,11 +68,11 @@ After creation or verified reuse, save only:
 - `intake.form_spec_id`;
 - `intake.form_spec_version`;
 - `intake.created_by: chatgpt_jotform_app` or `reused_existing`;
-- `intake.submission_strategy: latest_approved`;
+- `intake.submission_strategy: explicit_submission`;
 - `intake.attachments_optional: true`;
 - `intake.persist_raw_submission: false`.
 
-Display the form URL and provide an exact command to import the approved or latest submission. Stop after configuration; do not read a submission until the owner explicitly asks to import one.
+Display the clickable form URL and return the same exact continuation command used for the GitHub Issue Form. Stop after configuration; do not read a submission until the owner explicitly reports that the form was submitted.
 
 ## Manual YAML
 
@@ -75,7 +82,9 @@ Set:
 - `intake.setup_status: ready`;
 - `intake.submission_strategy: not_applicable`.
 
-Explain that the required fields are subject, objective, current level, preferred language and weekly hours. Do not invent those values. Provide an exact command for the owner to use after saving the approved values.
+Explain that the required fields are subject, objective, current level, preferred language and weekly hours. Do not invent those values. Return the configuration path and this exact command:
+
+`Preenchi e aprovei o study.config.yml. Importe e valide o intake; depois, inicie o diagnóstico proporcional com perguntas curtas, uma por vez.`
 
 ## Instance marker
 
@@ -87,4 +96,4 @@ Update `.open-study-path/instance.yml` with:
 
 Setup completion means the instance and intake method are ready. It does not mean intake was imported or a curriculum was generated.
 
-Complete this phase using `instructions/phase-completion.md`. Keep the response concise, link the selected provider, and make the next required owner action unmistakable.
+Complete this phase using `instructions/phase-completion.md`. Keep the response concise, always link the selected form when one exists, and make the next required owner action unmistakable.

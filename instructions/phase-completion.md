@@ -34,13 +34,25 @@ Never ask for whole-PR review when no unresolved decision exists.
 
 ### After intake setup
 
-Tell the owner how to submit the configured intake and return its explicit reference.
+Always return the direct clickable intake URL when the selected provider has a form. For manual YAML, return the exact configuration path instead.
+
+For GitHub Issue Form or Jotform, use this continuation command:
+
+`Enviei o formulário. Localize e importe a única submissão válida. Conclua e valide esta etapa; depois, inicie o diagnóstico proporcional com perguntas curtas, uma por vez.`
+
+Do not ask the owner to copy an issue number or submission ID by default.
 
 ### After intake import
 
 Do not claim that providers were recommended or connected. Intake records preferences only.
 
+If the owner explicitly authorized diagnostic chaining, begin `instructions/20-diagnostic.md` only after the intake source is resolved, the state validates and the intake PR is merged. State the proportional question budget and ask the first short question.
+
+If diagnostic chaining was not requested, use:
+
 `Inicie o diagnóstico proporcional desta trilha. Faça perguntas curtas, uma por vez. Não gere a trilha ainda.`
+
+If zero valid submissions are found, return the same direct intake link. If more than one valid submission remains, list only the candidates needed for disambiguation and request a choice.
 
 ### After diagnostic
 
