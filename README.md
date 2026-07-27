@@ -10,10 +10,24 @@ Open Study Path separates four concerns:
 
 1. **Roadmap** — the complete dependency-aware learning path.
 2. **Topic contracts** — concise approved definitions of capability, effort, evidence and mastery.
-3. **Materialized content** — complete lessons, rubrics and assessment forms for the active study window.
+3. **Materialized content** — complete lessons, visual models, rubrics and assessment forms for the active study window.
 4. **Execution integrations** — Trello, Calendar, Gmail, GitHub Issues or Markdown representations.
 
 GitHub is the source of truth. Trello is an execution index, not the course-content repository.
+
+```mermaid
+flowchart LR
+    R[Complete roadmap] --> T[Topic contracts]
+    T --> W[Active content window]
+    W --> M[Modules with Mermaid visuals]
+    M --> A[Assessment evidence]
+    A -->|Mastered| N[Materialize next eligible topic]
+    A -->|Needs work| C[Focused recovery]
+    N --> W
+    C --> A
+```
+
+The diagram shows the durable loop: plan the whole path, teach only slightly ahead, evaluate with evidence and adapt future material without silently changing the approved curriculum.
 
 ## Adaptive rolling generation
 
@@ -28,6 +42,11 @@ content_generation:
   full_upfront_max_topics: 4
   full_upfront_max_hours: 4
   adapt_future_modules_from_assessments: true
+  visual_learning:
+    mermaid_enabled: true
+    roadmap_dependency_diagram_required: true
+    minimum_diagrams_per_materialized_module: 1
+    diagrams_must_be_explained: true
 ```
 
 A small curriculum within both thresholds may be generated completely upfront. A larger curriculum materializes only the first two topics. After a topic is mastered, the agent automatically materializes the next eligible content in the same evaluation operation, validates and merges the small PR, and updates existing task integrations.
@@ -46,6 +65,29 @@ Default planning targets:
 - split above 120 minutes when the capability can be separated responsibly.
 
 This keeps tasks approachable while avoiding dozens of trivial assessments.
+
+## Visual learning with Mermaid
+
+Mermaid is a required teaching tool rather than optional decoration.
+
+- Generated roadmaps show the real dependency graph between topics.
+- Every materialized module contains at least one diagram that makes a relationship, decision, sequence, state, timeline, data flow or architecture visible.
+- Nontechnical topics can use decision trees, causal flows, conceptual maps and timelines.
+- Programming, AWS and system-design topics can use architecture, sequence, state, class, entity-relationship and dependency diagrams.
+- Complex topics should use multiple focused views instead of one crowded diagram.
+- Every diagram is introduced and explained in prose, and must render in GitHub Markdown.
+
+```mermaid
+flowchart TD
+    Q{What must become visible?}
+    Q -->|Decision or process| F[Flowchart]
+    Q -->|Interaction over time| S[Sequence diagram]
+    Q -->|Changing conditions| ST[State diagram]
+    Q -->|Concept organization| M[Mind map]
+    Q -->|Architecture or dependencies| D[Flowchart with subgraphs]
+```
+
+The diagram type is selected from the learning need, not copied mechanically across modules. See `docs/mermaid-visual-learning.md` for examples and review criteria.
 
 ## Assessment workflow
 
@@ -77,7 +119,18 @@ When mastery is insufficient, the agent creates focused recovery and targeted re
 
 ## Guided lifecycle
 
-`setup → intake → diagnostic → roadmap and initial content generation → publication → evaluation → automatic next-content materialization or recovery → tracking and replanning`
+```mermaid
+flowchart LR
+    Setup --> Intake --> Diagnostic --> Generate
+    Generate --> Review[Agent + CI review]
+    Review --> Publish
+    Publish --> Study
+    Study --> Evaluate
+    Evaluate -->|Mastered| Materialize[Next-content materialization]
+    Evaluate -->|Not mastered| Recovery
+    Materialize --> Study
+    Recovery --> Study
+```
 
 Each operation ends with a brief result, primary artifact links, material attention items, PR status and one exact command.
 
@@ -97,15 +150,16 @@ Publication creates one task per topic:
 
 - `.open-study-path/template.yml` — template-mode guard.
 - `AGENTS.md` — operating contract.
-- `templates/instance.yml` — instance workflow and rolling-generation defaults.
+- `templates/instance.yml` — instance workflow, rolling-generation and visual-learning defaults.
 - `instructions/manifest.yml` — lifecycle ordering and internal operations.
 - `instructions/30-generate-path.md` — complete roadmap and initial content window.
-- `instructions/35-review-curriculum.md` — automatic pedagogical review.
+- `instructions/35-review-curriculum.md` — automatic pedagogical and visual review.
 - `instructions/40-publish-tasks.md` — integration publication.
 - `instructions/55-evaluate-topic.md` — deterministic assessment resolution and grading.
 - `instructions/57-materialize-next-content.md` — automatic rolling materialization.
+- `docs/mermaid-visual-learning.md` — diagram selection, examples and review criteria.
 - `templates/topic.md` — concise topic contract.
-- `templates/module.md` — complete teaching module with granular execution plan.
+- `templates/module.md` — complete teaching module with granular execution plan and Mermaid map.
 - `templates/topic-assessment-issue-form.yml` — discoverable assessment submission.
 - `scripts/validate_curriculum.py` — rolling curriculum and content validator.
 - `scripts/validate_guided_lifecycle.py` — lifecycle regression guard.
