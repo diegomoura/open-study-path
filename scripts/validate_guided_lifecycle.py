@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Validate guided lifecycle, review, publication and evaluation contracts."""
+"""Validate guided rolling-course lifecycle contracts."""
 
 from __future__ import annotations
 
@@ -12,6 +12,7 @@ import yaml
 ROOT = Path(__file__).resolve().parents[1]
 INSTANCE_MARKER = ROOT / ".open-study-path/instance.yml"
 ALLOWED_CURRICULUM_POLICIES = {"manual", "agent_review_then_merge"}
+ALLOWED_CONTENT_STRATEGIES = {"adaptive_rolling_window", "full_upfront"}
 DEPRECATED_PUBLICATION_SUFFIX = "Não altere o conteúdo pedagógico aprovado"
 
 
@@ -21,8 +22,7 @@ def fail(message: str) -> None:
 
 
 def load_yaml(path: str) -> Any:
-    with (ROOT / path).open("r", encoding="utf-8") as handle:
-        return yaml.safe_load(handle)
+    return yaml.safe_load((ROOT / path).read_text(encoding="utf-8"))
 
 
 def load_text(path: str) -> str:
@@ -31,24 +31,50 @@ def load_text(path: str) -> str:
 
 def require_terms(path: str, terms: list[str]) -> None:
     if not (ROOT / path).is_file():
-        fail(f"missing guided lifecycle file: {path}")
+        fail(f"missing lifecycle file: {path}")
     text = load_text(path)
     for term in terms:
         if term not in text:
             fail(f"{path} is missing required term: {term}")
 
 
-def validate_workflow(document: dict[str, Any], path: str, *, default_required: bool) -> None:
+def validate_instance_contract(document: dict[str, Any], path: str, *, defaults: bool) -> None:
     workflow = document.get("workflow")
     if not isinstance(workflow, dict):
         fail(f"{path} must define workflow")
     if "curriculum_review_policy" in workflow:
-        fail(f"{path} uses deprecated workflow.curriculum_review_policy")
+        fail(f"{path} uses deprecated curriculum_review_policy")
     policy = workflow.get("curriculum_merge_policy")
     if policy not in ALLOWED_CURRICULUM_POLICIES:
         fail(f"invalid curriculum_merge_policy in {path}: {policy}")
-    if default_required and policy != "agent_review_then_merge":
+    if defaults and policy != "agent_review_then_merge":
         fail("new instances must default curriculum_merge_policy to agent_review_then_merge")
+
+    generation = document.get("content_generation")
+    if not isinstance(generation, dict):
+        fail(f"{path} must define content_generation")
+    if generation.get("strategy") not in ALLOWED_CONTENT_STRATEGIES:
+        fail(f"invalid content generation strategy in {path}")
+    if not isinstance(generation.get("lookahead_topics"), int) or generation["lookahead_topics"] < 1:
+        fail(f"{path} must define positive lookahead_topics")
+    if generation.get("adapt_future_modules_from_assessments") is not True:
+        fail(f"{path} must enable assessment-informed adaptation")
+    granularity = generation.get("granularity")
+    if not isinstance(granularity, dict):
+        fail(f"{path} must define granularity")
+    expected = {
+        "activity_minutes_min": 10,
+        "activity_minutes_max": 25,
+        "activities_per_topic_min": 3,
+        "activities_per_topic_max": 7,
+        "topic_minutes_target_min": 45,
+        "topic_minutes_target_max": 90,
+        "split_topic_above_minutes": 120,
+    }
+    if defaults:
+        for key, value in expected.items():
+            if granularity.get(key) != value:
+                fail(f"default {key} must be {value}")
 
 
 def main() -> None:
@@ -58,12 +84,11 @@ def main() -> None:
         for phase in manifest.get("phases", [])
         if isinstance(phase, dict) and phase.get("id")
     }
-
-    if "review_curriculum" in phases:
-        fail("review_curriculum must remain internal to generation")
+    if "review_curriculum" in phases or "materialize_content" in phases:
+        fail("review and materialization must remain internal")
 
     generate = phases.get("generate", {})
-    expected_outputs = [
+    expected_generate_outputs = [
         ".open-study-path/instance.yml",
         "study/roadmap.md",
         "study/topics/",
@@ -74,9 +99,9 @@ def main() -> None:
     if generate.get("next_phase") != "publish":
         fail("generate must route to publish")
     if generate.get("internal_review") != "instructions/35-review-curriculum.md":
-        fail("generate must reference internal curriculum review")
-    if generate.get("outputs") != expected_outputs:
-        fail("generate must output topics, complete modules, rubrics and assessment forms")
+        fail("generate must reference internal review")
+    if generate.get("outputs") != expected_generate_outputs:
+        fail("generate output contract changed unexpectedly")
 
     publish = phases.get("publish", {})
     if publish.get("depends_on") != ["generate"] or publish.get("next_phase") != "evaluate":
@@ -86,62 +111,94 @@ def main() -> None:
 
     evaluate = phases.get("evaluate", {})
     if evaluate.get("instruction") != "instructions/55-evaluate-topic.md":
-        fail("evaluate phase must reference topic evaluation instruction")
-    if evaluate.get("outputs") != ["state/assessments/", "state/progress.json"]:
-        fail("evaluate outputs must include assessment history and progress")
+        fail("evaluate must reference topic evaluation")
+    if evaluate.get("internal_materialization") != "instructions/57-materialize-next-content.md":
+        fail("evaluate must run rolling materialization internally")
+    required_evaluate_outputs = {
+        "state/assessments/", "state/progress.json", "study/roadmap.md", "study/topics/",
+        "study/modules/", "study/assessments/", ".github/ISSUE_TEMPLATE/assessment-topic-*.yml",
+    }
+    if set(evaluate.get("outputs", [])) != required_evaluate_outputs:
+        fail("evaluate outputs must include progress and rolling content artifacts")
 
-    validate_workflow(load_yaml("templates/instance.yml"), "templates/instance.yml", default_required=True)
+    validate_instance_contract(load_yaml("templates/instance.yml"), "templates/instance.yml", defaults=True)
     if INSTANCE_MARKER.is_file():
-        validate_workflow(load_yaml(".open-study-path/instance.yml"), ".open-study-path/instance.yml", default_required=False)
+        validate_instance_contract(load_yaml(".open-study-path/instance.yml"), ".open-study-path/instance.yml", defaults=False)
 
     require_terms("instructions/30-generate-path.md", [
-        "study/modules/",
-        "study/assessments/",
-        "Complete-content contract",
-        "five substantial prompts",
-        "Revisão do PR: aprovada pelo agente e pelo CI",
-        "anotações adicionadas ao PR",
-        "Finalizei o TOPIC-000. Avalie a issue #<número>.",
+        "complete roadmap and every topic contract",
+        "adaptive_rolling_window",
+        "lookahead_topics",
+        "three to seven execution actions",
+        "10–25 minutes",
+        "content_status: planned",
+        "Finalizei o TOPIC-000. Avalie minhas respostas.",
+        "Never assume that an arbitrary newest repository issue",
     ])
     require_terms("instructions/35-review-curriculum.md", [
-        "every module teaches the content",
-        "rubric totaling 100 points",
-        "anotações adicionadas ao PR",
-        "aprovada pelo agente e pelo CI",
+        "planned` or `materialized",
+        "three to seven focused activities",
+        "deterministic topic marker",
+        "rolling-window size",
+        "Revisão do PR: aprovada pelo agente e pelo CI",
     ])
     require_terms("instructions/40-publish-tasks.md", [
-        "study/modules/",
-        "study/assessments/",
-        "direct link to the complete module",
-        "direct link to the assessment Issue Form",
-        "Do not start an improvised lesson in chat by default",
+        "Materialized topic",
+        "Planned topic",
+        "Do not add nonexistent module",
+        "assessment:submitted",
+        "Finalizei o TOPIC-000. Avalie minhas respostas.",
     ])
     require_terms("instructions/55-evaluate-topic.md", [
-        "explicit GitHub issue number",
-        "Grade every response independently",
-        "total score from 0 to 100",
-        "focused GitHub recovery issue",
-        "Finalizei a recuperação do TOPIC-000",
-        "Ace Quiz Maker",
+        "issue number is optional",
+        "Exactly one valid candidate",
+        "More than one candidate",
+        "Never choose an arbitrary newest repository issue",
+        "instructions/57-materialize-next-content.md",
+        "The learner must not send a separate command",
+    ])
+    require_terms("instructions/57-materialize-next-content.md", [
+        "not a separate user-facing phase",
+        "restore `lookahead_topics`",
+        "verified assessment results",
+        "must not silently rewrite",
+        "Do not ask the owner for a separate generation",
     ])
     require_terms("instructions/phase-completion.md", [
-        "Revisão do PR: aprovada pelo agente e pelo CI",
-        "anotações adicionadas ao PR",
-        "Do not begin an improvised lesson in chat by default",
-        "Finalizei o TOPIC-000. Avalie a issue #<número>.",
+        "initial rolling window",
+        "Do not require the learner to copy the issue number",
+        "automatically materialize",
+        "Finalizei a recuperação do TOPIC-000. Avalie minhas respostas.",
     ])
     require_terms("templates/topic.md", [
-        "module: study/modules/TOPIC-000.md",
-        "assessment: study/assessments/TOPIC-000.yml",
-        "Submit the GitHub assessment form",
+        "content_status: planned",
+        "content_version: 0",
+        "three and seven small",
+        "Finalizei o TOPIC-000. Avalie minhas respostas.",
     ])
-    for path in [
-        "templates/module.md",
-        "templates/assessment-rubric.yml",
-        "templates/topic-assessment-issue-form.yml",
-    ]:
-        if not (ROOT / path).is_file():
-            fail(f"missing course artifact template: {path}")
+    require_terms("templates/module.md", [
+        "## Plano de execução",
+        "three to seven",
+        "10 and 25 minutes",
+        "Finalizei o TOPIC-000. Avalie minhas respostas.",
+    ])
+    require_terms("templates/topic-assessment-issue-form.yml", [
+        "assessment:submitted",
+        "open-study-path:assessment topic_id=TOPIC-000",
+        "Avalie minhas respostas",
+    ])
+    require_terms("templates/chatgpt-project-instructions.md", [
+        "adaptive rolling window",
+        "planned topics",
+        "Do not require an issue number by default",
+        "instructions/57-materialize-next-content.md",
+    ])
+    require_terms("AGENTS.md", [
+        "adaptive content generation",
+        "Deterministic assessment resolution",
+        "Automatic next-content materialization",
+        "Never select an arbitrary newest issue",
+    ])
 
     for path in [
         "instructions/40-publish-tasks.md",
@@ -151,9 +208,9 @@ def main() -> None:
         "AGENTS.md",
     ]:
         if DEPRECATED_PUBLICATION_SUFFIX in load_text(path):
-            fail(f"{path} still requires the owner to restate curriculum immutability")
+            fail(f"{path} still requires owner to restate curriculum immutability")
 
-    print("Guided full-course generation, publication and evaluation contracts passed.")
+    print("Guided rolling generation, publication, deterministic evaluation and materialization contracts passed.")
 
 
 if __name__ == "__main__":
