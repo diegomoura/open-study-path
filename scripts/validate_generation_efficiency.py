@@ -97,6 +97,7 @@ def main() -> None:
     workflow = text(".github/workflows/validate-template.yml")
     for command in [
         "python scripts/validate_generation_efficiency.py",
+        "python scripts/validate_learning_experience.py",
         "python scripts/test_curriculum_placeholder_detection.py",
         "python scripts/validate_curriculum_safe.py",
     ]:
@@ -105,7 +106,7 @@ def main() -> None:
     if "python scripts/validate_curriculum.py" in workflow:
         fail("workflow must use structural placeholder detection through the safe validator")
 
-    print("Efficient curriculum generation and complete agent lifecycle contracts passed.")
+    print("Efficient curriculum generation, learner experience and complete lifecycle contracts passed.")
 
 
 if __name__ == "__main__":

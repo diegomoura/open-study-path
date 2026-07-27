@@ -14,15 +14,16 @@ The explicit fallback remains supported:
 
 When an issue number is provided, read it and validate that it matches the requested topic.
 
-When no issue number is provided, search the instance repository for candidate issues that satisfy all of these conditions:
+When no issue number is provided, search the instance repository for candidate issues using these authoritative signals:
 
 1. label `assessment`;
 2. label `assessment:submitted`;
-3. title beginning with `[Avaliação] TOPIC-000`;
-4. body containing `open-study-path:assessment topic_id=TOPIC-000`;
-5. not already recorded as an evaluated attempt under `state/assessments/TOPIC-000/`;
-6. not labeled `assessment:graded`;
-7. created after the last recorded attempt when an earlier attempt exists.
+3. body containing `open-study-path:assessment topic_id=TOPIC-000`;
+4. not already recorded as an evaluated attempt under `state/assessments/TOPIC-000/`;
+5. not labeled `assessment:graded`;
+6. created after the last recorded attempt when an earlier attempt exists.
+
+A title beginning with `[Avaliação] TOPIC-000` is a preferred consistency signal, but it is not mandatory when the hidden topic marker and labels uniquely identify the submission. GitHub Issue Form titles remain editable by the learner.
 
 Use the issue author as an additional filter when the learner identity is known from the active authenticated context. Do not persist unnecessary identity data solely for this lookup.
 
@@ -31,6 +32,8 @@ Use the issue author as an additional filter when the learner identity is known 
 - More than one candidate: show only the candidate issue numbers and links and ask which one should be evaluated.
 
 Never choose an arbitrary newest repository issue.
+
+After resolving exactly one candidate, normalize its title to `[Avaliação] TOPIC-000 — <topic title>` when it differs. This is repository hygiene, not an assessment criterion. Never reject or penalize an otherwise valid submission because the learner edited the title.
 
 ## Required inputs
 
@@ -127,7 +130,7 @@ Do not repeat mastered questions unless necessary to confirm correction of a cri
 
 ## Optional formative practice
 
-Quizlet, Ace Quiz Maker, local flashcards and chat-generated quizzes may supplement practice. They never replace the durable GitHub assessment, rubric, evidence and response-by-response evaluation.
+Quizlet, Ace Quiz Maker, local Markdown flashcards, importable TSV files and chat-generated quizzes may supplement practice. They never replace the durable GitHub assessment, rubric, evidence and response-by-response evaluation.
 
 ## Completion response
 

@@ -11,7 +11,7 @@ Review against:
 - `instructions/57-materialize-next-content.md` when materializing later content;
 - `docs/mermaid-visual-learning.md`;
 - `docs/integration-capabilities.md`;
-- topic, module, rubric, integration-plan and Issue Form templates;
+- topic, module, flashcard, rubric, integration-plan and Issue Form templates;
 - configured availability, granularity, visual-learning, integration preferences and content-generation strategy;
 - verified assessment evidence when future content is being adapted.
 
@@ -40,36 +40,42 @@ Confirm that:
 17. complex technical modules use additional diagrams when one view would mix architecture, runtime interaction and state changes excessively;
 18. each assessment has five substantive prompts and a rubric totaling 100 points;
 19. rubrics define a passing score, critical misconceptions and focused recovery rules;
-20. Issue Forms contain the standard labels, deterministic topic marker and command `Finalizei o TOPIC-000. Avalie minhas respostas.`;
-21. the initial materialized set follows the configured full-upfront thresholds or rolling-window size in deterministic topological order;
-22. later materialization preserves approved objectives, prerequisites, deliverables, effort and mastery criteria;
-23. adaptations from assessment evidence affect examples, emphasis, visual models and practice without silently changing the approved curriculum structure;
-24. total effort and schedule projection remain consistent with availability;
-25. scope is explicitly introductory when it does not satisfy the complete long-term goal;
-26. required resources name a specific work and canonical locator;
-27. `study/integrations.md` exists and recommends only capabilities supported by the course, diagnostic or learner preference;
-28. every recommended provider explains what it is, why it fits, how it will be used, cost/access, minimum data, authority, fallback, preflight class and decision;
-29. Consensus is conditional evidence support and does not replace primary sources or official documentation;
-30. Quizlet or Ace Quiz Maker results do not affect mastery, and useful flashcards have a durable repository fallback;
-31. exactly one task backend is authoritative; Todoist may be auxiliary only when it cannot modify the primary task state;
-32. Reclaim or calendar recommendations respect free-tier policy and have a no-cost fallback;
-33. Habitify is limited to consistency signals and never changes mastery;
-34. Mermaid remains canonical when Whimsical or another external visual workspace is recommended;
-35. Airtable is strictly `github_to_airtable`, cannot promote mastery and cannot overwrite canonical progress;
-36. external courses identify precise sections, access conditions, active effort and evidence, with a free alternative for potentially paid resources;
-37. providers in `avoid` or disallowed by `account_connections` are not selected;
-38. optional providers are classified as optional probes and cannot block core generation or study;
-39. no external tasks or integrations are created during curriculum generation or review.
+20. Issue Forms contain the standard labels, deterministic topic marker, complete prefilled title and command `Finalizei o TOPIC-000. Avalie minhas respostas.`;
+21. every materialized module links the exact instance Issue Form URL rather than showing only the YAML filename;
+22. when flashcards are useful, the module declares and links both a learner-facing Markdown deck and an importable TSV deck;
+23. the Markdown deck contains usable expandable question-and-answer cards, and the TSV contains the same useful recall material with `Front`, `Back` and `Tags`;
+24. no module claims a Quizlet or other external set exists unless publication actually recorded its external URL;
+25. the initial materialized set follows the configured full-upfront thresholds or rolling-window size in deterministic topological order;
+26. later materialization preserves approved objectives, prerequisites, deliverables, effort and mastery criteria;
+27. adaptations from assessment evidence affect examples, emphasis, visual models and practice without silently changing the approved curriculum structure;
+28. total effort and schedule projection remain consistent with availability;
+29. scope is explicitly introductory when it does not satisfy the complete long-term goal;
+30. required resources name a specific work and canonical locator;
+31. `study/integrations.md` exists and recommends only capabilities supported by the course, diagnostic or learner preference;
+32. every recommended provider explains what it is, why it fits, how it will be used, cost/access, minimum data, authority, fallback, preflight class and decision;
+33. Consensus is conditional evidence support and does not replace primary sources or official documentation;
+34. Quizlet or Ace Quiz Maker results do not affect mastery, and useful flashcards have durable Markdown and TSV repository fallbacks;
+35. exactly one task backend is authoritative; Todoist may be auxiliary only when it cannot modify the primary task state;
+36. Reclaim or calendar recommendations respect free-tier policy and have a no-cost fallback;
+37. Habitify is limited to consistency signals and never changes mastery;
+38. Mermaid remains canonical when Whimsical or another external visual workspace is recommended;
+39. Airtable is strictly `github_to_airtable`, cannot promote mastery and cannot overwrite canonical progress;
+40. external courses identify precise sections, access conditions, active effort and evidence, with a free alternative for potentially paid resources;
+41. providers in `avoid` or disallowed by `account_connections` are not selected;
+42. optional providers are classified as optional probes and cannot block core generation or study;
+43. no external tasks or integrations are created during curriculum generation or review.
 
 Reject a module as incomplete when it could be replaced by a short checklist without losing meaningful teaching content. Also reject a required visual section that contains a generic diagram unrelated to the topic or a Mermaid block without explanatory prose.
+
+Reject a learner-facing module when the flashcard action opens only a raw import file, when the assessment instruction exposes only an internal filename, or when the Issue Form asks the learner to complete an otherwise predictable title.
 
 Reject an integration plan when it is a catalog dump, assumes the learner knows the tools, claims current free-plan capabilities without verification, creates multiple sources of truth or recommends a provider without a concrete course signal. Correct problems directly on the proposal branch.
 
 ## Allowed diffs
 
-Initial generation may change the instance marker, `study.config.yml` for permitted `auto` resolution, roadmap, integration plan, every topic contract and only the modules, flashcard files, rubrics and forms selected by the initial content window.
+Initial generation may change the instance marker, `study.config.yml` for permitted `auto` resolution, roadmap, integration plan, every topic contract and only the modules, paired Markdown/TSV flashcard files, rubrics and forms selected by the initial content window.
 
-Later materialization must remain limited to the selected topic contracts, their modules, optional flashcard files, rubrics and forms, roadmap materialization status and integration-plan adjustments justified by verified assessment evidence.
+Later materialization must remain limited to the selected topic contracts, their modules, paired Markdown/TSV flashcard files, rubrics and forms, roadmap materialization status and integration-plan adjustments justified by verified assessment evidence.
 
 ## Automatic review and merge policy
 
