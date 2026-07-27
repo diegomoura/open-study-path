@@ -76,6 +76,21 @@ def validate_instance_contract(document: dict[str, Any], path: str, *, defaults:
             if granularity.get(key) != value:
                 fail(f"default {key} must be {value}")
 
+    visual = generation.get("visual_learning")
+    if not isinstance(visual, dict):
+        fail(f"{path} must define content_generation.visual_learning")
+    if visual.get("mermaid_enabled") is not True:
+        fail(f"{path} must enable Mermaid visual learning")
+    if visual.get("roadmap_dependency_diagram_required") is not True:
+        fail(f"{path} must require a Mermaid roadmap dependency diagram")
+    minimum = visual.get("minimum_diagrams_per_materialized_module")
+    if not isinstance(minimum, int) or minimum < 1:
+        fail(f"{path} must require at least one Mermaid diagram per materialized module")
+    if visual.get("diagrams_must_be_explained") is not True:
+        fail(f"{path} must require explanatory prose around diagrams")
+    if defaults and visual.get("prefer_multiple_diagrams_for_complex_topics") is not True:
+        fail("new instances must prefer multiple focused diagrams for complex topics")
+
 
 def main() -> None:
     manifest = load_yaml("instructions/manifest.yml")
@@ -132,12 +147,17 @@ def main() -> None:
         "three to seven execution actions",
         "10–25 minutes",
         "content_status: planned",
+        "Visual learning with Mermaid",
+        "at least one explained Mermaid visual model",
+        "actual topic dependency graph",
         "Finalizei o TOPIC-000. Avalie minhas respostas.",
         "Never assume that an arbitrary newest repository issue",
     ])
     require_terms("instructions/35-review-curriculum.md", [
         "`planned` or `materialized`",
         "three to seven focused activities",
+        "fenced Mermaid diagrams",
+        "generic diagram unrelated to the topic",
         "deterministic topic marker",
         "rolling-window size",
         "Revisão do PR: aprovada pelo agente e pelo CI",
@@ -161,6 +181,7 @@ def main() -> None:
         "not a separate user-facing phase",
         "restore `lookahead_topics`",
         "verified assessment results",
+        "minimum number of useful Mermaid diagrams",
         "must not silently rewrite",
         "Do not ask the owner for a separate generation",
     ])
@@ -174,13 +195,22 @@ def main() -> None:
         "content_status: planned",
         "content_version: 0",
         "between three and seven small",
+        "Mermaid visual model",
         "Finalizei o TOPIC-000. Avalie minhas respostas.",
     ])
     require_terms("templates/module.md", [
+        "visual_diagrams: 1",
         "## Plano de execução",
         "três a sete ações",
         "entre 10 e 25 minutos",
+        "## Mapa visual",
+        "```mermaid",
         "Finalizei o TOPIC-000. Avalie minhas respostas.",
+    ])
+    require_terms("templates/roadmap.md", [
+        "## Topic dependency graph",
+        "actual `TOPIC-000` identifiers",
+        "```mermaid",
     ])
     require_terms("templates/topic-assessment-issue-form.yml", [
         "assessment:submitted",
@@ -190,14 +220,29 @@ def main() -> None:
     require_terms("templates/chatgpt-project-instructions.md", [
         "content_generation",
         "planned topics",
+        "Mermaid as a first-class visual teaching tool",
         "Do not require an issue number by default",
         "instructions/57-materialize-next-content.md",
     ])
     require_terms("AGENTS.md", [
         "adaptive content generation",
+        "Mermaid visual learning",
+        "actual topic dependency graph",
         "Deterministic assessment resolution",
         "Automatic next-content materialization",
         "Never select an arbitrary newest issue",
+    ])
+    require_terms("docs/mermaid-visual-learning.md", [
+        "Mermaid diagrams are first-class teaching artifacts",
+        "Every materialized module",
+        "Nontechnical example",
+        "Technical example",
+        "Review criteria",
+    ])
+    require_terms("README.md", [
+        "## Visual learning with Mermaid",
+        "```mermaid",
+        "docs/mermaid-visual-learning.md",
     ])
 
     for path in [
@@ -210,7 +255,7 @@ def main() -> None:
         if DEPRECATED_PUBLICATION_SUFFIX in load_text(path):
             fail(f"{path} still requires owner to restate curriculum immutability")
 
-    print("Guided rolling generation, publication, deterministic evaluation and materialization contracts passed.")
+    print("Guided rolling generation, Mermaid visual learning, publication, deterministic evaluation and materialization contracts passed.")
 
 
 if __name__ == "__main__":
