@@ -58,6 +58,13 @@ def main() -> None:
             "CI is confirmation, not the primary linter",
             "even temporarily",
             "current unchanged head",
+            "## Publication and integrations",
+            "## Deterministic assessment resolution",
+            "## Automatic next-content materialization",
+            "## Source of truth",
+            "## Safety",
+            "Finalizei o TOPIC-000. Avalie minhas respostas.",
+            "instructions/57-materialize-next-content.md",
         ],
     )
     require(
@@ -98,7 +105,7 @@ def main() -> None:
     if "python scripts/validate_curriculum.py" in workflow:
         fail("workflow must use structural placeholder detection through the safe validator")
 
-    print("Efficient curriculum generation contract passed.")
+    print("Efficient curriculum generation and complete agent lifecycle contracts passed.")
 
 
 if __name__ == "__main__":
