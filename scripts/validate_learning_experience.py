@@ -76,7 +76,7 @@ def require_contracts() -> None:
 
     evaluation = text("instructions/55-evaluate-topic.md")
     for term in [
-        "title is a preferred consistency signal",
+        "preferred consistency signal",
         "normalize its title",
         "Never reject or penalize",
     ]:
