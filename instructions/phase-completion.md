@@ -6,6 +6,8 @@ Use this contract at the end of every lifecycle phase.
 
 Keep the completion response brief and action-oriented. Do not repeat full intake, diagnostic, curriculum or state unless requested.
 
+Do not send a separate transition message immediately before repository work. Complete the active operation and send one final completion response.
+
 The response must contain, in this order:
 
 1. **Result** — what completed and whether it was validated.
@@ -19,7 +21,7 @@ Internal validation, review, correction, safe merge and automatic rolling-window
 
 ## Pull-request state
 
-Follow the configured phase-specific policy. For `workflow.curriculum_merge_policy: agent_review_then_merge`, review, correct, validate, mark ready and merge when no pedagogical decision remains.
+Follow the configured phase-specific policy. `auto_when_unambiguous` permits merge only when checks, evidence, scope, privacy and consistency rules pass without a material interpretation decision. For `workflow.curriculum_merge_policy: agent_review_then_merge`, review, correct, validate, mark ready and merge when no pedagogical decision remains.
 
 Use one review status:
 
