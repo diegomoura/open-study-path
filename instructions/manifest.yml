@@ -17,6 +17,7 @@ phases:
       - study.config.yml
       - state/intake-summary.json
       - state/progress.json
+      - state/integrations.json
       - study/roadmap.md
 
   - id: configure_intake
@@ -61,9 +62,12 @@ phases:
     merge_policy_path: workflow.curriculum_merge_policy
     outputs:
       - .open-study-path/instance.yml
+      - study.config.yml
       - study/roadmap.md
+      - study/integrations.md
       - study/topics/
       - study/modules/
+      - study/flashcards/
       - study/assessments/
       - .github/ISSUE_TEMPLATE/assessment-topic-*.yml
     stop_after_phase: true
@@ -74,6 +78,9 @@ phases:
     allowed_modes: [instance]
     depends_on: [generate]
     next_phase: evaluate
+    outputs:
+      - study.config.yml
+      - state/integrations.json
     stop_after_phase: true
 
   - id: evaluate
@@ -85,9 +92,12 @@ phases:
     outputs:
       - state/assessments/
       - state/progress.json
+      - state/integrations.json
       - study/roadmap.md
+      - study/integrations.md
       - study/topics/
       - study/modules/
+      - study/flashcards/
       - study/assessments/
       - .github/ISSUE_TEMPLATE/assessment-topic-*.yml
     stop_after_phase: true
@@ -99,6 +109,7 @@ phases:
     next_phase: replan
     outputs:
       - state/progress.json
+      - state/integrations.json
 
   - id: replan
     instruction: instructions/60-replan.md
