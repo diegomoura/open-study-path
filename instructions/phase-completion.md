@@ -73,6 +73,19 @@ State whether the configured strategy generated all modules or an initial rollin
 
 Summarize only the selected or recommended capability providers, not every known plugin. Make clear that no external resource was created during generation.
 
+Before the completion response, identify selected or recommended optional providers that have an immediate use in the materialized content window but whose access is not verified in the current ChatGPT Project. Use the platform Plugin Management capability to search for the exact app and render a nonblocking install/connect suggestion when all of these conditions hold:
+
+- the integration plan contains a concrete pedagogical or operational reason;
+- the provider is not declined, forbidden by `avoid` or disallowed by account-connection preferences;
+- the app is not already verified as connected;
+- the same provider has not already been suggested in the current completion operation.
+
+Prioritize at most three connection suggestions by immediate usefulness. Quizlet is eligible only when at least one materialized topic already has an approved local Markdown/TSV flashcard deck. Do not ask a text-only yes/no question before showing the available connection control. The suggestion requires an explicit user click, does not prove authorization, does not authorize external writes and must not block the local fallback or the next lifecycle command.
+
+Do not claim that an app was installed or connected merely because the suggestion was displayed. When the learner connects Quizlet after a fallback publication, use this return command:
+
+`Conectei o Quizlet ao ChatGPT. Verifique novamente e publique os flashcards dos tópicos materializados.`
+
 Use:
 
 `Publique as tarefas da trilha nas integrações configuradas.`
@@ -90,6 +103,8 @@ Re-run probes and continue automatically when they pass. Do not include unavaila
 Do not begin an improvised lesson in chat by default. Link the first complete module, authoritative task and assessment form.
 
 Briefly list optional providers that used fallbacks, such as local flashcards instead of Quizlet or Mermaid-only instead of an external visual workspace. Do not frame optional fallback as a failure of the course.
+
+When a useful optional provider used a fallback because it was not connected, a connection suggestion may be rendered once under `instructions/42-integration-preflight.md`. Continue the successful publication response regardless of whether the learner clicks it.
 
 Link the integration plan when the learner needs to understand why a provider was selected.
 
