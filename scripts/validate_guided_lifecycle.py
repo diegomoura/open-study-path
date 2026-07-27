@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import re
 import sys
 from pathlib import Path
 from typing import Any
@@ -14,6 +15,11 @@ INSTANCE_MARKER = ROOT / ".open-study-path/instance.yml"
 ALLOWED_CURRICULUM_POLICIES = {"manual", "agent_review_then_merge"}
 ALLOWED_CONTENT_STRATEGIES = {"adaptive_rolling_window", "full_upfront"}
 DEPRECATED_PUBLICATION_SUFFIX = "Não altere o conteúdo pedagógico aprovado"
+MERMAID_BLOCK = re.compile(r"```mermaid\s*\n(.*?)```", re.DOTALL | re.IGNORECASE)
+ALLOWED_MERMAID_TYPES = (
+    "flowchart", "graph", "mindmap", "timeline", "statediagram-v2",
+    "sequencediagram", "classdiagram", "erdiagram", "gantt", "journey", "pie",
+)
 
 
 def fail(message: str) -> None:
@@ -36,6 +42,24 @@ def require_terms(path: str, terms: list[str]) -> None:
     for term in terms:
         if term not in text:
             fail(f"{path} is missing required term: {term}")
+
+
+def parse_frontmatter(path: Path) -> tuple[dict[str, Any], str]:
+    text = path.read_text(encoding="utf-8")
+    if not text.startswith("---\n"):
+        fail(f"missing YAML frontmatter: {path.relative_to(ROOT)}")
+    try:
+        _, raw, body = text.split("---", 2)
+    except ValueError:
+        fail(f"malformed YAML frontmatter: {path.relative_to(ROOT)}")
+    metadata = yaml.safe_load(raw)
+    if not isinstance(metadata, dict):
+        fail(f"frontmatter must be an object: {path.relative_to(ROOT)}")
+    return metadata, body
+
+
+def mermaid_blocks(text: str) -> list[str]:
+    return [block.strip() for block in MERMAID_BLOCK.findall(text) if block.strip()]
 
 
 def validate_instance_contract(document: dict[str, Any], path: str, *, defaults: bool) -> None:
@@ -92,6 +116,69 @@ def validate_instance_contract(document: dict[str, Any], path: str, *, defaults:
         fail("new instances must prefer multiple focused diagrams for complex topics")
 
 
+def validate_mermaid_artifacts(document: dict[str, Any]) -> None:
+    topics_dir = ROOT / "study/topics"
+    topic_paths = sorted(topics_dir.glob("*.md")) if topics_dir.is_dir() else []
+    if not topic_paths:
+        return
+
+    visual = document["content_generation"]["visual_learning"]
+    minimum = visual["minimum_diagrams_per_materialized_module"]
+    topic_ids: list[str] = []
+    topics: list[tuple[dict[str, Any], Path]] = []
+    for path in topic_paths:
+        metadata, _ = parse_frontmatter(path)
+        topic_id = metadata.get("id")
+        if not isinstance(topic_id, str) or not topic_id:
+            fail(f"topic is missing an id: {path.relative_to(ROOT)}")
+        topic_ids.append(topic_id)
+        topics.append((metadata, path))
+
+    roadmap = ROOT / "study/roadmap.md"
+    if not roadmap.is_file():
+        fail("generated topics require study/roadmap.md")
+    roadmap_blocks = mermaid_blocks(roadmap.read_text(encoding="utf-8"))
+    if not roadmap_blocks:
+        fail("generated roadmap must contain a Mermaid dependency diagram")
+    if not any(all(topic_id in block for topic_id in topic_ids) for block in roadmap_blocks):
+        fail("one roadmap Mermaid block must contain every generated topic id")
+
+    for metadata, topic_path in topics:
+        if metadata.get("content_status") != "materialized":
+            continue
+        topic_id = metadata["id"]
+        module_value = metadata.get("module")
+        if not isinstance(module_value, str) or not module_value:
+            fail(f"materialized topic {topic_id} must define its module path")
+        module_path = ROOT / module_value
+        if not module_path.is_file():
+            fail(f"materialized topic {topic_id} is missing module: {module_value}")
+        module_metadata, module_body = parse_frontmatter(module_path)
+        declared = module_metadata.get("visual_diagrams")
+        if not isinstance(declared, int) or declared < minimum:
+            fail(f"module {topic_id} must declare at least {minimum} visual_diagrams")
+        blocks = mermaid_blocks(module_body)
+        if len(blocks) < minimum or len(blocks) < declared:
+            fail(f"module {topic_id} has fewer Mermaid blocks than declared or configured")
+        if "## Mapa visual" not in module_body:
+            fail(f"module {topic_id} is missing the Mapa visual section")
+        for block in blocks:
+            first_line = next((line.strip().lower() for line in block.splitlines() if line.strip()), "")
+            if not first_line.startswith(ALLOWED_MERMAID_TYPES):
+                fail(f"module {topic_id} uses an unsupported or missing Mermaid diagram type: {first_line}")
+        visual_section = re.search(
+            r"^## Mapa visual\s*$\n(.*?)(?=^##\s|\Z)",
+            module_body,
+            re.MULTILINE | re.DOTALL,
+        )
+        if not visual_section:
+            fail(f"module {topic_id} is missing visual explanation")
+        prose = MERMAID_BLOCK.sub(" ", visual_section.group(1))
+        words = re.findall(r"\b\w+\b", prose, flags=re.UNICODE)
+        if len(words) < 30:
+            fail(f"module {topic_id} must explain its Mermaid diagram with meaningful prose")
+
+
 def main() -> None:
     manifest = load_yaml("instructions/manifest.yml")
     phases = {
@@ -136,9 +223,13 @@ def main() -> None:
     if set(evaluate.get("outputs", [])) != required_evaluate_outputs:
         fail("evaluate outputs must include progress and rolling content artifacts")
 
-    validate_instance_contract(load_yaml("templates/instance.yml"), "templates/instance.yml", defaults=True)
+    template_document = load_yaml("templates/instance.yml")
+    validate_instance_contract(template_document, "templates/instance.yml", defaults=True)
+    active_document = template_document
     if INSTANCE_MARKER.is_file():
-        validate_instance_contract(load_yaml(".open-study-path/instance.yml"), ".open-study-path/instance.yml", defaults=False)
+        active_document = load_yaml(".open-study-path/instance.yml")
+        validate_instance_contract(active_document, ".open-study-path/instance.yml", defaults=False)
+    validate_mermaid_artifacts(active_document)
 
     require_terms("instructions/30-generate-path.md", [
         "Generate a complete dependency-aware roadmap",
