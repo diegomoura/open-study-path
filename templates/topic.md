@@ -29,15 +29,15 @@ Connect the topic to the learner's final goal or a diagnostic gap.
 
 ## Learning activities
 
-Define between three and seven small, independently checkable actions. Each action should normally take 10–25 minutes and should not compress several distinct steps into one line.
+Define between three and seven small, independently checkable actions. Each action should normally take 10–25 minutes and should not compress several distinct steps into one line. When materialized, include active use of the module's Mermaid visual model rather than treating it as decoration.
 
 - [ ] First focused activity (10–25 min)
-- [ ] Second focused activity (10–25 min)
+- [ ] Study and explain the topic's visual model (10–25 min)
 - [ ] Third focused activity (10–25 min)
 
 ## Complete module
 
-- When `content_status: materialized`, link [the complete study module](../modules/TOPIC-000.md).
+- When `content_status: materialized`, link [the complete study module](../modules/TOPIC-000.md), which must include at least the configured minimum number of explained Mermaid diagrams.
 - When `content_status: planned`, state that the lesson will be materialized automatically when it enters the active rolling window. Do not create a broken link or pretend the lesson exists.
 
 ## Assessment
@@ -57,6 +57,7 @@ Describe the evidence that can be submitted through the assessment form.
 ## Mastery criteria
 
 - [ ] Explain the concept without relying on notes
+- [ ] Interpret or reconstruct the central visual model
 - [ ] Apply it in a new situation
 - [ ] Identify common mistakes and tradeoffs
 - [ ] Meet the rubric passing score without a critical misconception

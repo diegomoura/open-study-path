@@ -59,6 +59,19 @@ Prefer small independently checkable tasks, but do not inflate the number of top
 
 A topic contract is not the lesson. Every materialized module must teach with explanatory content, prerequisite retrieval, a granular execution plan, at least two worked examples, misconceptions, guided practice, independent practice, active recall, deliverable instructions and precise references.
 
+## Mermaid visual learning
+
+Read `content_generation.visual_learning` and `docs/mermaid-visual-learning.md`.
+
+- Every generated roadmap must contain a Mermaid diagram of the actual topic dependency graph.
+- Every materialized module must contain at least the configured minimum number of useful Mermaid diagrams; the default is one.
+- Introduce each diagram and explain afterwards what the learner should notice and what the model omits.
+- Use conceptual maps, decision trees, causal flows, timelines and state changes for nontechnical subjects.
+- Use architecture, dependency, sequence, state, class and data-flow views for programming, AWS and other technical subjects.
+- Prefer multiple focused diagrams for complex topics rather than one crowded diagram.
+- Ensure Mermaid syntax renders in GitHub. Avoid raw HTML, unsupported features, decorative diagrams and generic diagrams unrelated to the topic.
+- A diagram supplements prose, examples and practice; it never replaces them.
+
 ## Curriculum review and merge
 
 Read `instructions/30-generate-path.md`, `instructions/35-review-curriculum.md` and `workflow.curriculum_merge_policy`.
@@ -124,7 +137,7 @@ After mastery, execute `instructions/57-materialize-next-content.md` inside the 
 - Select eligible planned topics in deterministic topological order.
 - Use the roadmap, topic contract, intake, diagnosis and verified assessment evidence.
 - Use prior modules as consistency references, not as the sole template.
-- Adapt examples, emphasis, prerequisite retrieval and practice difficulty when evidence supports it.
+- Adapt examples, emphasis, prerequisite retrieval, visual models and practice difficulty when evidence supports it.
 - Never silently rewrite approved objectives, prerequisites, deliverables, effort or mastery criteria; structural changes belong to replan.
 - Create a small draft PR limited to selected topics, their modules/rubrics/forms and roadmap materialization status.
 - Review, validate and safely merge before returning the next ready module.
@@ -138,9 +151,9 @@ When mastery fails, create focused recovery and targeted reassessment. Ace Quiz 
 2. `study.config.yml`: learner and integration preferences.
 3. `instructions/manifest.yml`: phase contracts.
 4. `state/diagnostic-summary.json`: placement evidence.
-5. `study/roadmap.md`: complete approved graph and materialization overview.
+5. `study/roadmap.md`: complete approved graph, Mermaid dependency view and materialization overview.
 6. `study/topics/`: complete topic contracts.
-7. `study/modules/`: materialized teaching content.
+7. `study/modules/`: materialized teaching content and visual models.
 8. `study/assessments/` and Issue Forms: materialized assessments.
 9. `state/assessments/`: evaluated attempts.
 10. `state/progress.json`: verified progress.

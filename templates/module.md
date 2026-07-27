@@ -3,6 +3,7 @@ topic_id: TOPIC-000
 title: Replace me
 version: 1
 estimated_minutes: 60
+visual_diagrams: 1
 ---
 
 # TOPIC-000 — Replace me
@@ -36,6 +37,21 @@ Inclua duas ou três perguntas curtas ou tarefas de recuperação ativa. Dê ori
 ## Conteúdo essencial
 
 Ensine efetivamente o conteúdo em linguagem adequada ao nível configurado. Inclua definições, relações entre conceitos, limites, nuances e raciocínio. Não use placeholders como “estude o conceito”.
+
+## Mapa visual
+
+Introduza o que o diagrama representa e por que ele ajuda a compreender este tópico. Todo módulo materializado deve conter ao menos um diagrama Mermaid útil e explicado. Temas complexos podem usar vários diagramas separados.
+
+Escolha o tipo adequado: `flowchart`, `mindmap`, `timeline`, `stateDiagram-v2`, `sequenceDiagram`, `classDiagram` ou `erDiagram`. Em arquitetura de software ou nuvem, use `flowchart` com `subgraph` para componentes e limites quando isso renderizar de forma mais confiável no GitHub.
+
+```mermaid
+flowchart TD
+    A[Conceito ou situação inicial] --> B{Decisão, relação ou transformação}
+    B -->|Caminho 1| C[Consequência ou aplicação]
+    B -->|Caminho 2| D[Alternativa ou erro comum]
+```
+
+Depois do diagrama, explique em palavras o que o estudante deve observar, como as partes se relacionam e quais limitações o desenho não mostra. Não deixe o diagrama solto e não o use como substituto da explicação textual.
 
 ## Exemplos trabalhados
 
