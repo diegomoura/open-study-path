@@ -44,7 +44,7 @@ For every materialized topic, create:
 - one scoring rubric under `study/assessments/` using `templates/assessment-rubric.yml`;
 - one GitHub Issue Form under `.github/ISSUE_TEMPLATE/assessment-topic-<number>.yml` using `templates/topic-assessment-issue-form.yml`;
 - `content_status: materialized`, a positive `content_version` and `materialized_at` in the topic contract;
-- a durable flashcard file under `study/flashcards/` when the topic contains enough atomic recall material and formative practice is selected or recommended.
+- both a learner-facing Markdown flashcard deck and an importable TSV file under `study/flashcards/` when the topic contains enough atomic recall material and formative practice is selected or recommended.
 
 `study/topics/` is the compact contract and index. `study/modules/` contains the content the learner actually studies. A planned topic must never contain broken module links or imply that its detailed lesson already exists.
 
@@ -63,7 +63,7 @@ Every materialized module must be self-contained enough for the configured study
 9. guided practice with hints;
 10. independent practice and the required deliverable;
 11. active-recall synthesis;
-12. exact assessment-submission instructions;
+12. exact assessment-submission instructions with a direct clickable form URL;
 13. precise references.
 
 Do not generate modules that merely say “read”, “study”, “reflect” or “discuss” without teaching the underlying content.
@@ -124,9 +124,14 @@ When Consensus or another optional research provider is selected and available, 
 
 Every externally discovered claim or resource included in the curriculum must be represented by a precise, reviewable reference in the module. A plugin response alone is not a durable citation.
 
-### Durable flashcard fallback
+### Durable and usable flashcards
 
-When flashcards are pedagogically useful, generate `study/flashcards/TOPIC-000.tsv` with columns `Front`, `Back` and `Tags`. Include definitions, distinctions, retrieval prompts and misconception corrections. The file must be useful without Quizlet and importable when the provider is later connected.
+When flashcards are pedagogically useful, generate both:
+
+- `study/flashcards/TOPIC-000.md` from `templates/flashcards.md`, with each question in `<summary>` and its answer inside a `<details>` block so the learner can study directly in GitHub;
+- `study/flashcards/TOPIC-000.tsv` with columns `Front`, `Back` and `Tags`, containing the same deck for import into Quizlet or another compatible tool.
+
+Set `flashcards_study` and `flashcards` in the module frontmatter. Link the Markdown deck first as the primary study experience and the TSV second as the import/download format. Include definitions, distinctions, retrieval prompts and misconception corrections. Do not claim an external set exists until publication has actually created it and stored its URL in `state/integrations.json`.
 
 ## Assessments
 
@@ -136,9 +141,16 @@ Issue Forms are the durable submission channel. They must include:
 
 - labels `assessment` and `assessment:submitted`;
 - the hidden marker `open-study-path:assessment topic_id=TOPIC-000`;
+- a complete prefilled title `[Avaliação] TOPIC-000 — <topic title>` so the learner does not need to type a title;
 - the standard learner command:
 
 `Finalizei o TOPIC-000. Avalie minhas respostas.`
+
+The module must contain a direct clickable URL built from the exact instance repository:
+
+`https://github.com/OWNER/REPOSITORY/issues/new?template=assessment-topic-000.yml`
+
+Do not present only the internal YAML filename. GitHub keeps the title editable, so deterministic assessment resolution must rely primarily on labels, the hidden topic marker and prior-attempt state; the title is a useful signal, not the sole authority.
 
 An explicit issue number is supported only as a disambiguation fallback. Never assume that an arbitrary newest repository issue is the assessment.
 
@@ -165,7 +177,7 @@ Open a draft pull request. The initial-generation diff may include:
 - `study/roadmap.md`;
 - `study/integrations.md`;
 - `study/topics/`;
-- modules, optional flashcard files, rubrics and Issue Forms only for topics selected by the configured initial window.
+- modules, Markdown/TSV flashcard pairs, rubrics and Issue Forms only for topics selected by the configured initial window.
 
 Set `status.curriculum_proposed: true` and keep `status.curriculum_approved: false` while drafting.
 
