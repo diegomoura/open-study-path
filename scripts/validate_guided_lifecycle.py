@@ -178,8 +178,8 @@ def main() -> None:
     ])
     require_terms("templates/module.md", [
         "## Plano de execução",
-        "three to seven",
-        "between 10 and 25 minutes",
+        "três a sete ações",
+        "entre 10 e 25 minutos",
         "Finalizei o TOPIC-000. Avalie minhas respostas.",
     ])
     require_terms("templates/topic-assessment-issue-form.yml", [
