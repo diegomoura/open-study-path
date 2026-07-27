@@ -126,7 +126,7 @@ def main() -> None:
         validate_instance_contract(load_yaml(".open-study-path/instance.yml"), ".open-study-path/instance.yml", defaults=False)
 
     require_terms("instructions/30-generate-path.md", [
-        "complete roadmap and every topic contract",
+        "Generate a complete dependency-aware roadmap",
         "adaptive_rolling_window",
         "lookahead_topics",
         "three to seven execution actions",
@@ -136,15 +136,15 @@ def main() -> None:
         "Never assume that an arbitrary newest repository issue",
     ])
     require_terms("instructions/35-review-curriculum.md", [
-        "planned` or `materialized",
+        "`planned` or `materialized`",
         "three to seven focused activities",
         "deterministic topic marker",
         "rolling-window size",
         "Revisão do PR: aprovada pelo agente e pelo CI",
     ])
     require_terms("instructions/40-publish-tasks.md", [
-        "Materialized topic",
-        "Planned topic",
+        "### Materialized topic",
+        "### Planned topic",
         "Do not add nonexistent module",
         "assessment:submitted",
         "Finalizei o TOPIC-000. Avalie minhas respostas.",
@@ -173,13 +173,13 @@ def main() -> None:
     require_terms("templates/topic.md", [
         "content_status: planned",
         "content_version: 0",
-        "three and seven small",
+        "between three and seven small",
         "Finalizei o TOPIC-000. Avalie minhas respostas.",
     ])
     require_terms("templates/module.md", [
         "## Plano de execução",
         "three to seven",
-        "10 and 25 minutes",
+        "between 10 and 25 minutes",
         "Finalizei o TOPIC-000. Avalie minhas respostas.",
     ])
     require_terms("templates/topic-assessment-issue-form.yml", [
@@ -188,7 +188,7 @@ def main() -> None:
         "Avalie minhas respostas",
     ])
     require_terms("templates/chatgpt-project-instructions.md", [
-        "adaptive rolling window",
+        "content_generation",
         "planned topics",
         "Do not require an issue number by default",
         "instructions/57-materialize-next-content.md",
