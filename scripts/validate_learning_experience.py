@@ -109,7 +109,7 @@ def require_contracts() -> None:
         [
             "## Optional app discovery and connection offer",
             "do not ask a separate text-only confirmation",
-            "never create a test flashcard set",
+            "Never create a test flashcard set",
             "connection_offer_status",
             "displayed offer is not consent for an external write",
         ],
