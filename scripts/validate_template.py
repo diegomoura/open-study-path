@@ -354,9 +354,12 @@ def check_intake() -> None:
     if mapping.get("version") != spec.get("version"):
         fail("field mapping version must match jotform specification version")
     mapped_keys = set(mapping.get("mappings", {}))
-    missing_mappings = expected_keys.difference(mapped_keys)
+    persistable_keys = expected_keys - {"consent"}
+    missing_mappings = persistable_keys.difference(mapped_keys)
     if missing_mappings:
         fail(f"field mapping is missing intake keys: {sorted(missing_mappings)}")
+    if "consent" in mapped_keys:
+        fail("consent must be validated but not persisted as course configuration")
 
     intake = example.get("intake", {})
     if intake.get("form_spec_id") != spec.get("id"):
