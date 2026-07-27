@@ -3,7 +3,18 @@
   "title": "Open Study Path instance configuration",
   "type": "object",
   "additionalProperties": false,
-  "required": ["version", "configured", "path", "learner", "preferences", "references", "intake", "integrations", "planning"],
+  "required": [
+    "version",
+    "configured",
+    "path",
+    "learner",
+    "preferences",
+    "references",
+    "intake",
+    "integration_preferences",
+    "integrations",
+    "planning"
+  ],
   "properties": {
     "version": {"const": 1},
     "configured": {"type": "boolean"},
@@ -96,33 +107,197 @@
         "persist_raw_submission": {"const": false}
       }
     },
+    "integration_preferences": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "experience",
+        "free_tier_only",
+        "account_connections",
+        "already_uses",
+        "willing_to_connect",
+        "avoid",
+        "notes"
+      ],
+      "properties": {
+        "experience": {"enum": ["minimal", "guided_recommendations", "enriched"]},
+        "free_tier_only": {"type": "boolean"},
+        "account_connections": {"enum": ["ask_per_provider", "connected_services_only", "no_external_accounts"]},
+        "already_uses": {"type": "array", "items": {"type": "string"}, "uniqueItems": true},
+        "willing_to_connect": {"type": "array", "items": {"type": "string"}, "uniqueItems": true},
+        "avoid": {"type": "array", "items": {"type": "string"}, "uniqueItems": true},
+        "notes": {"type": ["string", "null"]}
+      }
+    },
     "integrations": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["task_manager", "calendar", "notifications"],
+      "required": [
+        "source_of_truth",
+        "research",
+        "formative_practice",
+        "task_manager",
+        "reminders",
+        "calendar",
+        "habit_tracking",
+        "visual_workspace",
+        "artifact_workspace",
+        "analytics_projection",
+        "course_discovery",
+        "notifications"
+      ],
       "properties": {
+        "source_of_truth": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["provider", "required", "authority"],
+          "properties": {
+            "provider": {"const": "github"},
+            "required": {"const": true},
+            "authority": {
+              "type": "array",
+              "items": {"enum": ["curriculum", "content", "assessment", "mastery", "progress"]},
+              "allOf": [
+                {"contains": {"const": "curriculum"}},
+                {"contains": {"const": "assessment"}},
+                {"contains": {"const": "mastery"}}
+              ],
+              "uniqueItems": true
+            }
+          }
+        },
+        "research": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["provider", "preferred", "enabled", "required", "activation", "fallback"],
+          "properties": {
+            "provider": {"enum": ["auto", "consensus", "web", "none"]},
+            "preferred": {"const": "consensus"},
+            "enabled": {"enum": ["auto", "enabled", "disabled"]},
+            "required": {"const": false},
+            "activation": {"const": "topic_relevance"},
+            "fallback": {"type": "array", "minItems": 1, "items": {"type": "string"}}
+          }
+        },
+        "formative_practice": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["provider", "preferred", "alternatives", "enabled", "required", "affects_mastery"],
+          "properties": {
+            "provider": {"enum": ["auto", "quizlet", "ace_quiz_maker", "markdown_flashcards", "none"]},
+            "preferred": {"const": "quizlet"},
+            "alternatives": {"type": "array", "items": {"enum": ["ace_quiz_maker", "markdown_flashcards"]}, "uniqueItems": true},
+            "enabled": {"enum": ["auto", "enabled", "disabled"]},
+            "required": {"const": false},
+            "affects_mastery": {"const": false}
+          }
+        },
         "task_manager": {
           "type": "object",
-          "required": ["provider", "board_or_project"],
+          "additionalProperties": false,
+          "required": ["provider", "preferred", "alternatives", "board_or_project", "single_authoritative_backend"],
           "properties": {
-            "provider": {"enum": ["github_issues", "trello", "markdown"]},
-            "board_or_project": {"type": ["string", "null"]}
+            "provider": {"enum": ["auto", "github_issues", "trello", "todoist", "markdown"]},
+            "preferred": {"const": "trello"},
+            "alternatives": {"type": "array", "items": {"enum": ["todoist", "github_issues", "markdown"]}, "uniqueItems": true},
+            "board_or_project": {"type": ["string", "null"]},
+            "single_authoritative_backend": {"const": true}
+          }
+        },
+        "reminders": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["provider", "preferred", "enabled", "required", "affects_task_state"],
+          "properties": {
+            "provider": {"enum": ["auto", "todoist", "calendar", "none"]},
+            "preferred": {"const": "todoist"},
+            "enabled": {"enum": ["auto", "enabled", "disabled"]},
+            "required": {"const": false},
+            "affects_task_state": {"const": false}
           }
         },
         "calendar": {
           "type": "object",
-          "required": ["provider", "enabled"],
+          "additionalProperties": false,
+          "required": ["provider", "preferred", "alternatives", "enabled", "required", "free_tier_only"],
           "properties": {
-            "provider": {"enum": ["none", "google_calendar"]},
-            "enabled": {"type": "boolean"}
+            "provider": {"enum": ["auto", "none", "reclaim", "google_calendar", "outlook_calendar"]},
+            "preferred": {"const": "reclaim"},
+            "alternatives": {"type": "array", "items": {"enum": ["google_calendar", "outlook_calendar", "none"]}, "uniqueItems": true},
+            "enabled": {"enum": ["auto", "enabled", "disabled"]},
+            "required": {"const": false},
+            "free_tier_only": {"type": "boolean"}
+          }
+        },
+        "habit_tracking": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["provider", "preferred", "enabled", "required", "affects_mastery", "max_default_habits"],
+          "properties": {
+            "provider": {"enum": ["auto", "habitify", "none"]},
+            "preferred": {"const": "habitify"},
+            "enabled": {"enum": ["auto", "enabled", "disabled"]},
+            "required": {"const": false},
+            "affects_mastery": {"const": false},
+            "max_default_habits": {"type": "integer", "minimum": 1, "maximum": 3}
+          }
+        },
+        "visual_workspace": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["canonical", "external_provider", "preferred_external", "enabled", "required"],
+          "properties": {
+            "canonical": {"const": "mermaid"},
+            "external_provider": {"enum": ["auto", "whimsical", "miro", "lucid", "figma", "none"]},
+            "preferred_external": {"const": "whimsical"},
+            "enabled": {"enum": ["auto", "enabled", "disabled"]},
+            "required": {"const": false}
+          }
+        },
+        "artifact_workspace": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["provider", "preferred", "alternatives", "enabled", "required"],
+          "properties": {
+            "provider": {"enum": ["auto", "google_drive", "notion", "sharepoint", "dropbox", "none"]},
+            "preferred": {"const": "google_drive"},
+            "alternatives": {"type": "array", "items": {"enum": ["notion", "sharepoint", "dropbox", "none"]}, "uniqueItems": true},
+            "enabled": {"enum": ["auto", "enabled", "disabled"]},
+            "required": {"const": false}
+          }
+        },
+        "analytics_projection": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["provider", "preferred", "enabled", "required", "direction", "affects_mastery"],
+          "properties": {
+            "provider": {"enum": ["auto", "airtable", "none"]},
+            "preferred": {"const": "airtable"},
+            "enabled": {"enum": ["auto", "enabled", "disabled"]},
+            "required": {"const": false},
+            "direction": {"const": "github_to_airtable"},
+            "affects_mastery": {"const": false}
+          }
+        },
+        "course_discovery": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["enabled", "providers", "resource_only", "require_free_alternative_for_paid_resources"],
+          "properties": {
+            "enabled": {"enum": ["auto", "enabled", "disabled"]},
+            "providers": {"type": "array", "items": {"enum": ["coursera", "edx", "udemy", "khan_academy"]}, "uniqueItems": true},
+            "resource_only": {"const": true},
+            "require_free_alternative_for_paid_resources": {"const": true}
           }
         },
         "notifications": {
           "type": "object",
-          "required": ["provider", "email_enabled"],
+          "additionalProperties": false,
+          "required": ["provider", "email_enabled", "required"],
           "properties": {
-            "provider": {"enum": ["chat", "gmail", "none"]},
-            "email_enabled": {"type": "boolean"}
+            "provider": {"enum": ["chat", "gmail", "outlook_email", "none"]},
+            "email_enabled": {"type": "boolean"},
+            "required": {"const": false}
           }
         }
       }

@@ -8,7 +8,8 @@ body:
       value: |
         Use este formulário somente em um fork ou repositório criado a partir do template.
         Informe apenas dados necessários ao planejamento. Não inclua segredos ou dados pessoais desnecessários.
-        Campos e anexos indicados como opcionais não bloqueiam a geração da trilha.
+        Campos, anexos e integrações opcionais não bloqueiam a geração da trilha.
+        Depois do diagnóstico, o agente explicará e recomendará somente as ferramentas adequadas a este curso. GitHub continuará sendo a fonte de verdade do conteúdo, avaliações e domínio.
 
   - type: input
     id: path_name
@@ -145,7 +146,7 @@ body:
     id: assessment_style
     attributes:
       label: Como prefere ser avaliado?
-      description: Opcional.
+      description: Opcional. A evidência oficial continuará registrada nas avaliações do GitHub.
       options:
         - label: Quizzes
         - label: Exercícios
@@ -159,34 +160,134 @@ body:
       label: Necessidades de acessibilidade ou restrições
       description: Opcional.
 
+  - type: markdown
+    attributes:
+      value: |
+        ## Experiência com integrações
+        As ferramentas abaixo enriquecem o curso, mas são opcionais. O agente fará uma recomendação contextual depois do diagnóstico, explicando para que serve cada ferramenta, como será usada, possíveis limites do plano gratuito, dados acessados, fallback e qual sistema mantém a verdade.
+
+  - type: dropdown
+    id: integration_experience
+    attributes:
+      label: Quanto enriquecimento externo você deseja?
+      description: Mínimo usa principalmente GitHub/Markdown. Guiado recomenda apenas ferramentas úteis. Enriquecido considera mais recursos opcionais.
+      options:
+        - Recomendações guiadas
+        - Experiência mínima
+        - Experiência enriquecida
+    validations:
+      required: true
+
+  - type: dropdown
+    id: free_tier_only
+    attributes:
+      label: O curso deve funcionar apenas com recursos gratuitos?
+      description: Mesmo quando a resposta for Não, nenhum recurso pago poderá ser obrigatório sem alternativa gratuita.
+      options:
+        - Sim
+        - Não
+    validations:
+      required: true
+
+  - type: dropdown
+    id: account_connections
+    attributes:
+      label: Como deseja tratar novas conexões de conta?
+      options:
+        - Perguntar antes de conectar cada serviço
+        - Usar somente serviços que eu já conectei
+        - Não usar contas externas
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: already_uses
+    attributes:
+      label: Quais serviços você já utiliza?
+      description: Opcional. Marque apenas contas ou ferramentas que já conhece.
+      options:
+        - label: Trello — quadro visual rico para tópicos, checklists, links e estados
+        - label: Todoist — tarefas pessoais simples, prioridades, recorrências e lembretes
+        - label: Google Calendar — blocos fixos de estudo e lembretes
+        - label: Outlook Calendar — agenda Microsoft e blocos de estudo
+        - label: Reclaim — agenda adaptativa que protege e reorganiza tempo de foco
+        - label: Quizlet — flashcards e recuperação ativa; não substitui a avaliação oficial
+        - label: Consensus — pesquisa de literatura científica e descoberta de fontes
+        - label: Habitify — hábitos e consistência; não determina domínio
+        - label: Whimsical — diagramas externos interativos; Mermaid permanece canônico
+        - label: Google Drive — documentos, planilhas, apresentações e entregáveis
+        - label: Airtable — dashboards derivados; não é fonte de verdade
+        - label: Notion — notas ou biblioteca auxiliar
+
+  - type: checkboxes
+    id: willing_to_connect
+    attributes:
+      label: Quais serviços você aceitaria conectar se forem recomendados?
+      description: Opcional. Marcar não conecta nada automaticamente.
+      options:
+        - label: Ferramenta de tarefas, como Trello ou Todoist
+        - label: Agenda adaptativa ou calendário, como Reclaim, Google ou Outlook
+        - label: Flashcards, como Quizlet
+        - label: Pesquisa acadêmica, como Consensus
+        - label: Hábitos, como Habitify
+        - label: Diagramas externos, como Whimsical
+        - label: Workspace de entregáveis, como Google Drive
+        - label: Dashboard analítico, como Airtable
+        - label: Catálogo de cursos, como Coursera, edX, Udemy ou Khan Academy
+
   - type: dropdown
     id: task_manager
     attributes:
-      label: Onde deseja acompanhar as tarefas?
+      label: Onde prefere acompanhar as tarefas?
+      description: Trello é o padrão para cursos ricos. Todoist é adequado para uma experiência simples. Apenas um backend manterá o estado operacional autoritativo.
       options:
-        - GitHub Issues
+        - Deixar o agente recomendar
         - Trello
+        - Todoist
+        - GitHub Issues
         - Somente Markdown
     validations:
       required: true
 
   - type: dropdown
-    id: use_calendar
+    id: scheduling_provider
     attributes:
-      label: Deseja integrar com Google Calendar?
-      description: Opcional.
+      label: Como prefere planejar as sessões de estudo?
+      description: Reclaim é preferido para agenda adaptativa; Google ou Outlook oferecem blocos fixos. A trilha nunca exigirá assinatura paga.
       options:
-        - Não
+        - Deixar o agente recomendar
+        - Reclaim
+        - Google Calendar
+        - Outlook Calendar
+        - Sem integração de agenda
+    validations:
+      required: true
+
+  - type: dropdown
+    id: todoist_reminders
+    attributes:
+      label: Deseja considerar o Todoist apenas para lembretes recorrentes?
+      description: Opcional. Nesse modo, concluir um lembrete não conclui o tópico no backend principal.
+      options:
+        - Deixar o agente recomendar
         - Sim
+        - Não
 
   - type: dropdown
     id: email_summaries
     attributes:
-      label: Deseja receber resumos pelo Gmail?
-      description: Opcional. Se escolher Sim, a integração de notificações será configurada como Gmail.
+      label: Deseja receber resumos por e-mail quando houver provedor compatível?
+      description: Opcional. Chat continua sendo o fallback.
       options:
         - Não
-        - Sim
+        - Gmail
+        - Outlook
+
+  - type: textarea
+    id: integration_notes
+    attributes:
+      label: Restrições ou preferências sobre integrações
+      description: Opcional. Informe serviços que deseja evitar, limites de privacidade ou contexto corporativo.
 
   - type: textarea
     id: additional_notes
@@ -199,5 +300,5 @@ body:
     attributes:
       label: Consentimento
       options:
-        - label: Entendo que informações normalizadas necessárias ao planejamento poderão ser salvas neste repositório, sem persistir a submissão bruta, anexos originais ou dados pessoais desnecessários.
+        - label: Entendo que informações normalizadas necessárias ao planejamento poderão ser salvas neste repositório, sem persistir a submissão bruta, anexos originais, credenciais ou dados pessoais desnecessários.
           required: true

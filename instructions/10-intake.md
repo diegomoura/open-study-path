@@ -29,7 +29,27 @@ Use the provider configured in the instance's `study.config.yml`. Never use a fo
 
 Required planning facts are the subject, detailed objective, current level, preferred language and weekly availability. Desired outcome, motivation, deadline, preferred days or periods, accessibility needs, notes, text references, URLs and attachments are optional.
 
+Integration preferences are also optional for curriculum generation, but normalize them when provided:
+
+- desired experience: `minimal`, `guided_recommendations` or `enriched`;
+- free-tier-only policy;
+- account-connection policy;
+- services already used;
+- capability categories the learner would consider connecting;
+- preferred task backend, scheduler, reminder and email provider;
+- services or data handling the learner wants to avoid.
+
 Normalize approved intake with `intake/field-mapping.yml` into `study.config.yml` and `state/intake-summary.json`. Set `configured: true` only after the required planning facts are populated and validated. Mark assumptions visibly. Missing optional answers must not block generation; derive conservative defaults only when necessary and record them as assumptions.
+
+Do not recommend, connect, probe or create external tools during intake. Preserve `auto` provider choices. The actual contextual recommendation is created only after diagnostic evidence and the curriculum structure are available, following `templates/integrations-plan.md`.
+
+GitHub remains the source of truth regardless of the selected external providers. Normalize the following invariant fields without requiring the learner to repeat them:
+
+- `integrations.source_of_truth.provider: github`;
+- formative practice and habit results do not affect mastery;
+- analytics projection direction is `github_to_airtable`;
+- Mermaid is the canonical visual provider;
+- task management has one authoritative backend.
 
 Update `.open-study-path/instance.yml` with `status.intake_imported: true`.
 
@@ -49,7 +69,9 @@ For `auto_when_unambiguous`, auto-merge only when:
 - configuration validation and CI pass;
 - the diff contains only the three files above;
 - `state/intake-summary.json` contains no material assumptions;
-- no attachment, conflicting response or integration choice requires interpretation.
+- no attachment or conflicting response requires interpretation.
+
+An `auto` integration preference is not ambiguity: it explicitly delegates contextual recommendation until after diagnostic. A direct provider choice is also not ambiguous when it is valid and does not conflict with `avoid`, `no_external_accounts` or free-tier requirements.
 
 If any condition fails, leave the PR open and explain the specific review needed. A request to import intake authorizes creating the PR; automatic merge is authorized only by the marker policy.
 

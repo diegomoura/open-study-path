@@ -35,7 +35,10 @@ REQUIRED_REUSABLE_FILES = [
     "README.md",
     "AGENTS.md",
     "docs/chatgpt-project-setup.md",
+    "docs/integration-capabilities.md",
     "templates/chatgpt-project-instructions.md",
+    "templates/integrations-plan.md",
+    "templates/integrations-state.json",
     "instructions/00-bootstrap.md",
     "instructions/05-configure-intake.md",
     "instructions/10-intake.md",
@@ -61,6 +64,18 @@ REQUIRED_INTAKE_KEYS = {
     "weekly_hours",
     "task_manager",
     "consent",
+}
+
+REQUIRED_INTEGRATION_INTAKE_KEYS = {
+    "integration_experience",
+    "free_tier_only",
+    "account_connections",
+    "already_uses",
+    "willing_to_connect",
+    "task_manager",
+    "scheduling_provider",
+    "todoist_reminders",
+    "email_summaries",
 }
 
 
@@ -294,6 +309,19 @@ def check_guard() -> None:
         check_template_mode(marker)
 
 
+def option_values(field: dict[str, Any]) -> set[str]:
+    options = field.get("options", [])
+    values: set[str] = set()
+    for option in options:
+        if isinstance(option, str):
+            values.add(option.lower())
+        elif isinstance(option, dict):
+            label = option.get("label")
+            if isinstance(label, str):
+                values.add(label.lower())
+    return values
+
+
 def check_intake() -> None:
     spec = load_yaml("intake/jotform-form-spec.yml")
     mapping = load_yaml("intake/field-mapping.yml")
@@ -305,7 +333,8 @@ def check_intake() -> None:
     if len(field_keys) != len(set(field_keys)):
         fail("jotform specification contains duplicate field keys")
 
-    missing_required = REQUIRED_INTAKE_KEYS.difference(field_keys)
+    expected_keys = REQUIRED_INTAKE_KEYS | REQUIRED_INTEGRATION_INTAKE_KEYS
+    missing_required = expected_keys.difference(field_keys)
     if missing_required:
         fail(f"jotform specification is missing required keys: {sorted(missing_required)}")
     if spec.get("privacy", {}).get("attachments_optional") is not True:
@@ -314,11 +343,23 @@ def check_intake() -> None:
         fail("jotform specification must prohibit raw-submission persistence")
 
     email_field = next((field for field in fields if field.get("key") == "email_summaries"), None)
-    if not email_field or "Gmail" not in str(email_field.get("label", "")):
-        fail("Jotform email summaries field must name Gmail explicitly")
+    if not email_field:
+        fail("Jotform must define email_summaries")
+    email_options = option_values(email_field)
+    if not {"gmail", "outlook_email"}.issubset(email_options):
+        fail("Jotform email summaries must support Gmail and Outlook")
 
     if mapping.get("spec_id") != spec.get("id"):
         fail("field mapping spec_id does not match jotform specification id")
+    if mapping.get("version") != spec.get("version"):
+        fail("field mapping version must match jotform specification version")
+    mapped_keys = set(mapping.get("mappings", {}))
+    persistable_keys = expected_keys - {"consent"}
+    missing_mappings = persistable_keys.difference(mapped_keys)
+    if missing_mappings:
+        fail(f"field mapping is missing intake keys: {sorted(missing_mappings)}")
+    if "consent" in mapped_keys:
+        fail("consent must be validated but not persisted as course configuration")
 
     intake = example.get("intake", {})
     if intake.get("form_spec_id") != spec.get("id"):
@@ -332,14 +373,25 @@ def check_intake() -> None:
 
     issue_blocks = [block for block in issue_form.get("body", []) if isinstance(block, dict)]
     issue_ids = {block.get("id") for block in issue_blocks if block.get("id")}
-    missing_issue_fields = REQUIRED_INTAKE_KEYS.difference(issue_ids)
+    missing_issue_fields = expected_keys.difference(issue_ids)
     if missing_issue_fields:
         fail(f"GitHub Issue Form is missing required fields: {sorted(missing_issue_fields)}")
 
     issue_email = next((block for block in issue_blocks if block.get("id") == "email_summaries"), None)
-    issue_email_label = (issue_email or {}).get("attributes", {}).get("label", "")
-    if "Gmail" not in str(issue_email_label):
-        fail("GitHub Issue Form email summaries field must name Gmail explicitly")
+    issue_email_options = option_values((issue_email or {}).get("attributes", {}))
+    if not any("gmail" in option for option in issue_email_options):
+        fail("GitHub Issue Form email summaries must support Gmail")
+    if not any("outlook" in option for option in issue_email_options):
+        fail("GitHub Issue Form email summaries must support Outlook")
+
+    explanatory_text = "\n".join(
+        str(block.get("attributes", {}).get("value", ""))
+        for block in issue_blocks
+        if block.get("type") == "markdown"
+    )
+    for term in ["GitHub", "fonte de verdade", "opcionais"]:
+        if term not in explanatory_text:
+            fail(f"GitHub Issue Form integration explanation is missing: {term}")
 
     print("Intake contract passed.")
 

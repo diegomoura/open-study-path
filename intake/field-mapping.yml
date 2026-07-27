@@ -1,4 +1,4 @@
-version: 1
+version: 2
 spec_id: open-study-path-intake
 
 mappings:
@@ -20,31 +20,69 @@ mappings:
   accessibility_needs: learner.accessibility_needs
   reference_text_or_urls: references.text_or_urls
   reference_attachments: references.attachments
+  integration_experience: integration_preferences.experience
+  free_tier_only: integration_preferences.free_tier_only
+  account_connections: integration_preferences.account_connections
+  already_uses: integration_preferences.already_uses
+  willing_to_connect: integration_preferences.willing_to_connect
+  integration_notes: integration_preferences.notes
   task_manager: integrations.task_manager.provider
-  use_calendar: integrations.calendar.enabled
-  email_summaries: integrations.notifications.email_enabled
+  scheduling_provider: integrations.calendar.provider
+  todoist_reminders: integrations.reminders.enabled
+  email_summaries: integrations.notifications.provider
   additional_notes: preferences.notes
 
 provider_rules:
-  use_calendar:
+  free_tier_only:
     true:
+      integrations.calendar.free_tier_only: true
+    false:
+      integrations.calendar.free_tier_only: false
+
+  scheduling_provider:
+    auto:
+      integrations.calendar.provider: auto
+      integrations.calendar.enabled: auto
+    reclaim:
+      integrations.calendar.provider: reclaim
+      integrations.calendar.enabled: enabled
+    google_calendar:
       integrations.calendar.provider: google_calendar
-      integrations.calendar.enabled: true
-    false:
+      integrations.calendar.enabled: enabled
+    outlook_calendar:
+      integrations.calendar.provider: outlook_calendar
+      integrations.calendar.enabled: enabled
+    none:
       integrations.calendar.provider: none
-      integrations.calendar.enabled: false
+      integrations.calendar.enabled: disabled
+
+  todoist_reminders:
+    auto:
+      integrations.reminders.provider: auto
+      integrations.reminders.enabled: auto
+    enabled:
+      integrations.reminders.provider: todoist
+      integrations.reminders.enabled: enabled
+    disabled:
+      integrations.reminders.provider: none
+      integrations.reminders.enabled: disabled
+
   email_summaries:
-    true:
-      integrations.notifications.provider: gmail
-      integrations.notifications.email_enabled: true
-    false:
+    none:
       integrations.notifications.provider: chat
       integrations.notifications.email_enabled: false
+    gmail:
+      integrations.notifications.provider: gmail
+      integrations.notifications.email_enabled: true
+    outlook_email:
+      integrations.notifications.provider: outlook_email
+      integrations.notifications.email_enabled: true
 
 normalization:
   trim_strings: true
   discard_empty_optional_fields: true
   split_multiline_prior_knowledge: true
+  preserve_auto_provider_choices: true
   attachments:
     persist_original_files: false
     persist_safe_metadata_only: true

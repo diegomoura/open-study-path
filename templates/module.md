@@ -4,6 +4,7 @@ title: Replace me
 version: 1
 estimated_minutes: 60
 visual_diagrams: 1
+flashcards: null
 ---
 
 # TOPIC-000 — Replace me
@@ -69,13 +70,23 @@ Inclua exercícios com pistas graduais. Não revele imediatamente a resposta com
 
 Inclua tarefas que exijam transferência para um caso novo e produção do entregável definido no tópico.
 
+## Prática formativa e revisão
+
+Quando o tópico tiver definições, comandos, fórmulas, classificações, comparações ou erros comuns adequados à recuperação ativa, defina `flashcards: study/flashcards/TOPIC-000.tsv` no frontmatter e gere o arquivo com colunas `Front`, `Back` e `Tags`.
+
+Linke o arquivo local, que é o fallback durável e deve funcionar sem conta externa. Quando Quizlet for selecionado e sincronizado, adicione também o link do conjunto externo sem remover o fallback. Ace Quiz Maker pode ser sugerido para checagem rápida em chat.
+
+Explique explicitamente que flashcards e quizzes são prática formativa. Pontuação, sequência ou conclusão nessas ferramentas não determina domínio do tópico.
+
+Quando flashcards não forem pedagogicamente úteis, mantenha `flashcards: null` e explique brevemente por que a prática principal exige aplicação, produção ou raciocínio mais longo.
+
 ## Síntese por recuperação ativa
 
 Inclua perguntas que possam ser respondidas sem consultar o texto e uma breve orientação de revisão espaçada.
 
 ## Entregável e evidência
 
-Descreva exatamente o que deve ser produzido e como vincular ou transcrever a evidência no formulário de avaliação.
+Descreva exatamente o que deve ser produzido e como vincular ou transcrever a evidência no formulário de avaliação. Quando o entregável estiver em Google Drive ou outro workspace externo, preserve um link seguro e deixe claro que o resultado oficial da avaliação permanece no GitHub.
 
 ## Avaliação do tópico
 
@@ -85,6 +96,8 @@ Use o Issue Form específico do tópico. Depois de enviar as respostas, retorne 
 
 O número da issue só deve ser solicitado quando a busca determinística encontrar mais de uma submissão candidata.
 
+Checklist, lembrete, sessão agendada, hábito ou resultado formativo não substitui esta avaliação.
+
 ## Referências
 
-Liste fontes primárias ou oficiais com localizador canônico. Identifique edições, traduções ou URLs que ainda precisem de verificação.
+Liste fontes primárias ou oficiais com localizador canônico. Para pesquisa acadêmica descoberta com Consensus ou outro provedor, registre a fonte verificável; não cite apenas a resposta do plugin. Para cursos externos, identifique seção ou aula, acesso e alternativa gratuita quando aplicável.

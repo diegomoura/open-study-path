@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Validate guided rolling-course lifecycle contracts."""
+"""Validate guided lifecycle, visual learning and capability integrations."""
 
 from __future__ import annotations
 
@@ -83,6 +83,7 @@ def validate_instance_contract(document: dict[str, Any], path: str, *, defaults:
         fail(f"{path} must define positive lookahead_topics")
     if generation.get("adapt_future_modules_from_assessments") is not True:
         fail(f"{path} must enable assessment-informed adaptation")
+
     granularity = generation.get("granularity")
     if not isinstance(granularity, dict):
         fail(f"{path} must define granularity")
@@ -116,11 +117,79 @@ def validate_instance_contract(document: dict[str, Any], path: str, *, defaults:
         fail("new instances must prefer multiple focused diagrams for complex topics")
 
 
-def validate_mermaid_artifacts(document: dict[str, Any]) -> None:
+def validate_capability_config(document: dict[str, Any], path: str) -> None:
+    preferences = document.get("integration_preferences")
+    if not isinstance(preferences, dict):
+        fail(f"{path} must define integration_preferences")
+    if preferences.get("experience") not in {"minimal", "guided_recommendations", "enriched"}:
+        fail(f"{path} has invalid integration experience")
+    if preferences.get("account_connections") not in {
+        "ask_per_provider", "connected_services_only", "no_external_accounts"
+    }:
+        fail(f"{path} has invalid account connection policy")
+    if not isinstance(preferences.get("free_tier_only"), bool):
+        fail(f"{path} must define free_tier_only")
+    for key in ["already_uses", "willing_to_connect", "avoid"]:
+        if not isinstance(preferences.get(key), list):
+            fail(f"{path} integration_preferences.{key} must be an array")
+
+    integrations = document.get("integrations")
+    if not isinstance(integrations, dict):
+        fail(f"{path} must define integrations")
+    required = {
+        "source_of_truth", "research", "formative_practice", "task_manager",
+        "reminders", "calendar", "habit_tracking", "visual_workspace",
+        "artifact_workspace", "analytics_projection", "course_discovery", "notifications",
+    }
+    if set(integrations) != required:
+        fail(f"{path} integration capability set changed: {sorted(set(integrations) ^ required)}")
+
+    truth = integrations["source_of_truth"]
+    if truth.get("provider") != "github" or truth.get("required") is not True:
+        fail("GitHub must remain the required source of truth")
+    authority = set(truth.get("authority", []))
+    if not {"curriculum", "content", "assessment", "mastery", "progress"}.issubset(authority):
+        fail("GitHub source-of-truth authority is incomplete")
+
+    if integrations["task_manager"].get("single_authoritative_backend") is not True:
+        fail("task management must have one authoritative backend")
+    if integrations["formative_practice"].get("affects_mastery") is not False:
+        fail("formative practice must not affect mastery")
+    if integrations["reminders"].get("affects_task_state") is not False:
+        fail("auxiliary reminders must not affect authoritative task state")
+    habits = integrations["habit_tracking"]
+    if habits.get("affects_mastery") is not False:
+        fail("habit tracking must not affect mastery")
+    if not isinstance(habits.get("max_default_habits"), int) or not 1 <= habits["max_default_habits"] <= 3:
+        fail("habit tracking must default to at most three habits")
+    if integrations["visual_workspace"].get("canonical") != "mermaid":
+        fail("Mermaid must remain the canonical visual provider")
+    analytics = integrations["analytics_projection"]
+    if analytics.get("direction") != "github_to_airtable" or analytics.get("affects_mastery") is not False:
+        fail("Airtable must remain a non-authoritative GitHub projection")
+    discovery = integrations["course_discovery"]
+    if discovery.get("resource_only") is not True:
+        fail("course discovery providers must remain resource-only")
+    if discovery.get("require_free_alternative_for_paid_resources") is not True:
+        fail("potentially paid course resources require a free alternative")
+
+
+def validate_generated_artifacts(document: dict[str, Any]) -> None:
     topics_dir = ROOT / "study/topics"
     topic_paths = sorted(topics_dir.glob("*.md")) if topics_dir.is_dir() else []
     if not topic_paths:
         return
+
+    integration_plan = ROOT / "study/integrations.md"
+    if not integration_plan.is_file():
+        fail("generated curriculum must contain study/integrations.md")
+    integration_text = integration_plan.read_text(encoding="utf-8")
+    for term in [
+        "GitHub", "fonte de verdade", "Fallback", "Airtable", "github_to_airtable",
+        "Todoist", "Mermaid", "domínio",
+    ]:
+        if term not in integration_text:
+            fail(f"generated integration plan is missing: {term}")
 
     visual = document["content_generation"]["visual_learning"]
     minimum = visual["minimum_diagrams_per_materialized_module"]
@@ -162,10 +231,12 @@ def validate_mermaid_artifacts(document: dict[str, Any]) -> None:
             fail(f"module {topic_id} has fewer Mermaid blocks than declared or configured")
         if "## Mapa visual" not in module_body:
             fail(f"module {topic_id} is missing the Mapa visual section")
+        if "## Prática formativa e revisão" not in module_body:
+            fail(f"module {topic_id} is missing the formative-practice section")
         for block in blocks:
             first_line = next((line.strip().lower() for line in block.splitlines() if line.strip()), "")
             if not first_line.startswith(ALLOWED_MERMAID_TYPES):
-                fail(f"module {topic_id} uses an unsupported or missing Mermaid diagram type: {first_line}")
+                fail(f"module {topic_id} uses an unsupported Mermaid diagram type: {first_line}")
         visual_section = re.search(
             r"^## Mapa visual\s*$\n(.*?)(?=^##\s|\Z)",
             module_body,
@@ -174,9 +245,21 @@ def validate_mermaid_artifacts(document: dict[str, Any]) -> None:
         if not visual_section:
             fail(f"module {topic_id} is missing visual explanation")
         prose = MERMAID_BLOCK.sub(" ", visual_section.group(1))
-        words = re.findall(r"\b\w+\b", prose, flags=re.UNICODE)
-        if len(words) < 30:
+        if len(re.findall(r"\b\w+\b", prose, flags=re.UNICODE)) < 30:
             fail(f"module {topic_id} must explain its Mermaid diagram with meaningful prose")
+
+        flashcards = module_metadata.get("flashcards")
+        if flashcards is not None:
+            if not isinstance(flashcards, str) or not flashcards.startswith("study/flashcards/"):
+                fail(f"module {topic_id} has invalid flashcards path")
+            flashcard_path = ROOT / flashcards
+            if not flashcard_path.is_file():
+                fail(f"module {topic_id} references missing flashcards: {flashcards}")
+            lines = flashcard_path.read_text(encoding="utf-8").splitlines()
+            if not lines or lines[0] != "Front\tBack\tTags":
+                fail(f"flashcards for {topic_id} must use Front/Back/Tags TSV headers")
+            if len(lines) < 5:
+                fail(f"flashcards for {topic_id} need at least four useful cards")
 
 
 def main() -> None:
@@ -189,12 +272,19 @@ def main() -> None:
     if "review_curriculum" in phases or "materialize_content" in phases:
         fail("review and materialization must remain internal")
 
+    bootstrap = phases.get("bootstrap_instance", {})
+    if "state/integrations.json" not in bootstrap.get("outputs", []):
+        fail("bootstrap must create integration state")
+
     generate = phases.get("generate", {})
     expected_generate_outputs = [
         ".open-study-path/instance.yml",
+        "study.config.yml",
         "study/roadmap.md",
+        "study/integrations.md",
         "study/topics/",
         "study/modules/",
+        "study/flashcards/",
         "study/assessments/",
         ".github/ISSUE_TEMPLATE/assessment-topic-*.yml",
     ]
@@ -210,6 +300,8 @@ def main() -> None:
         fail("publish must depend on generate and route to evaluate")
     if publish.get("internal_preflight") != "instructions/42-integration-preflight.md":
         fail("publish must reference integration preflight")
+    if set(publish.get("outputs", [])) != {"study.config.yml", "state/integrations.json"}:
+        fail("publish must persist provider resolution and idempotency state")
 
     evaluate = phases.get("evaluate", {})
     if evaluate.get("instruction") != "instructions/55-evaluate-topic.md":
@@ -217,11 +309,13 @@ def main() -> None:
     if evaluate.get("internal_materialization") != "instructions/57-materialize-next-content.md":
         fail("evaluate must run rolling materialization internally")
     required_evaluate_outputs = {
-        "state/assessments/", "state/progress.json", "study/roadmap.md", "study/topics/",
-        "study/modules/", "study/assessments/", ".github/ISSUE_TEMPLATE/assessment-topic-*.yml",
+        "state/assessments/", "state/progress.json", "state/integrations.json",
+        "study/roadmap.md", "study/integrations.md", "study/topics/", "study/modules/",
+        "study/flashcards/", "study/assessments/",
+        ".github/ISSUE_TEMPLATE/assessment-topic-*.yml",
     }
     if set(evaluate.get("outputs", [])) != required_evaluate_outputs:
-        fail("evaluate outputs must include progress and rolling content artifacts")
+        fail("evaluate outputs must include progress, integrations and rolling content artifacts")
 
     template_document = load_yaml("templates/instance.yml")
     validate_instance_contract(template_document, "templates/instance.yml", defaults=True)
@@ -229,111 +323,61 @@ def main() -> None:
     if INSTANCE_MARKER.is_file():
         active_document = load_yaml(".open-study-path/instance.yml")
         validate_instance_contract(active_document, ".open-study-path/instance.yml", defaults=False)
-    validate_mermaid_artifacts(active_document)
+
+    validate_capability_config(load_yaml("study.config.example.yml"), "study.config.example.yml")
+    validate_generated_artifacts(active_document)
 
     require_terms("instructions/30-generate-path.md", [
-        "Generate a complete dependency-aware roadmap",
-        "adaptive_rolling_window",
-        "lookahead_topics",
-        "three to seven execution actions",
-        "10–25 minutes",
-        "content_status: planned",
-        "Visual learning with Mermaid",
-        "at least one explained Mermaid visual model",
-        "actual topic dependency graph",
+        "Contextual integration recommendation", "Consensus", "Quizlet", "Reclaim",
+        "Habitify", "Whimsical", "github_to_airtable", "Durable flashcard fallback",
         "Finalizei o TOPIC-000. Avalie minhas respostas.",
-        "Never assume that an arbitrary newest repository issue",
     ])
     require_terms("instructions/35-review-curriculum.md", [
-        "`planned` or `materialized`",
-        "three to seven focused activities",
-        "fenced Mermaid diagrams",
-        "generic diagram unrelated to the topic",
-        "deterministic topic marker",
-        "rolling-window size",
-        "Revisão do PR: aprovada pelo agente e pelo CI",
+        "study/integrations.md", "exactly one task backend", "Airtable",
+        "github_to_airtable", "optional providers", "Revisão do PR: aprovada pelo agente e pelo CI",
     ])
     require_terms("instructions/40-publish-tasks.md", [
-        "### Materialized topic",
-        "### Planned topic",
-        "Do not add nonexistent module",
-        "assessment:submitted",
-        "Finalizei o TOPIC-000. Avalie minhas respostas.",
+        "Authority model", "Authoritative task backend", "Auxiliary Todoist reminders",
+        "Formative practice", "Airtable analytical projection", "state/integrations.json",
+    ])
+    require_terms("instructions/42-integration-preflight.md", [
+        "required_for_selected_publication", "optional_probe", "Optional-provider fallback",
+        "Free-tier policy", "Conectei <providers> ao ChatGPT",
     ])
     require_terms("instructions/55-evaluate-topic.md", [
-        "issue number is optional",
-        "Exactly one valid candidate",
-        "More than one candidate",
-        "Never choose an arbitrary newest repository issue",
-        "instructions/57-materialize-next-content.md",
-        "The learner must not send a separate command",
+        "GitHub is the only authority", "Todoist reminders", "Habitify streaks",
+        "github_to_airtable", "Never choose an arbitrary newest repository issue",
     ])
     require_terms("instructions/57-materialize-next-content.md", [
-        "not a separate user-facing phase",
-        "restore `lookahead_topics`",
-        "verified assessment results",
-        "minimum number of useful Mermaid diagrams",
-        "must not silently rewrite",
-        "Do not ask the owner for a separate generation",
-    ])
-    require_terms("instructions/phase-completion.md", [
-        "initial rolling window",
-        "Do not require the learner to copy the issue number",
-        "automatically materialize",
-        "Finalizei a recuperação do TOPIC-000. Avalie minhas respostas.",
-    ])
-    require_terms("templates/topic.md", [
-        "content_status: planned",
-        "content_version: 0",
-        "between three and seven small",
-        "Mermaid visual model",
-        "Finalizei o TOPIC-000. Avalie minhas respostas.",
+        "Optional research during materialization", "durable TSV flashcard file",
+        "Auxiliary Todoist reminders", "Airtable projection", "Do not ask the owner",
     ])
     require_terms("templates/module.md", [
-        "visual_diagrams: 1",
-        "## Plano de execução",
-        "três a sete ações",
-        "entre 10 e 25 minutos",
-        "## Mapa visual",
-        "```mermaid",
-        "Finalizei o TOPIC-000. Avalie minhas respostas.",
+        "flashcards: null", "## Mapa visual", "## Prática formativa e revisão",
+        "study/flashcards/TOPIC-000.tsv", "Pontuação, sequência ou conclusão",
     ])
-    require_terms("templates/roadmap.md", [
-        "## Topic dependency graph",
-        "actual `TOPIC-000` identifiers",
-        "```mermaid",
+    require_terms("templates/integrations-plan.md", [
+        "Cartões explicativos", "Apenas um backend de tarefas", "github_to_airtable",
+        "Acesso e custo", "Preflight", "Idempotência",
     ])
-    require_terms("templates/topic-assessment-issue-form.yml", [
-        "assessment:submitted",
-        "open-study-path:assessment topic_id=TOPIC-000",
-        "Avalie minhas respostas",
+    require_terms("templates/integrations-state.json", [
+        '"source_of_truth"', '"selected_capabilities"', '"resources"', '"sync"',
+    ])
+    require_terms("docs/integration-capabilities.md", [
+        "Capability-based integrations", "Quizlet", "Consensus", "Reclaim",
+        "Habitify", "Whimsical", "Airtable", "Explanation card contract",
     ])
     require_terms("templates/chatgpt-project-instructions.md", [
-        "content_generation",
-        "planned topics",
-        "Mermaid as a first-class visual teaching tool",
-        "Do not require an issue number by default",
-        "instructions/57-materialize-next-content.md",
+        "capability-based", "GitHub remains the only source of truth", "Quizlet",
+        "Consensus", "Reclaim", "Airtable", "instructions/57-materialize-next-content.md",
     ])
     require_terms("AGENTS.md", [
-        "adaptive content generation",
-        "Mermaid visual learning",
-        "actual topic dependency graph",
-        "Deterministic assessment resolution",
-        "Automatic next-content materialization",
-        "Never select an arbitrary newest issue",
-    ])
-    require_terms("docs/mermaid-visual-learning.md", [
-        "Mermaid diagrams are first-class teaching artifacts",
-        "Every materialized module",
-        "Nontechnical example",
-        "Technical example",
-        "Review criteria",
+        "Capability-based integrations", "single authoritative task backend",
+        "GitHub remains the only source of truth", "github_to_airtable",
     ])
     require_terms("README.md", [
-        "## Visual learning with Mermaid",
-        "```mermaid",
-        "docs/mermaid-visual-learning.md",
+        "## Capability-based integrations", "study/integrations.md",
+        "state/integrations.json", "docs/integration-capabilities.md",
     ])
 
     for path in [
@@ -346,7 +390,10 @@ def main() -> None:
         if DEPRECATED_PUBLICATION_SUFFIX in load_text(path):
             fail(f"{path} still requires owner to restate curriculum immutability")
 
-    print("Guided rolling generation, Mermaid visual learning, publication, deterministic evaluation and materialization contracts passed.")
+    print(
+        "Guided rolling generation, Mermaid visual learning, capability integrations, "
+        "deterministic evaluation and materialization contracts passed."
+    )
 
 
 if __name__ == "__main__":

@@ -1,6 +1,6 @@
 # Generate and approve learning path
 
-Generate a complete dependency-aware roadmap and concise contract for every topic. Materialize detailed teaching content according to the configured content-generation strategy. Do not publish external tasks during this phase.
+Generate a complete dependency-aware roadmap and concise contract for every topic. Materialize detailed teaching content according to the configured content-generation strategy. Generate a contextual integration plan, but do not publish external resources during this phase.
 
 ## Planning contract
 
@@ -8,7 +8,8 @@ Always create upfront:
 
 - `study/roadmap.md` with the complete topic graph and estimated schedule;
 - one concise contract per topic under `study/topics/` using `templates/topic.md`;
-- observable objectives, prerequisites, effort, deliverables, evidence, mastery criteria and precise resources for every topic.
+- observable objectives, prerequisites, effort, deliverables, evidence, mastery criteria and precise resources for every topic;
+- `study/integrations.md` using `templates/integrations-plan.md`, with recommendations derived from the actual course and learner preferences.
 
 The learner must be able to see the whole path even when future lessons have not yet been materialized.
 
@@ -42,7 +43,8 @@ For every materialized topic, create:
 - one complete lesson under `study/modules/` using `templates/module.md`;
 - one scoring rubric under `study/assessments/` using `templates/assessment-rubric.yml`;
 - one GitHub Issue Form under `.github/ISSUE_TEMPLATE/assessment-topic-<number>.yml` using `templates/topic-assessment-issue-form.yml`;
-- `content_status: materialized`, a positive `content_version` and `materialized_at` in the topic contract.
+- `content_status: materialized`, a positive `content_version` and `materialized_at` in the topic contract;
+- a durable flashcard file under `study/flashcards/` when the topic contains enough atomic recall material and formative practice is selected or recommended.
 
 `study/topics/` is the compact contract and index. `study/modules/` contains the content the learner actually studies. A planned topic must never contain broken module links or imply that its detailed lesson already exists.
 
@@ -85,6 +87,47 @@ A diagram is a teaching artifact, not decoration. Introduce what it represents a
 
 Do not use a diagram to replace necessary prose, examples or practice. Use it to make relationships, decisions, sequences, states or architecture easier to understand.
 
+## Contextual integration recommendation
+
+Read `study.config.yml`, `state/intake-summary.json`, `state/diagnostic-summary.json`, the complete roadmap and the initial materialized modules. Follow `docs/integration-capabilities.md` and create `study/integrations.md`.
+
+Do not recommend every available provider. Select only capabilities supported by concrete signals from the course, learner, schedule or desired deliverables. For every recommended or explicitly requested provider, explain:
+
+1. what it is in plain language;
+2. why it fits this specific course;
+3. how and when it will be used;
+4. expected free-tier use and possible limitations;
+5. minimum data read or written;
+6. what authority it has and does not have;
+7. a provider-independent fallback;
+8. whether its preflight is required or optional;
+9. the decision state: `selected`, `recommended`, `declined` or `unavailable`.
+
+Resolve `auto` choices conservatively into concrete providers in `study.config.yml` only when the intake policy permits recommendation. Respect `already_uses`, `willing_to_connect`, `avoid`, `account_connections`, `experience` and `free_tier_only`. When external accounts are forbidden, use repository-native fallbacks.
+
+Apply these defaults contextually:
+
+- **Consensus:** preferred for empirical claims, scientific topics, psychology, education, health and evidence comparison. It is supporting research, not curriculum authority. For APIs, programming, cloud and standards, prefer official documentation and primary technical sources.
+- **Quizlet:** preferred for meaningful sets of terms, definitions, commands, formulas, comparisons, classifications or common errors. Ace Quiz Maker and local Markdown/TSV flashcards are fallbacks. Formative scores never affect mastery.
+- **Trello:** preferred task backend for rich or long courses with links, checklists, recovery and roadmap visibility.
+- **Todoist:** may replace Trello for a short or simple course, or act only as an auxiliary recurring reminder. When auxiliary, it cannot change the authoritative task state.
+- **Reclaim:** preferred when availability varies or focus blocks should be protected and rescheduled. Google Calendar or Outlook Calendar are fixed-schedule fallbacks. Do not require paid capabilities.
+- **Habitify:** use only when consistency is a material risk, with at most three default habits. Habit completion never affects mastery.
+- **Whimsical:** use for editable, collaborative or spatial external diagrams. Mermaid remains canonical and sufficient.
+- **Google Drive:** use when the course needs Docs, Sheets, Slides or external deliverables. GitHub keeps the approved content and assessment result.
+- **Airtable:** use only as a `github_to_airtable` analytical projection. It cannot promote mastery or overwrite canonical progress.
+- **Coursera, edX, Udemy and Khan Academy:** use as resource discovery. Select precise sections or exercises with objective, time and evidence; never assign an entire course as one vague task. Paid resources require a free or official alternative.
+
+### Optional research probes during generation
+
+When Consensus or another optional research provider is selected and available, perform a harmless read-only probe before using it. If the probe fails, record the provider as unavailable in the integration plan and use primary sources, official documentation and web research. Optional research availability must not block generation.
+
+Every externally discovered claim or resource included in the curriculum must be represented by a precise, reviewable reference in the module. A plugin response alone is not a durable citation.
+
+### Durable flashcard fallback
+
+When flashcards are pedagogically useful, generate `study/flashcards/TOPIC-000.tsv` with columns `Front`, `Back` and `Tags`. Include definitions, distinctions, retrieval prompts and misconception corrections. The file must be useful without Quizlet and importable when the provider is later connected.
+
 ## Assessments
 
 Every materialized topic assessment must contain five substantial prompts covering conceptual understanding, analysis, transfer to a new case, misconception correction and independent evidence. The rubric must total 100 points, define `passing_score`, identify critical misconceptions and support focused recovery.
@@ -99,7 +142,7 @@ Issue Forms are the durable submission channel. They must include:
 
 An explicit issue number is supported only as a disambiguation fallback. Never assume that an arbitrary newest repository issue is the assessment.
 
-Ace Quiz Maker or chat quizzes may be offered as optional formative practice, but they do not replace the GitHub assessment, rubric and durable evidence history.
+Quizlet, Ace Quiz Maker, Habitify, Todoist completion and calendar attendance are optional practice or execution signals. They do not replace the GitHub assessment, rubric and durable evidence history.
 
 ## Scope and effort
 
@@ -111,14 +154,18 @@ Distinguish active study time from elapsed time required for real-world practice
 
 Prefer primary or official resources. Every required resource must name a specific work and canonical locator such as section, chapter, book or letter number. Edition, translation and URL selection may remain pending when clearly identified.
 
+For external course catalogs, identify the exact course, section, lesson or exercise. Mark whether access is public, requires an existing account or may be paid. A potentially paid resource must have a free or official alternative.
+
 ## Pull request and automatic review
 
 Open a draft pull request. The initial-generation diff may include:
 
 - `.open-study-path/instance.yml`;
+- `study.config.yml` when resolving permitted `auto` capability choices;
 - `study/roadmap.md`;
+- `study/integrations.md`;
 - `study/topics/`;
-- modules, rubrics and Issue Forms only for topics selected by the configured initial window.
+- modules, optional flashcard files, rubrics and Issue Forms only for topics selected by the configured initial window.
 
 Set `status.curriculum_proposed: true` and keep `status.curriculum_approved: false` while drafting.
 
@@ -128,11 +175,11 @@ For `workflow.curriculum_merge_policy: agent_review_then_merge`:
 
 1. review and correct the proposal branch;
 2. run all required checks;
-3. self-review the final diff, rolling-window selection and Mermaid rendering;
+3. self-review the final diff, rolling-window selection, Mermaid rendering, references and integration recommendations;
 4. set `status.curriculum_approved: true` only when review passes;
 5. rerun checks;
 6. mark the draft ready;
-7. merge when no pedagogical decision remains unresolved.
+7. merge when no pedagogical or integration-policy decision remains unresolved.
 
 Do not attempt to formally approve a pull request authored by the same account. Contract verification, final diff review and successful CI constitute operational review.
 
@@ -150,6 +197,6 @@ Do not ask the owner to review the entire PR when no unresolved decision exists.
 
 ## Completion
 
-Do not create Trello cards, calendar events or notifications during generation. Complete the phase using `instructions/phase-completion.md` and guide to:
+Do not create cards, tasks, calendar events, habits, flashcard sets, external diagrams, Drive artifacts, Airtable rows or notifications during generation. Complete the phase using `instructions/phase-completion.md`, link `study/integrations.md`, and guide to:
 
 `Publique as tarefas da trilha nas integrações configuradas.`
