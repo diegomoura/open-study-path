@@ -178,9 +178,9 @@ Configure OWNER/REPOSITORY as an Open Study Path instance using the GitHub Issue
 
 Read AGENTS.md, .open-study-path/template.yml, templates/instance.yml and instructions/manifest.yml before making changes.
 
-Create and validate only the instance setup files and prepare the intake form. Do not import intake answers, run the diagnostic, generate the curriculum or publish external tasks yet.
+Create and validate only the instance setup files and configure the selected intake method. Do not import intake answers, run the diagnostic, generate the curriculum or publish external tasks yet.
 
-Stop when the instance and intake provider are ready. Return the direct intake form link and the exact command I should send after submitting it.
+Stop when the instance and intake provider are ready. Return the direct intake URL when applicable, the configuration path when no form exists, and the exact command I should send for the next guided operation.
 ```
 
 This first operation must finish after instance setup and intake-provider configuration. Intake import, diagnostic, curriculum generation and publication are separate guided operations.
