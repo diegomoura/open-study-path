@@ -2,6 +2,9 @@
 id: TOPIC-000
 title: Replace me
 status: planned
+content_status: planned
+content_version: 0
+materialized_at: null
 difficulty: beginner
 estimated_hours: 0
 prerequisites: []
@@ -14,7 +17,7 @@ assessment_form: .github/ISSUE_TEMPLATE/assessment-topic-000.yml
 
 ## Objective
 
-Describe the observable capability the learner will gain.
+Describe one observable capability the learner will gain.
 
 ## Why this matters
 
@@ -26,22 +29,22 @@ Connect the topic to the learner's final goal or a diagnostic gap.
 
 ## Learning activities
 
-- [ ] Complete the prerequisite check in the module
-- [ ] Study the complete lesson
-- [ ] Work through the examples
-- [ ] Complete guided practice
-- [ ] Complete independent practice and the deliverable
-- [ ] Submit the GitHub assessment form
+Define between three and seven small, independently checkable actions. Each action should normally take 10–25 minutes and should not compress several distinct steps into one line.
+
+- [ ] First focused activity (10–25 min)
+- [ ] Second focused activity (10–25 min)
+- [ ] Third focused activity (10–25 min)
 
 ## Complete module
 
-- [Study module](../modules/TOPIC-000.md)
+- When `content_status: materialized`, link [the complete study module](../modules/TOPIC-000.md).
+- When `content_status: planned`, state that the lesson will be materialized automatically when it enters the active rolling window. Do not create a broken link or pretend the lesson exists.
 
 ## Assessment
 
-- [Scoring rubric](../assessments/TOPIC-000.yml)
-- Issue Form: `.github/ISSUE_TEMPLATE/assessment-topic-000.yml`
-- Completion command: `Finalizei o TOPIC-000. Avalie a issue #<número>.`
+- When materialized, link [the scoring rubric](../assessments/TOPIC-000.yml) and the topic Issue Form.
+- Standard completion command: `Finalizei o TOPIC-000. Avalie minhas respostas.`
+- An explicit issue number remains an optional disambiguation fallback, not the default learner burden.
 
 ## Deliverable
 
@@ -49,7 +52,7 @@ Describe the artifact or performance to produce.
 
 ## Evidence
 
-Add links, files, explanations or assessment results.
+Describe the evidence that can be submitted through the assessment form.
 
 ## Mastery criteria
 
@@ -70,4 +73,4 @@ Add links, files, explanations or assessment results.
 
 ## Prompt to start a study chat
 
-Use the complete module as the teaching source. The default flow is self-study followed by submission through the topic Issue Form. Chat guidance may supplement the module, but it must not replace the durable assessment issue and rubric.
+Use the complete module as the teaching source when it is materialized. The default flow is self-study followed by submission through the topic Issue Form. Chat guidance may supplement the module, but it must not replace the durable assessment issue and rubric.
