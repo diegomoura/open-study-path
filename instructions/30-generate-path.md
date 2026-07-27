@@ -55,15 +55,35 @@ Every materialized module must be self-contained enough for the configured study
 3. prerequisite retrieval questions;
 4. actual explanatory content written in clear language;
 5. definitions, relationships, limits and nuances;
-6. at least two worked examples;
-7. common misconceptions and corrections;
-8. guided practice with hints;
-9. independent practice and the required deliverable;
-10. active-recall synthesis;
-11. exact assessment-submission instructions;
-12. precise references.
+6. at least one explained Mermaid visual model;
+7. at least two worked examples;
+8. common misconceptions and corrections;
+9. guided practice with hints;
+10. independent practice and the required deliverable;
+11. active-recall synthesis;
+12. exact assessment-submission instructions;
+13. precise references.
 
 Do not generate modules that merely say “read”, “study”, “reflect” or “discuss” without teaching the underlying content.
+
+## Visual learning with Mermaid
+
+Read `content_generation.visual_learning` from `.open-study-path/instance.yml`. When absent, use the template defaults documented in `docs/mermaid-visual-learning.md`.
+
+The roadmap must contain a Mermaid diagram representing the actual topic dependency graph, not a generic lifecycle placeholder.
+
+Every materialized module must contain at least `minimum_diagrams_per_materialized_module` fenced Mermaid diagrams. The default is one. Use more than one when a complex topic contains distinct structures, flows or interactions that benefit from separate views.
+
+Choose a diagram type that matches the subject:
+
+- nontechnical or conceptual topics: decision trees, causal flows, category maps, timelines, state changes and comparison paths;
+- programming and software design: flowcharts, sequence diagrams, state diagrams, class diagrams, entity relationships and dependency graphs;
+- cloud and infrastructure topics: architecture or data-flow views using flowcharts and subgraphs, plus sequence diagrams when interactions matter;
+- processes and procedures: flowcharts, state diagrams and timelines.
+
+A diagram is a teaching artifact, not decoration. Introduce what it represents and explain immediately afterwards what the learner should notice. Keep labels readable, avoid unsupported Mermaid features and raw HTML, and ensure the diagram renders in GitHub Markdown.
+
+Do not use a diagram to replace necessary prose, examples or practice. Use it to make relationships, decisions, sequences, states or architecture easier to understand.
 
 ## Assessments
 
@@ -108,7 +128,7 @@ For `workflow.curriculum_merge_policy: agent_review_then_merge`:
 
 1. review and correct the proposal branch;
 2. run all required checks;
-3. self-review the final diff and rolling-window selection;
+3. self-review the final diff, rolling-window selection and Mermaid rendering;
 4. set `status.curriculum_approved: true` only when review passes;
 5. rerun checks;
 6. mark the draft ready;
