@@ -100,9 +100,19 @@ Before external writes, classify each selected capability as `required_for_selec
 
 Every external resource stored in `state/integrations.json` must include capability, provider, safe external identifier, URL when available, topic, content version, authority, synchronization status and timestamp. Reuse exact resources; do not create duplicates.
 
+## Efficient repository execution
+
+Read `instructions/32-generation-execution.md` for curriculum generation and rolling materialization.
+
+Build the complete allowed diff and run the local validation suite before the first remote push or PR when a checkout is available. CI is confirmation, not the primary linter. Prefer one coherent proposal commit and focused correction commits rather than file-by-file publication.
+
+Every intermediate and final commit must remain within the active phase scope. In an instance curriculum operation, never modify workflows, validators, validator tests, reusable instructions, templates or schemas, even temporarily. Diagnose learner content from the repository code and exact logs without instrumentation commits or unrelated web searches.
+
+When the current unchanged head has successful required checks, is mergeable, has no unresolved review thread and needs no owner decision, finish immediately: mark ready, merge under the configured policy and return the completion response. Do not keep researching or rerunning unchanged checks.
+
 ## Curriculum review and merge
 
-Read `instructions/30-generate-path.md`, `instructions/35-review-curriculum.md` and `workflow.curriculum_merge_policy`.
+Read `instructions/30-generate-path.md`, `instructions/32-generation-execution.md`, `instructions/35-review-curriculum.md` and `workflow.curriculum_merge_policy`.
 
 Create curriculum and materialization PRs as drafts. Correct every resolvable issue, run required checks, self-review the final diff and merge under `agent_review_then_merge` when no pedagogical or integration-policy decision remains.
 
@@ -120,74 +130,3 @@ Never ask for a generic second review command when no unresolved decision exists
 Read `instructions/40-publish-tasks.md` and `instructions/42-integration-preflight.md` before external writes.
 
 Initial required publication is atomic across configured required providers. Verify each required connection with a harmless read-only operation. Optional providers use fallbacks rather than blocking.
-
-Create one task per topic in the single authoritative backend:
-
-- materialized topics receive module, topic, assessment and optional flashcard links plus the granular module checklist;
-- planned topics receive objective, prerequisites, topic-contract link and a clear future-materialization state;
-- never attach nonexistent module or assessment links;
-- only dependency-ready materialized topics enter the provider's ready state.
-
-The task backend is an execution index, not the course-content repository. Reuse exact matching resources and state identifiers.
-
-Ensure assessment labels exist: `assessment`, `assessment:submitted`, `assessment:graded`, `assessment:recovery-required`.
-
-After publication, use:
-
-`Ao concluir o TOPIC-000 e enviar o formulário, escreva: "Finalizei o TOPIC-000. Avalie minhas respostas."`
-
-## Deterministic assessment resolution
-
-Read `instructions/55-evaluate-topic.md`.
-
-The standard command requires a topic ID but not an issue number:
-
-`Finalizei o TOPIC-000. Avalie minhas respostas.`
-
-Resolve the assessment using all of these signals:
-
-- labels `assessment` and `assessment:submitted`;
-- title prefix `[Avaliação] TOPIC-000`;
-- hidden body marker `open-study-path:assessment topic_id=TOPIC-000`;
-- absence from prior recorded attempts;
-- absence of `assessment:graded`;
-- creation after the previous attempt when applicable.
-
-Evaluate automatically when exactly one candidate remains. Provide the form link when none remains. Ask for a specific issue only when multiple valid candidates remain. Never select an arbitrary newest issue.
-
-Grade every response independently, calculate 0–100, comment on the resolved issue, persist a versioned attempt and update progress. Mastery requires passing score, usable evidence and no unresolved critical misconception. No external provider may set mastery.
-
-## Automatic next-content materialization
-
-After mastery, execute `instructions/57-materialize-next-content.md` inside the same evaluation operation.
-
-- Restore the configured lookahead window without another learner command.
-- Select eligible planned topics in deterministic topological order.
-- Use the roadmap, topic contract, intake, diagnosis and verified assessment evidence.
-- Use prior modules as consistency references, not as the sole template.
-- Adapt examples, emphasis, prerequisite retrieval, visual models, formative practice and difficulty when evidence supports it.
-- Never silently rewrite approved objectives, prerequisites, deliverables, effort or mastery criteria; structural changes belong to replan.
-- Create a small draft PR limited to selected topics, their modules/flashcards/rubrics/forms, integration-plan adjustments and roadmap status.
-- Review, validate and safely merge before returning the next ready module.
-- Probe selected connectors and update derived resources after repository merge. Missing optional connectors use fallbacks and must not undo repository materialization.
-
-When mastery fails, create focused recovery and targeted reassessment. Formative tools may supplement practice but never replace durable GitHub evidence and rubrics.
-
-## Source of truth
-
-1. `.open-study-path/instance.yml`: repository identity, workflow and generation strategy.
-2. `study.config.yml`: learner, capability and provider preferences.
-3. `instructions/manifest.yml`: phase contracts.
-4. `state/diagnostic-summary.json`: placement evidence.
-5. `study/roadmap.md`: complete approved graph, Mermaid dependency view and materialization overview.
-6. `study/integrations.md`: explained provider recommendation and fallback plan.
-7. `study/topics/`: complete topic contracts.
-8. `study/modules/` and `study/flashcards/`: materialized teaching and formative artifacts.
-9. `study/assessments/` and Issue Forms: materialized assessments.
-10. `state/assessments/`: evaluated attempts.
-11. `state/progress.json`: verified progress.
-12. `state/integrations.json`: safe external-resource and synchronization index only.
-
-## Safety
-
-Never commit credentials, secrets, raw submissions, diagnostic transcripts or unnecessary personal data. Prefer pull requests for structural and material changes. Ask before destructive operations.

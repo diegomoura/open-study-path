@@ -19,9 +19,13 @@ The response must contain, in this order:
 
 Internal validation, review, correction, safe merge and automatic rolling-window materialization required by the active operation must finish before responding.
 
+Internal logs and diagnostic ZIP files are debugging aids, not primary learner artifacts. After a successful phase, do not attach, list or foreground them. Mention them only when the final operation remains blocked and owner inspection is necessary for a concrete decision.
+
 ## Pull-request state
 
 Follow the configured phase-specific policy. `auto_when_unambiguous` permits merge only when checks, evidence, scope, privacy and consistency rules pass without a material interpretation decision. For `workflow.curriculum_merge_policy: agent_review_then_merge`, review, correct, validate, mark ready and merge when no pedagogical or integration-policy decision remains.
+
+When the current PR head is unchanged, required checks are successful, the PR is mergeable, no unresolved review thread exists and no owner decision remains, finish immediately. Do not continue research, regenerate files or rerun unchanged checks.
 
 Use one review status:
 
