@@ -25,6 +25,12 @@ content_generation:
     topic_minutes_target_min: 45
     topic_minutes_target_max: 90
     split_topic_above_minutes: 120
+  visual_learning:
+    mermaid_enabled: true
+    roadmap_dependency_diagram_required: true
+    minimum_diagrams_per_materialized_module: 1
+    diagrams_must_be_explained: true
+    prefer_multiple_diagrams_for_complex_topics: true
 
 status:
   setup_complete: false
