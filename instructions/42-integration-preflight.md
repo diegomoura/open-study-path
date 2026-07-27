@@ -1,61 +1,132 @@
-# Integration preflight for task publication
+# Capability-based integration preflight
 
 Run this preflight inside the `publish` phase before any external write.
 
-## Determine required connections
+## Inputs
 
-Read `study.config.yml` and derive only the connections required by the configured providers:
+Read:
 
-- `integrations.task_manager.provider: trello` requires Trello;
-- `integrations.task_manager.provider: github_issues` requires access to the instance repository through GitHub;
-- `integrations.task_manager.provider: markdown` requires no external connection;
-- `integrations.calendar.provider: google_calendar` with `enabled: true` requires Google Calendar;
-- `integrations.notifications.provider: gmail` with `email_enabled: true` requires Gmail;
-- providers set to `none`, `chat` or disabled do not require an external connection.
+- `study.config.yml`;
+- approved `study/integrations.md`;
+- `state/integrations.json`;
+- exact repository identity from `.open-study-path/instance.yml`.
 
-Do not test integrations that are not enabled in the instance.
+Do not infer enabled providers from a global app catalog. A provider is relevant only when selected by the approved plan or needed as its fallback.
+
+## Classify capabilities
+
+Classify every capability as one of:
+
+- `required_for_selected_publication` — its provider must be available before the atomic required publication set begins;
+- `optional_probe` — try a harmless read, but failure immediately selects the documented fallback and does not block;
+- `not_enabled` — no probe and no write.
+
+GitHub access is always required.
+
+The authoritative external task backend is required when the selected plan expects tasks outside Markdown. A provider explicitly promoted to required by the owner is also required. By default, research, flashcards, reminders, scheduling, habits, external visuals, artifact workspaces, analytics, course discovery and notifications are optional.
+
+## Provider resolution
+
+Resolve the concrete providers configured for each capability:
+
+- task manager: Trello, Todoist, GitHub Issues or Markdown;
+- reminders: Todoist, calendar or none;
+- scheduling: Reclaim, Google Calendar, Outlook Calendar or none;
+- research: Consensus, web or none;
+- formative practice: Quizlet, Ace Quiz Maker, local flashcards or none;
+- habits: Habitify or none;
+- external visuals: Whimsical, Miro, Lucid, Figma or none;
+- artifacts: Google Drive, Notion, SharePoint, Dropbox or none;
+- analytics: Airtable or none;
+- notifications: Gmail, Outlook email, chat or none.
+
+A value of `auto` must already have a documented recommendation and fallback in `study/integrations.md`. Resolve it before writes and persist the actual provider used in `study.config.yml` or `state/integrations.json`.
 
 ## Verify actual access
 
-A provider name in `study.config.yml`, an installed app, or an available tool definition does not prove that the current ChatGPT Project is authorized.
+A provider name, installed app, visible tool definition or learner statement does not prove that the current ChatGPT Project is authorized.
 
-For every required external provider, execute one harmless read-only operation through its connector. Examples include listing a small number of Trello boards, reading Google Calendar colors or a minimal event search, listing Gmail labels, or reading the instance repository through GitHub.
+For every relevant external provider, execute one harmless minimal read-only operation supported by its connector. Examples:
 
-Treat missing tools, authorization requests, permission errors and failed read operations as an unavailable connection. Never request API keys, tokens or passwords in chat.
+- GitHub: read the instance marker or repository metadata;
+- Trello: list a small number of boards;
+- Todoist: list a small number of projects or tasks;
+- Reclaim, Google Calendar or Outlook Calendar: read availability, calendars or a bounded event window;
+- Quizlet: list or read a saved set when supported;
+- Consensus: run a minimal non-writing availability search only when research use is pending;
+- Habitify: read a small habit list;
+- Whimsical or another visual provider: list a small number of workspaces or files;
+- Google Drive or alternatives: list a small number of files;
+- Airtable: list accessible bases or schema metadata;
+- Gmail or Outlook email: list labels, folders or profile metadata.
 
-## Atomic preflight
+Use only operations actually exposed by the connected plugin. Never request API keys, tokens or passwords.
 
-Complete the connection preflight before creating any board, card, issue, event, email or integration-state write.
+## Required-provider atomicity
 
-When one or more required connections are unavailable:
+Complete every required probe before creating any required external resource.
 
-1. create no external resources;
-2. do not partially publish through the providers that are connected;
-3. name only the unavailable providers;
-4. tell the owner to connect or authorize those apps in the current ChatGPT Project;
-5. provide the exact return command below, replacing `<providers>` with the missing provider names:
+When one or more required providers are unavailable:
+
+1. create no resource in the required publication set;
+2. do not partially publish through other required providers;
+3. optional probes may be skipped because required publication is paused;
+4. name only the unavailable required providers;
+5. tell the owner to connect or authorize those apps in the current ChatGPT Project;
+6. provide the exact return command below:
 
 `Conectei <providers> ao ChatGPT. Verifique novamente e continue a publicação.`
 
-The return command does not prove access. Run the read-only probes again. If a connection is still unavailable, report only the providers that still fail.
+The return command does not prove access. Run the read-only probes again.
 
-The original publication request plus the return command authorize continuation of the same publication operation. Do not request another confirmation after all required probes pass.
+## Optional-provider fallback
 
-When every required connection is available, do not send an intermediate “connections verified” response. Continue directly with the configured publication adapters.
+When an optional provider is unavailable, unauthorized, unsupported, paid-only for the needed action or outside the learner's account policy:
 
-The approved-curriculum immutability rule from `instructions/40-publish-tasks.md` remains active throughout preflight and resumed publication. It never needs to be repeated in an owner command.
+1. create no resource in that provider;
+2. mark the provider `unavailable` with the reason category in `state/integrations.json`, without storing sensitive error details;
+3. activate the approved fallback;
+4. continue the publication operation;
+5. report the fallback briefly at completion.
+
+Examples:
+
+- Quizlet unavailable → link local TSV/Markdown flashcards;
+- Consensus unavailable → retain primary sources, official documentation and web research;
+- Reclaim unavailable → use approved Google/Outlook Calendar fallback or no schedule;
+- Habitify unavailable → keep habits in the task backend or module checklist;
+- Whimsical unavailable → use Mermaid only;
+- Drive unavailable → use repository artifacts;
+- Airtable unavailable → use repository state and omit the dashboard;
+- email unavailable → report in chat.
+
+Optional failure must never block generation, study, assessment, recovery or mastery.
+
+## Free-tier policy
+
+When `integration_preferences.free_tier_only` or a capability's `free_tier_only` is true:
+
+- do not probe by performing a paid write;
+- do not assume current plan entitlements from documentation or memory;
+- use only capabilities confirmed by harmless reads or safe attempted operations;
+- avoid requiring upgrades;
+- select the documented free fallback when the needed feature is unavailable.
 
 ## Idempotency before writes
 
-Before creating resources, search for identifiers already stored in `state/integrations.json` when it exists and look for exact matching resources in the connected providers. Reuse valid existing boards, projects, lists, cards, events or task artifacts rather than creating duplicates.
+Before creating resources, inspect exact records in `state/integrations.json` and search the connected provider for matching resources. Reuse or update valid resources rather than creating duplicates.
 
-A failed or interrupted publication must report which resources were actually created. Never claim atomic rollback when an external provider does not support it.
+Match on capability, provider, external type, topic ID, content version and stable course identifier. An interrupted publication must report what was actually created or updated. Never claim atomic rollback when the provider does not support it.
+
+## Continue after probes
+
+When required probes pass, do not send an intermediate “connections verified” response. Continue directly with required publication and optional provider probes.
 
 ## Blocked response
 
 Use a brief response equivalent to:
 
-> Resultado: publicação pausada antes de qualquer criação externa.
+> Resultado: publicação pausada antes de qualquer criação externa obrigatória.
 >
 > Atenção: não foi possível verificar a conexão com `<providers>`. Conecte ou autorize esses apps no Projeto do ChatGPT.
 >
@@ -63,4 +134,4 @@ Use a brief response equivalent to:
 >
 > `Conectei <providers> ao ChatGPT. Verifique novamente e continue a publicação.`
 
-Do not include a success artifact or claim that integrations were configured while the probes are failing.
+Do not list unavailable optional providers in the blocked response; they use fallbacks and will be summarized after successful core publication.
