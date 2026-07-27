@@ -1,0 +1,15 @@
+{
+  "version": 1,
+  "source_of_truth": {
+    "provider": "github",
+    "repository": "OWNER/REPOSITORY"
+  },
+  "selected_capabilities": {},
+  "resources": [],
+  "sync": {
+    "last_attempt_at": null,
+    "last_success_at": null,
+    "status": "not_started",
+    "errors": []
+  }
+}
