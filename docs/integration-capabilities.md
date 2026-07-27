@@ -8,7 +8,8 @@ flowchart LR
     D --> C[Approved curriculum]
     C --> R[Contextual capability recommendation]
     R --> P[Explained integration plan]
-    P --> F[Capability-based preflight]
+    P --> O[Optional connection offer]
+    O --> F[Capability-based preflight]
     F --> S[Idempotent synchronization]
     S --> G[GitHub verified state]
 ```
@@ -36,7 +37,9 @@ The plan is generated only after the agent understands the subject, learner, sco
 
 ### Quizlet
 
-Recommend when the course contains a meaningful body of atomic recall material: terminology, definitions, commands, formulas, classifications, comparisons or common errors. Generate a durable local flashcard artifact before or alongside external synchronization. A Quizlet score never changes mastery.
+Recommend when the course contains a meaningful body of atomic recall material: terminology, definitions, commands, formulas, classifications, comparisons or common errors. Generate a durable local Markdown and TSV flashcard artifact before or alongside external synchronization. A Quizlet score never changes mastery.
+
+A Quizlet connection offer is eligible only after at least one materialized topic has an approved local deck. The offer should explain that connecting enables an interactive external set while the local decks remain available. Do not suggest Quizlet merely because the app exists.
 
 ### Consensus
 
@@ -76,6 +79,29 @@ flowchart LR
 
 Suggested Airtable tables are Courses, Topics, Attempts, Study Sessions and Integrations. Every row derived from GitHub should include its source repository, source path or issue, content version and last synchronization timestamp.
 
+## Optional connection offer
+
+A contextual recommendation and an app connection are separate decisions.
+
+When a selected or recommended optional provider has immediate value in the materialized content window and access is not verified, the agent may use ChatGPT's Plugin Management capability to search for the exact provider and render an install/connect suggestion.
+
+The connection offer must follow these rules:
+
+1. it is based on a concrete course need, not the global app catalog;
+2. it is never shown for providers marked declined, avoided or disallowed by account preferences;
+3. it requires an explicit user click and normal app authorization;
+4. it is nonblocking, so the repository-native fallback and lifecycle response continue;
+5. it does not authorize external writes by itself;
+6. it is shown at most once per provider in the current operation and no more than three suggestions are prioritized at one time;
+7. displaying the control is not evidence that the provider is connected;
+8. after connection, access is verified again before creating resources.
+
+For Quizlet, the normal return command is:
+
+`Conectei o Quizlet ao ChatGPT. Verifique novamente e publique os flashcards dos tópicos materializados.`
+
+During publication, state may record `connection_offer_status`, `connection_offer_at` and a short `connection_reason`. Never store tokens, OAuth details or raw authorization errors.
+
 ## Explanation card contract
 
 Every recommended provider must be explained using all fields below:
@@ -89,7 +115,8 @@ Every recommended provider must be explained using all fields below:
 7. authority boundaries;
 8. fallback;
 9. preflight class;
-10. decision status.
+10. decision status;
+11. connection-offer eligibility and return command when applicable.
 
 Do not assume the learner knows a provider by name. Avoid marketing language and do not promise that a free plan contains a capability without verifying it during use.
 
@@ -98,14 +125,18 @@ Do not assume the learner knows a provider by name. Avoid marketing language and
 Connections are classified by the selected integration plan:
 
 - `required_for_selected_publication`: failure pauses writes that must remain atomic together;
-- `optional_probe`: failure records the provider as unavailable and immediately uses the fallback;
-- `not_enabled`: no probe and no write.
+- `optional_probe`: missing access may show a nonblocking connection offer and then uses the fallback;
+- `not_enabled`: no probe, suggestion or write.
 
 GitHub access is always required. A selected primary task backend may be required for publication. Research, flashcards, reminders, habits, external visuals, artifact workspaces, analytics and course discovery are optional unless the owner explicitly promotes a capability to required.
 
+When a connector has no harmless read action, never create a disposable test resource. Use the first intended approved write as the optional access check and retain the fallback on failure.
+
 ## Idempotency
 
-`state/integrations.json` is an index, not a second source of learning truth. Each external resource records capability, provider, external identifier, URL, topic, content version, authority, synchronization status and timestamp. Search both this state file and the provider before creating anything.
+`state/integrations.json` is an index, not a second source of learning truth. Each external resource records capability, provider, external identifier, URL, topic, content version, authority, synchronization status and timestamp. Search both this state file and the provider before creating anything when provider search is supported.
+
+When a provider can create but cannot update, create a versioned replacement only after approved content changes, preserve the previous record as superseded and point operational links to the newest successful version.
 
 ## Free-tier policy
 

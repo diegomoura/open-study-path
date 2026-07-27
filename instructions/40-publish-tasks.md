@@ -10,17 +10,17 @@ The standard command is:
 
 `Publique as tarefas da trilha nas integrações configuradas.`
 
-The command authorizes publication through providers already selected in the approved integration plan. It does not authorize installing unknown apps, requiring a paid plan or enabling capabilities marked declined.
+The command authorizes publication through providers already selected in the approved integration plan. It does not authorize installing unknown apps, requiring a paid plan or enabling capabilities marked declined. A learner click on a course-specific connection suggestion plus the normal app permission flow may select a previously recommended optional provider for its documented capability.
 
 ## Connection preflight
 
 Before external writes, execute `instructions/42-integration-preflight.md`. Classify connections by capability rather than testing every known app.
 
 - Required selected providers must pass harmless read-only probes before the atomic required publication set begins.
-- Optional providers use harmless probes, but failure records `unavailable`, selects the documented fallback and does not block core publication.
-- Disabled or irrelevant providers are not probed.
+- Optional providers use harmless probes when available; missing access may trigger one nonblocking Plugin Management connection suggestion, then the documented fallback continues.
+- Disabled, declined, forbidden or irrelevant providers are not probed or suggested.
 
-When every required probe passes, continue without another confirmation.
+When every required probe passes, continue without another confirmation. Do not wait for a click on an optional connection suggestion before completing work that can use the fallback.
 
 ## Authority model
 
@@ -114,11 +114,29 @@ Calendar may show the complete schedule projection. For a planned topic, link on
 
 ## Formative practice
 
-When Quizlet is selected and connected, create or update topic flashcard sets from approved files under `study/flashcards/`. Use only the current content version and store the external set identifier.
+When Quizlet is selected and connected, create one real topic flashcard set from each approved current-version deck under `study/flashcards/`. Prefer the local TSV as structured source and use the Markdown deck as a human-review reference. Store the returned external set identifier and URL, then add the current external link to the authoritative topic task while preserving both local links.
 
-When Quizlet is unavailable, retain and link the local Markdown/TSV fallback. Ace Quiz Maker may provide an interactive quiz in chat, but it is not required for publication and has no mastery authority.
+When Quizlet is recommended or selected, useful local decks exist and access is missing, use Plugin Management as defined in `instructions/42-integration-preflight.md` to render one nonblocking Quizlet connection suggestion. Do not ask a separate yes/no question first. Continue publication with the local Markdown/TSV fallback whether or not the learner clicks the suggestion.
 
-Do not create flashcard sets for topics without useful atomic recall material merely to satisfy an integration.
+If the Quizlet connector does not expose a harmless read operation, do not create a disposable test set. The first intended topic-set creation is the access check after required publication can safely proceed. On failure, record a short `not_connected` or `unavailable` reason and keep the fallback.
+
+Some Quizlet integrations can create new sets but cannot modify an existing set. In that case:
+
+- reuse an existing current-version set only when its exact identifier is already recorded and usable;
+- when approved flashcard content changes, create a versioned replacement such as `TOPIC-001 — <título> — v2`;
+- mark the prior resource record as superseded instead of deleting history;
+- update the operational task link to the newest successful set;
+- never claim an old set was updated when a new one was created.
+
+When Quizlet remains unavailable, retain and link the local Markdown/TSV fallback. Ace Quiz Maker may provide an interactive quiz in chat, but it is not required for publication and has no mastery authority.
+
+Do not create flashcard sets for topics without useful atomic recall material merely to satisfy an integration. Do not publish sets for planned topics whose complete flashcard deck does not yet exist.
+
+After a learner connects Quizlet following a fallback publication, accept:
+
+`Conectei o Quizlet ao ChatGPT. Verifique novamente e publique os flashcards dos tópicos materializados.`
+
+Re-run access verification, inspect state for existing exact resources, create only missing current-version sets and update derived task links without republishing unrelated resources.
 
 ## Habit tracking
 
@@ -170,7 +188,7 @@ When Gmail or Outlook email is selected and connected, send or draft only the co
 
 ## Idempotency and state
 
-Inspect `state/integrations.json` and exact matching provider resources before every write. Reuse or update resources rather than creating duplicates.
+Inspect `state/integrations.json` and exact matching provider resources before every write. Reuse or update resources when the provider supports it; otherwise create versioned replacements only for changed approved content.
 
 Every resource record must include:
 
@@ -185,11 +203,13 @@ Every resource record must include:
 - `sync_status`;
 - `last_sync_at`.
 
-Update `selected_capabilities` with the actual provider or fallback used. Never persist tokens, passwords, raw submissions or unnecessary identity data.
+For optional connection offers, also persist non-sensitive fields equivalent to `connection_offer_status`, `connection_offer_at` and `connection_reason` when publication state is being updated.
+
+Update `selected_capabilities` with the actual provider or fallback used. Never persist tokens, passwords, OAuth details, raw submissions or unnecessary identity data.
 
 ## Completion
 
-Link the integration plan, first complete module, authoritative task and assessment form. Summarize which optional providers used fallbacks without framing them as failures of the course.
+Link the integration plan, first complete module, authoritative task and assessment form. Summarize which optional providers used fallbacks without framing them as failures of the course. A displayed optional connection suggestion does not change the successful result.
 
 Do not start an improvised lesson in chat by default. Use:
 

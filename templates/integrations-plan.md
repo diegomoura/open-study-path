@@ -19,22 +19,23 @@ Este plano é gerado depois do intake e do diagnóstico. Ele recomenda somente c
 - Checklist, hábito, sessão ou pontuação formativa não comprovam domínio.
 - Recursos pagos nunca são obrigatórios sem alternativa gratuita.
 - Uma integração opcional indisponível usa o fallback e não bloqueia a fase.
+- Uma recomendação pode gerar uma oferta de conexão contextual, mas a conexão exige clique explícito e não autoriza escritas externas por si só.
 
 ## Resumo recomendado
 
-| Capacidade | Provedor recomendado | Estado | Obrigatório | Motivo resumido | Fallback |
-| --- | --- | --- | --- | --- | --- |
-| Fonte de verdade | GitHub | selecionado | sim | conteúdo e evidência duráveis | nenhum |
-| Pesquisa acadêmica | substituir | recomendado/dispensado | não | substituir | fontes primárias e web |
-| Prática formativa | substituir | recomendado/dispensado | não | substituir | flashcards em Markdown/TSV |
-| Tarefas | substituir | recomendado | não | substituir | Markdown |
-| Lembretes | substituir | recomendado/dispensado | não | substituir | calendário ou chat |
-| Agenda | substituir | recomendado/dispensado | não | substituir | calendário fixo ou nenhum |
-| Hábitos | substituir | recomendado/dispensado | não | substituir | acompanhamento manual |
-| Diagramas externos | substituir | recomendado/dispensado | não | substituir | Mermaid |
-| Entregáveis | substituir | recomendado/dispensado | não | substituir | arquivos no GitHub |
-| Analytics | substituir | recomendado/dispensado | não | substituir | `state/progress.json` |
-| Descoberta de cursos | substituir | recomendado/dispensado | não | substituir | fontes públicas/oficiais |
+| Capacidade | Provedor recomendado | Estado | Obrigatório | Conexão | Motivo resumido | Fallback |
+| --- | --- | --- | --- | --- | --- | --- |
+| Fonte de verdade | GitHub | selecionado | sim | verificada | conteúdo e evidência duráveis | nenhum |
+| Pesquisa acadêmica | substituir | recomendado/dispensado | não | não necessária/elegível | substituir | fontes primárias e web |
+| Prática formativa | substituir | recomendado/dispensado | não | não necessária/elegível | substituir | flashcards em Markdown/TSV |
+| Tarefas | substituir | recomendado | não | não necessária/elegível | substituir | Markdown |
+| Lembretes | substituir | recomendado/dispensado | não | não necessária/elegível | substituir | calendário ou chat |
+| Agenda | substituir | recomendado/dispensado | não | não necessária/elegível | substituir | calendário fixo ou nenhum |
+| Hábitos | substituir | recomendado/dispensado | não | não necessária/elegível | substituir | acompanhamento manual |
+| Diagramas externos | substituir | recomendado/dispensado | não | não necessária/elegível | substituir | Mermaid |
+| Entregáveis | substituir | recomendado/dispensado | não | não necessária/elegível | substituir | arquivos no GitHub |
+| Analytics | substituir | recomendado/dispensado | não | não necessária/elegível | substituir | `state/progress.json` |
+| Descoberta de cursos | substituir | recomendado/dispensado | não | não necessária/elegível | substituir | fontes públicas/oficiais |
 
 ## Cartões explicativos
 
@@ -52,6 +53,27 @@ Crie um cartão para cada capacidade recomendada ou explicitamente solicitada. N
 - **Fallback:** caminho sem esse provedor.
 - **Preflight:** `required_for_selected_publication`, `optional_probe` ou `not_enabled`.
 - **Decisão:** `selected`, `recommended`, `declined` ou `unavailable`.
+- **Oferta de conexão:** `not_needed`, `eligible`, `shown`, `connected`, `declined` ou `unavailable`, com a condição concreta que torna a conexão útil agora.
+- **Comando de retorno:** comando exato para verificar novamente e concluir a publicação depois da conexão, quando aplicável.
+
+## Oferta contextual de conexão
+
+Uma oferta de conexão só é válida quando o provedor está `selected` ou `recommended`, tem utilidade imediata na janela materializada e ainda não foi verificado no Projeto atual do ChatGPT.
+
+Quando elegível:
+
+1. use o gerenciamento de apps do ChatGPT para localizar o provedor exato;
+2. apresente o controle de instalar/conectar sem perguntar antes por texto;
+3. exija clique explícito e o fluxo normal de autorização;
+4. não espere pelo clique para continuar com o fallback;
+5. não afirme que a conexão foi concluída apenas porque o controle apareceu;
+6. não repita a mesma sugestão na operação atual;
+7. priorize no máximo três sugestões com utilidade imediata;
+8. não sugira provedores recusados, evitados, proibidos ou irrelevantes.
+
+Para Quizlet, a oferta só é elegível quando existe ao menos um deck Markdown/TSV aprovado de tópico materializado. Use:
+
+`Conectei o Quizlet ao ChatGPT. Verifique novamente e publique os flashcards dos tópicos materializados.`
 
 ## Regras por capacidade
 
@@ -62,6 +84,8 @@ Prefira Consensus quando o módulo contém afirmações empíricas, ciência, sa
 ### Prática formativa
 
 Prefira Quizlet para definições, termos, comandos, fórmulas, classificações, comparações e erros comuns. Ace Quiz Maker pode oferecer checagem rápida. Gere fallback durável em `study/flashcards/` quando flashcards forem pedagogicamente úteis. Resultados formativos nunca determinam domínio.
+
+Quando houver decks locais materializados e Quizlet estiver recomendado ou selecionado, marque a oferta como `eligible` caso a conexão ainda não esteja verificada. Depois da conexão, publique conjuntos reais somente para tópicos materializados e registre seus links. Se o conector criar mas não editar conjuntos, use substituição versionada e preserve o histórico anterior como superseded.
 
 ### Tarefas e lembretes
 
@@ -106,4 +130,6 @@ Cada recurso externo persistido em `state/integrations.json` deve registrar:
 - `sync_status`;
 - `last_sync_at`.
 
-Antes de criar, procure o identificador salvo e um recurso exato no provedor. Reutilize ou atualize; não duplique.
+Quando uma oferta de conexão for registrada durante publicação, use somente dados não sensíveis como `connection_offer_status`, `connection_offer_at` e `connection_reason`.
+
+Antes de criar, procure o identificador salvo e um recurso exato no provedor quando a busca for suportada. Reutilize ou atualize; quando o provedor não permitir atualização, crie substituição versionada somente após mudança de conteúdo e preserve o registro anterior.

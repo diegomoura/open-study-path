@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Validate learner-facing flashcards, assessment links and issue titles."""
+"""Validate learner-facing flashcards, assessments and optional app offers."""
 
 from __future__ import annotations
 
@@ -46,16 +46,24 @@ def parse_frontmatter(path: Path) -> tuple[dict[str, Any], str]:
     return metadata, body
 
 
+def require_terms(path: str, terms: list[str], message: str) -> None:
+    content = text(path)
+    for term in terms:
+        if term not in content:
+            fail(f"{path} is missing {message}: {term}")
+
+
 def require_contracts() -> None:
-    module_template = text("templates/module.md")
-    for term in [
-        "flashcards_study: null",
-        "<details>",
-        "issues/new?template=assessment-topic-000.yml",
-        "Não apresente somente o nome interno",
-    ]:
-        if term not in module_template:
-            fail(f"templates/module.md is missing learner-experience term: {term}")
+    require_terms(
+        "templates/module.md",
+        [
+            "flashcards_study: null",
+            "<details>",
+            "issues/new?template=assessment-topic-000.yml",
+            "Não apresente somente o nome interno",
+        ],
+        "learner-experience term",
+    )
 
     if not (ROOT / "templates/flashcards.md").is_file():
         fail("missing templates/flashcards.md")
@@ -64,24 +72,82 @@ def require_contracts() -> None:
     if issue_template.get("title") != "[Avaliação] TOPIC-000 — Replace me":
         fail("assessment Issue Form template must prefill the complete topic title")
 
-    generation = text("instructions/30-generate-path.md")
-    for term in [
-        "Durable and usable flashcards",
-        "study/flashcards/TOPIC-000.md",
-        "direct clickable URL",
-        "title is a useful signal, not the sole authority",
-    ]:
-        if term not in generation:
-            fail(f"generation contract is missing learner-experience term: {term}")
+    require_terms(
+        "instructions/30-generate-path.md",
+        [
+            "Durable and usable flashcards",
+            "study/flashcards/TOPIC-000.md",
+            "direct clickable URL",
+            "title is a useful signal, not the sole authority",
+        ],
+        "generation learner-experience term",
+    )
 
-    evaluation = text("instructions/55-evaluate-topic.md")
-    for term in [
-        "preferred consistency signal",
-        "normalize its title",
-        "Never reject or penalize",
-    ]:
-        if term not in evaluation:
-            fail(f"evaluation contract is missing editable-title handling: {term}")
+    require_terms(
+        "instructions/55-evaluate-topic.md",
+        [
+            "preferred consistency signal",
+            "normalize its title",
+            "Never reject or penalize",
+        ],
+        "editable-title handling",
+    )
+
+    require_terms(
+        "instructions/phase-completion.md",
+        [
+            "platform Plugin Management capability",
+            "nonblocking install/connect suggestion",
+            "at most three connection suggestions",
+            "Conectei o Quizlet ao ChatGPT. Verifique novamente e publique os flashcards dos tópicos materializados.",
+        ],
+        "post-generation connection-offer contract",
+    )
+
+    require_terms(
+        "instructions/42-integration-preflight.md",
+        [
+            "## Optional app discovery and connection offer",
+            "do not ask a separate text-only confirmation",
+            "Never create a test flashcard set",
+            "connection_offer_status",
+            "displayed offer is not consent for an external write",
+        ],
+        "optional connection preflight term",
+    )
+
+    require_terms(
+        "instructions/40-publish-tasks.md",
+        [
+            "nonblocking Quizlet connection suggestion",
+            "first intended topic-set creation is the access check",
+            "versioned replacement",
+            "mark the prior resource record as superseded",
+        ],
+        "Quizlet publication term",
+    )
+
+    require_terms(
+        "docs/integration-capabilities.md",
+        [
+            "## Optional connection offer",
+            "explicit user click",
+            "no more than three suggestions",
+            "never create a disposable test resource",
+        ],
+        "connection-offer documentation term",
+    )
+
+    require_terms(
+        "templates/integrations-plan.md",
+        [
+            "## Oferta contextual de conexão",
+            "**Oferta de conexão:**",
+            "Conectei o Quizlet ao ChatGPT. Verifique novamente e publique os flashcards dos tópicos materializados.",
+            "substituição versionada",
+        ],
+        "integration-plan connection-offer term",
+    )
 
 
 def validate_generated_modules() -> None:
@@ -143,7 +209,9 @@ def validate_generated_modules() -> None:
 def main() -> None:
     require_contracts()
     validate_generated_modules()
-    print("Learner-facing flashcards, assessment links and editable-title handling passed.")
+    print(
+        "Learner-facing flashcards, assessment links, editable titles and optional app offers passed."
+    )
 
 
 if __name__ == "__main__":
