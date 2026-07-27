@@ -165,9 +165,39 @@ When mastery is insufficient, the agent creates focused recovery and targeted re
 3. Connect GitHub and authorize the instance repository.
 4. Copy `templates/chatgpt-project-instructions.md` into the Project Instructions.
 5. Replace `OWNER/REPOSITORY` with the exact repository identifier.
-6. Ask the first chat to set up the instance and configure an intake provider.
+6. In the first chat, paste the exact command in **First chat command** below.
 7. Complete intake, bounded diagnostic and curriculum generation using the exact commands returned by the agent.
 8. Review the generated integration plan and publish only after the curriculum PR is approved and merged.
+
+### First chat command
+
+The recommended zero-configuration intake provider is the GitHub Issue Form already included in the repository. Replace `OWNER/REPOSITORY` and paste this complete command into the first conversation:
+
+```text
+Configure OWNER/REPOSITORY as an Open Study Path instance using the GitHub Issue Form as the intake provider.
+
+Read AGENTS.md, .open-study-path/template.yml, templates/instance.yml and instructions/manifest.yml before making changes.
+
+Create and validate only the instance setup files and prepare the intake form. Do not import intake answers, run the diagnostic, generate the curriculum or publish external tasks yet.
+
+Stop when the instance and intake provider are ready. Return the direct intake form link and the exact command I should send after submitting it.
+```
+
+This first operation must finish after instance setup and intake-provider configuration. Intake import, diagnostic, curriculum generation and publication are separate guided operations.
+
+To use another intake provider, replace only the first paragraph with one of these alternatives while keeping the rest of the command unchanged.
+
+**Jotform**
+
+```text
+Configure OWNER/REPOSITORY as an Open Study Path instance using Jotform as the intake provider.
+```
+
+**Manual YAML**
+
+```text
+Configure OWNER/REPOSITORY as an Open Study Path instance using manual YAML as the intake provider.
+```
 
 ## Guided lifecycle
 
