@@ -1,4 +1,4 @@
-version: 1
+version: 2
 id: open-study-path-intake
 
 form:
@@ -7,8 +7,10 @@ form:
   workspace_type: personal
   description: >-
     Formulário de onboarding para gerar uma trilha de aprendizagem personalizada.
-    As respostas serão normalizadas no repositório da instância. Não informe
-    segredos ou dados pessoais desnecessários.
+    As respostas serão normalizadas no repositório da instância. Integrações são
+    opcionais e serão recomendadas somente depois do diagnóstico. GitHub permanece
+    como fonte de verdade do conteúdo, avaliações e domínio. Não informe segredos
+    ou dados pessoais desnecessários.
   completion_message: >-
     Formulário enviado. Volte ao ChatGPT conectado ao seu repositório e peça
     para importar a submissão mais recente. O envio não gera a trilha automaticamente.
@@ -29,7 +31,11 @@ sections:
   - id: preferences
     title: Preferências de aprendizagem
   - id: integrations
-    title: Integrações
+    title: Integrações opcionais
+    description: >-
+      O agente analisará a trilha e recomendará somente ferramentas úteis. Para cada
+      recomendação, explicará finalidade, uso, limites gratuitos, dados, fallback e
+      autoridade. Nenhuma integração opcional bloqueará o curso.
   - id: consent
     title: Consentimento
 
@@ -69,11 +75,7 @@ fields:
     label: Qual é seu nível atual?
     type: single_choice
     required: true
-    options:
-      - none
-      - beginner
-      - intermediate
-      - advanced
+    options: [none, beginner, intermediate, advanced]
 
   - key: prior_knowledge
     section: context
@@ -122,61 +124,36 @@ fields:
     label: Quais dias prefere estudar?
     type: multi_choice
     required: false
-    options:
-      - monday
-      - tuesday
-      - wednesday
-      - thursday
-      - friday
-      - saturday
-      - sunday
+    options: [monday, tuesday, wednesday, thursday, friday, saturday, sunday]
 
   - key: preferred_periods
     section: availability
     label: Quais períodos prefere?
     type: multi_choice
     required: false
-    options:
-      - morning
-      - afternoon
-      - evening
+    options: [morning, afternoon, evening]
 
   - key: learning_formats
     section: preferences
     label: Quais formatos de aprendizagem prefere?
     type: multi_choice
     required: false
-    options:
-      - documentation
-      - books
-      - videos
-      - courses
-      - exercises
-      - projects
-      - discussions
-      - flashcards
+    options: [documentation, books, videos, courses, exercises, projects, discussions, flashcards]
 
   - key: theory_practice_balance
     section: preferences
     label: Qual equilíbrio prefere entre teoria e prática?
     type: single_choice
     required: false
-    options:
-      - theory
-      - balanced
-      - practical
+    options: [theory, balanced, practical]
 
   - key: assessment_style
     section: preferences
     label: Como prefere ser avaliado?
+    help_text: A evidência oficial continuará registrada nas avaliações do GitHub.
     type: multi_choice
     required: false
-    options:
-      - quizzes
-      - exercises
-      - written_explanation
-      - project
-      - mock_interview
+    options: [quizzes, exercises, written_explanation, project, mock_interview]
 
   - key: accessibility_needs
     section: preferences
@@ -184,30 +161,118 @@ fields:
     type: long_text
     required: false
 
-  - key: task_manager
+  - key: integration_experience
     section: integrations
-    label: Onde deseja acompanhar as tarefas?
+    label: Quanto enriquecimento externo você deseja?
+    help_text: >-
+      minimal usa principalmente GitHub e Markdown; guided_recommendations recomenda
+      somente o que for útil; enriched considera mais recursos opcionais.
     type: single_choice
     required: true
-    options:
-      - github_issues
-      - trello
-      - markdown
+    default: guided_recommendations
+    options: [minimal, guided_recommendations, enriched]
 
-  - key: use_calendar
+  - key: free_tier_only
     section: integrations
-    label: Deseja integrar com Google Calendar?
+    label: O curso deve funcionar apenas com recursos gratuitos?
+    help_text: Recursos pagos nunca serão obrigatórios sem alternativa gratuita.
     type: yes_no
+    required: true
+    default: true
+
+  - key: account_connections
+    section: integrations
+    label: Como deseja tratar novas conexões de conta?
+    type: single_choice
+    required: true
+    default: ask_per_provider
+    options: [ask_per_provider, connected_services_only, no_external_accounts]
+
+  - key: already_uses
+    section: integrations
+    label: Quais serviços você já utiliza?
+    help_text: >-
+      Trello organiza tópicos visualmente; Todoist oferece tarefas simples e recorrentes;
+      Reclaim protege tempo de foco; Quizlet cria flashcards; Consensus pesquisa literatura;
+      Habitify mede consistência; Whimsical cria diagramas externos; Drive guarda entregáveis;
+      Airtable mostra dashboards derivados e nunca substitui o GitHub.
+    type: multi_choice
     required: false
-    default: false
+    options:
+      - trello
+      - todoist
+      - google_calendar
+      - outlook_calendar
+      - reclaim
+      - quizlet
+      - consensus
+      - habitify
+      - whimsical
+      - google_drive
+      - airtable
+      - notion
+
+  - key: willing_to_connect
+    section: integrations
+    label: Quais capacidades aceitaria conectar se forem recomendadas?
+    help_text: Marcar não conecta nada automaticamente.
+    type: multi_choice
+    required: false
+    options:
+      - task_management
+      - scheduling
+      - flashcards
+      - academic_research
+      - habit_tracking
+      - external_diagrams
+      - artifact_workspace
+      - analytics_dashboard
+      - course_discovery
+
+  - key: task_manager
+    section: integrations
+    label: Onde prefere acompanhar as tarefas?
+    help_text: >-
+      Trello é o padrão para cursos ricos; Todoist é adequado para uma experiência
+      simples. Apenas um backend manterá o estado operacional autoritativo.
+    type: single_choice
+    required: true
+    default: auto
+    options: [auto, trello, todoist, github_issues, markdown]
+
+  - key: scheduling_provider
+    section: integrations
+    label: Como prefere planejar as sessões de estudo?
+    help_text: >-
+      Reclaim é preferido para agenda adaptativa; Google ou Outlook oferecem blocos
+      fixos. A trilha nunca exigirá assinatura paga.
+    type: single_choice
+    required: true
+    default: auto
+    options: [auto, reclaim, google_calendar, outlook_calendar, none]
+
+  - key: todoist_reminders
+    section: integrations
+    label: Deseja considerar Todoist apenas para lembretes recorrentes?
+    help_text: Concluir um lembrete não conclui o tópico no backend principal.
+    type: single_choice
+    required: false
+    default: auto
+    options: [auto, enabled, disabled]
 
   - key: email_summaries
     section: integrations
-    label: Deseja receber resumos pelo Gmail?
-    help_text: Se escolher sim, a integração de notificações será configurada como Gmail.
-    type: yes_no
+    label: Deseja receber resumos por e-mail quando houver provedor compatível?
+    type: single_choice
     required: false
-    default: false
+    default: none
+    options: [none, gmail, outlook_email]
+
+  - key: integration_notes
+    section: integrations
+    label: Restrições ou preferências sobre integrações
+    type: long_text
+    required: false
 
   - key: additional_notes
     section: preferences
@@ -223,4 +288,4 @@ fields:
     text: >-
       Entendo que informações normalizadas necessárias ao planejamento poderão
       ser salvas no meu repositório, sem persistir a submissão bruta, anexos
-      originais ou dados pessoais desnecessários.
+      originais, credenciais ou dados pessoais desnecessários.
