@@ -11,6 +11,21 @@ workflow:
   diagnostic_merge_policy: auto_when_unambiguous
   curriculum_merge_policy: agent_review_then_merge
 
+content_generation:
+  strategy: adaptive_rolling_window
+  lookahead_topics: 2
+  full_upfront_max_topics: 4
+  full_upfront_max_hours: 4
+  adapt_future_modules_from_assessments: true
+  granularity:
+    activity_minutes_min: 10
+    activity_minutes_max: 25
+    activities_per_topic_min: 3
+    activities_per_topic_max: 7
+    topic_minutes_target_min: 45
+    topic_minutes_target_max: 90
+    split_topic_above_minutes: 120
+
 status:
   setup_complete: false
   intake_configured: false
