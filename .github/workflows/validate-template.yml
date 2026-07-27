@@ -37,7 +37,15 @@ jobs:
         run: python scripts/validate_template.py schema
 
       - name: Validate guided lifecycle
-        run: python scripts/validate_guided_lifecycle.py
+        run: python scripts/validate_guided_lifecycle.py 2>&1 | tee guided-validation.log
+
+      - name: Upload guided validation diagnostics
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: guided-validation-diagnostics
+          path: guided-validation.log
+          if-no-files-found: ignore
 
       - name: Validate curriculum contract
         run: python scripts/validate_curriculum.py
