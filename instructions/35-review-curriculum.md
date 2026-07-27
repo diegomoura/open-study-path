@@ -10,11 +10,12 @@ Review against:
 - `instructions/30-generate-path.md`;
 - `instructions/57-materialize-next-content.md` when materializing later content;
 - `docs/mermaid-visual-learning.md`;
-- topic, module, rubric and Issue Form templates;
-- configured availability, granularity, visual-learning and content-generation strategy;
+- `docs/integration-capabilities.md`;
+- topic, module, rubric, integration-plan and Issue Form templates;
+- configured availability, granularity, visual-learning, integration preferences and content-generation strategy;
 - verified assessment evidence when future content is being adapted.
 
-Do not publish external tasks during curriculum review.
+Do not publish external tasks or create provider resources during curriculum review.
 
 ## Review checklist
 
@@ -46,26 +47,40 @@ Confirm that:
 24. total effort and schedule projection remain consistent with availability;
 25. scope is explicitly introductory when it does not satisfy the complete long-term goal;
 26. required resources name a specific work and canonical locator;
-27. no external tasks or integrations are created during curriculum generation or review.
+27. `study/integrations.md` exists and recommends only capabilities supported by the course, diagnostic or learner preference;
+28. every recommended provider explains what it is, why it fits, how it will be used, cost/access, minimum data, authority, fallback, preflight class and decision;
+29. Consensus is conditional evidence support and does not replace primary sources or official documentation;
+30. Quizlet or Ace Quiz Maker results do not affect mastery, and useful flashcards have a durable repository fallback;
+31. exactly one task backend is authoritative; Todoist may be auxiliary only when it cannot modify the primary task state;
+32. Reclaim or calendar recommendations respect free-tier policy and have a no-cost fallback;
+33. Habitify is limited to consistency signals and never changes mastery;
+34. Mermaid remains canonical when Whimsical or another external visual workspace is recommended;
+35. Airtable is strictly `github_to_airtable`, cannot promote mastery and cannot overwrite canonical progress;
+36. external courses identify precise sections, access conditions, active effort and evidence, with a free alternative for potentially paid resources;
+37. providers in `avoid` or disallowed by `account_connections` are not selected;
+38. optional providers are classified as optional probes and cannot block core generation or study;
+39. no external tasks or integrations are created during curriculum generation or review.
 
-Reject a module as incomplete when it could be replaced by a short checklist without losing meaningful teaching content. Also reject a required visual section that contains a generic diagram unrelated to the topic or a Mermaid block without explanatory prose. Correct problems directly on the proposal branch.
+Reject a module as incomplete when it could be replaced by a short checklist without losing meaningful teaching content. Also reject a required visual section that contains a generic diagram unrelated to the topic or a Mermaid block without explanatory prose.
+
+Reject an integration plan when it is a catalog dump, assumes the learner knows the tools, claims current free-plan capabilities without verification, creates multiple sources of truth or recommends a provider without a concrete course signal. Correct problems directly on the proposal branch.
 
 ## Allowed diffs
 
-Initial generation may change the instance marker, roadmap, every topic contract and only the modules, rubrics and forms selected by the initial content window.
+Initial generation may change the instance marker, `study.config.yml` for permitted `auto` resolution, roadmap, integration plan, every topic contract and only the modules, flashcard files, rubrics and forms selected by the initial content window.
 
-Later materialization must remain limited to the selected topic contracts, their modules, rubrics and forms, plus roadmap materialization status.
+Later materialization must remain limited to the selected topic contracts, their modules, optional flashcard files, rubrics and forms, roadmap materialization status and integration-plan adjustments justified by verified assessment evidence.
 
 ## Automatic review and merge policy
 
 Read `workflow.curriculum_merge_policy` from `.open-study-path/instance.yml`. If missing, use `manual`.
 
 - `manual`: finish review, report findings and leave the PR open.
-- `agent_review_then_merge`: correct the branch, run required checks, self-review the final diff, set any required approved or materialized status, rerun checks, mark ready and merge when no unresolved pedagogical decision remains.
+- `agent_review_then_merge`: correct the branch, run required checks, self-review the final diff, set any required approved or materialized status, rerun checks, mark ready and merge when no unresolved pedagogical or integration-policy decision remains.
 
 Do not attempt to formally approve a PR authored by the same account. Contract verification, final diff review and successful CI constitute operational review.
 
-Leave the PR open only when goal, structure, effort, resource precision, assessment meaning, visual representation or a structural adaptation genuinely requires owner input, or when CI/scope validation fails.
+Leave the PR open only when goal, structure, effort, resource precision, assessment meaning, visual representation, provider privacy/cost policy or a structural adaptation genuinely requires owner input, or when CI/scope validation fails.
 
 When owner input is required, annotate the PR and use:
 
