@@ -5,6 +5,7 @@ version: 1
 estimated_minutes: 60
 visual_diagrams: 1
 flashcards: null
+flashcards_study: null
 ---
 
 # TOPIC-000 — Replace me
@@ -72,13 +73,18 @@ Inclua tarefas que exijam transferência para um caso novo e produção do entre
 
 ## Prática formativa e revisão
 
-Quando o tópico tiver definições, comandos, fórmulas, classificações, comparações ou erros comuns adequados à recuperação ativa, defina `flashcards: study/flashcards/TOPIC-000.tsv` no frontmatter e gere o arquivo com colunas `Front`, `Back` e `Tags`.
+Quando o tópico tiver definições, comandos, fórmulas, classificações, comparações ou erros comuns adequados à recuperação ativa:
 
-Linke o arquivo local, que é o fallback durável e deve funcionar sem conta externa. Quando Quizlet for selecionado e sincronizado, adicione também o link do conjunto externo sem remover o fallback. Ace Quiz Maker pode ser sugerido para checagem rápida em chat.
+- defina `flashcards: study/flashcards/TOPIC-000.tsv`;
+- defina `flashcards_study: study/flashcards/TOPIC-000.md`;
+- gere o TSV com colunas `Front`, `Back` e `Tags` para importação;
+- gere o Markdown com cartões expansíveis usando `<details>` e `<summary>` para estudo direto no GitHub.
+
+No módulo, apresente primeiro o link **Estudar os flashcards no GitHub** para o arquivo Markdown e, em seguida, o link **Baixar ou importar o TSV**. Quando Quizlet for realmente publicado, o cartão operacional e o estado de integrações devem incluir o link externo sem remover os dois arquivos locais.
 
 Explique explicitamente que flashcards e quizzes são prática formativa. Pontuação, sequência ou conclusão nessas ferramentas não determina domínio do tópico.
 
-Quando flashcards não forem pedagogicamente úteis, mantenha `flashcards: null` e explique brevemente por que a prática principal exige aplicação, produção ou raciocínio mais longo.
+Quando flashcards não forem pedagogicamente úteis, mantenha `flashcards: null` e `flashcards_study: null` e explique brevemente por que a prática principal exige aplicação, produção ou raciocínio mais longo.
 
 ## Síntese por recuperação ativa
 
@@ -90,7 +96,13 @@ Descreva exatamente o que deve ser produzido e como vincular ou transcrever a ev
 
 ## Avaliação do tópico
 
-Use o Issue Form específico do tópico. Depois de enviar as respostas, retorne ao chat com:
+Construa o link direto com a identidade exata da instância e apresente-o como ação clicável:
+
+`https://github.com/OWNER/REPOSITORY/issues/new?template=assessment-topic-000.yml`
+
+Use uma frase como **Abrir a avaliação do TOPIC-000**. Não apresente somente o nome interno `assessment-topic-000.yml` ao estudante.
+
+Depois de enviar as respostas, retorne ao chat com:
 
 `Finalizei o TOPIC-000. Avalie minhas respostas.`
 
