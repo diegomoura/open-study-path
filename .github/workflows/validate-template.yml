@@ -42,6 +42,12 @@ jobs:
       - name: Validate guided lifecycle
         run: python scripts/validate_guided_lifecycle.py 2>&1 | tee guided-validation.log
 
+      - name: Validate efficient generation contract
+        run: python scripts/validate_generation_efficiency.py
+
+      - name: Test curriculum placeholder detection
+        run: python scripts/test_curriculum_placeholder_detection.py
+
       - name: Upload guided validation diagnostics
         if: failure()
         uses: actions/upload-artifact@v4
@@ -51,4 +57,4 @@ jobs:
           if-no-files-found: ignore
 
       - name: Validate curriculum contract
-        run: python scripts/validate_curriculum.py
+        run: python scripts/validate_curriculum_safe.py
