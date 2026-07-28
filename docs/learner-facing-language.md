@@ -21,6 +21,30 @@ Uma resposta de fase bem-sucedida deve responder somente ao que for útil agora:
 
 Se uma informação não ajuda a responder uma dessas perguntas, ela normalmente não pertence à resposta principal.
 
+## Uma interface não é um inventário
+
+Trello, Todoist, GitHub Issues ou outra ferramenta de tarefas devem funcionar como uma porta de entrada curta para o estudo, não como uma listagem de todos os arquivos produzidos pelo sistema.
+
+Para cada capacidade, mostre um único recurso principal:
+
+- uma aula;
+- uma prática disponível agora;
+- uma avaliação.
+
+Quando uma integração externa foi criada com sucesso, ela é o recurso principal daquela capacidade no cartão. Exemplo: se o conjunto do Quizlet existe, o cartão mostra **Praticar no Quizlet** e não repete o deck Markdown e o TSV.
+
+As alternativas locais continuam dentro da aula e do repositório. Elas aparecem no cartão somente quando a integração principal está indisponível, quando importação é a ação desejada ou quando a pessoa pede alternativas.
+
+Não use como navegação principal:
+
+- contratos internos em `study/topics/`;
+- rubricas YAML em `study/assessments/`;
+- arquivos de estado;
+- índices de sincronização;
+- nomes de formulários sem link direto.
+
+Resuma no próprio cartão o objetivo, o tempo, o entregável e os critérios de conclusão que a pessoa realmente precisa conhecer.
+
 ## O que não deve aparecer por padrão após sucesso
 
 Não destaque:
@@ -33,7 +57,8 @@ Não destaque:
 - frases como “aprovado pelo agente e pelo CI”;
 - `materialized`, `planned`, `adaptive_rolling_window`, `optional_probe`, `required_for_selected_publication` ou `source_of_truth`;
 - detalhes de idempotência e sincronização;
-- explicações sobre como a issue foi localizada.
+- explicações sobre como a issue foi localizada;
+- links para contratos internos ou rubricas detalhadas quando um resumo no cartão é suficiente.
 
 Esses dados continuam disponíveis quando a pessoa pede detalhes técnicos, quando uma decisão está bloqueada ou quando uma falha precisa de ação.
 

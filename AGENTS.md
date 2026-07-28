@@ -92,7 +92,9 @@ Read `instructions/40-publish-tasks.md` and `instructions/42-integration-preflig
 
 Create one task per topic. Use human titles such as `1. Agência sem garantia`, not `[TOPIC-001]`, unless technical IDs were requested.
 
-A ready card says what the learner will do, how long it may take, where the lesson and practice are, what to produce and how to finish. A future card says that the lesson will be prepared automatically after prerequisites.
+A ready card says what the learner will do, how long it may take, where the lesson, primary practice and assessment are, what to produce and how to finish. A future card summarizes the stage and says that the lesson will be prepared automatically after prerequisites.
+
+A task backend is not a repository inventory. Show one primary learner-facing resource per capability. When Quizlet or another external practice resource exists, show it instead of repeating the local fallback in the task. Keep local alternatives in the lesson. Do not link topic contracts, rubric YAML, state files or synchronization records from normal learner tasks.
 
 Do not repeat “source of truth”, “authority”, `planned`, `materialized`, preflight or synchronization language in every card.
 

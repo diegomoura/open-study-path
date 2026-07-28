@@ -73,19 +73,29 @@ Run `instructions/42-integration-preflight.md` before external writes. Optional 
 
 ## Tasks
 
-Use human task titles such as `1. <título>`. Ready tasks say:
+Use human task titles such as `1. <título>`. Treat the selected task tool as a concise learner interface, not an inventory of repository artifacts.
+
+Ready tasks say:
 
 - what the person will learn;
 - time suggested;
-- lesson, practice and assessment links;
+- one lesson link;
+- one primary practice link available now;
+- one direct assessment link;
 - what to produce;
 - how to finish.
 
-Future tasks say the lesson will be prepared automatically after previous steps. Do not repeat technical authority or materialization language in every card.
+When an external practice resource such as Quizlet exists, show it as the task's practice link and keep Markdown/TSV alternatives inside the lesson. When it does not exist, show the best local learner-facing alternative. Do not show both merely because both are stored.
+
+Do not link `study/topics/` contracts, rubric YAML, state files or synchronization records from normal learner tasks. Summarize objective, deliverable and completion criteria directly in the task.
+
+Future tasks say what the person will learn, what they will produce and that the lesson will be prepared automatically after previous steps. They do not need an internal topic-contract link merely to provide a destination. Do not repeat technical authority or materialization language in every card.
 
 ## Assessments and progress
 
 Each ready topic has five substantial prompts and a 100-point rubric. The form asks for the learner's own reasoning and does not explain issue-title or lookup mechanics.
+
+The detailed rubric remains available to the evaluator and repository validation. Learner-facing tasks and navigation show concise observable completion criteria rather than linking the rubric YAML by default.
 
 Resolve one valid submission through labels, hidden marker and history. Ask for an issue number only when multiple candidates remain. Grade each response, report a clear score and feedback, persist the attempt and update progress.
 

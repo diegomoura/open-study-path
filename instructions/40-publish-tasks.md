@@ -35,7 +35,21 @@ Do not create empty assessment issues during publication.
 
 ## Task backend
 
-Create one task per topic in the single selected backend. The task is a clear index into the lesson, practice and assessment.
+Create one task per topic in the single selected backend. The task is the learner's concise entry point into the lesson, primary practice and assessment. It is not an inventory of every repository artifact.
+
+### One primary resource per capability
+
+Show one primary learner-facing resource per capability in the task:
+
+- one lesson link;
+- one current practice link for the same practice capability;
+- one direct assessment link.
+
+When an external integration is connected and its current resource was created successfully, show that external resource as the primary practice link. Keep local Markdown and TSV alternatives in the lesson and repository, but do not duplicate them in the task.
+
+When the external resource is unavailable, show the best local learner-facing alternative instead. Prefer the Markdown study deck. Show the TSV only when import is the intended action or the learner explicitly asks for it.
+
+Do not link internal topic contracts under `study/topics/`, rubric YAML files under `study/assessments/`, state files or synchronization records from the primary task. Summarize the useful parts of those artifacts directly in the card.
 
 ### Human card titles
 
@@ -54,9 +68,11 @@ Use a description equivalent to:
 > **O que você vai aprender:** <capacidade em linguagem clara>  
 > **Tempo sugerido:** <estimativa>
 >
-> **Aula:** <link direto>  
-> **Pratique:** <Markdown>, <Quizlet quando real>, <TSV para importação>  
-> **Avaliação:** <link direto>
+> **Recursos**
+>
+> - **Aula:** <link direto para o módulo>
+> - **Prática:** <um único recurso principal disponível agora>
+> - **Avaliação:** <link direto para o formulário>
 >
 > **O que você vai produzir:** <entregável>  
 > **Para concluir:** <critério de aplicação e pontuação em linguagem simples>
@@ -82,7 +98,7 @@ Use:
 >
 > A aula completa será preparada automaticamente quando você concluir as etapas anteriores. Você não precisa pedir a geração manualmente.
 
-Link only the topic overview or contract. Do not attach nonexistent module, rubric, flashcard or assessment links. Do not use `planned`, `materialized`, “janela ativa” or “ordem topológica” in learner copy.
+The future card must stand on its own. Do not link the internal topic contract merely to provide a destination. Link a roadmap only when it genuinely helps the learner understand the wider sequence. Do not attach nonexistent module, rubric, flashcard or assessment links. Do not use `planned`, `materialized`, “janela ativa” or “ordem topológica” in learner copy.
 
 Only dependency-ready lessons enter the ready list. Keep future lessons in the planned list.
 
@@ -101,19 +117,21 @@ Use “Revisão necessária” in visible copy instead of “Recuperação” wh
 
 ### Todoist or GitHub Issues
 
-When another task backend is selected, preserve the same human structure and links. Todoist reminders may be auxiliary only and must point to the primary task or lesson.
+When another task backend is selected, preserve the same human structure and projection rules. Todoist reminders may be auxiliary only and must point to the primary task or lesson.
 
 ## Scheduling
 
-Use the selected scheduling provider only as an aid to reserve time. Planned content links only to its current task or overview. Update existing matching schedule resources rather than creating duplicates.
+Use the selected scheduling provider only as an aid to reserve time. Future content links only to its current task when a link is useful. Update existing matching schedule resources rather than creating duplicates.
 
 ## Formative practice
 
-When Quizlet is selected and connected, create one real set from each approved current-version local deck. Prefer TSV as the structured source and Markdown as the review reference. Store the external ID and URL, then add **Praticar no Quizlet** to the current task while preserving local links.
+When Quizlet is selected and connected, create one real set from each approved current-version local deck. Prefer TSV as the structured source and Markdown as the review reference. Store the external ID and URL, then show only **Praticar no Quizlet** as the flashcard-practice link in the current task. Keep local Markdown and TSV files available inside the lesson and repository as durable alternatives.
 
 When useful decks exist but Quizlet is not connected, render one nonblocking connection suggestion through Plugin Management. Use natural copy:
 
-> Os flashcards já estão disponíveis no GitHub. Conectar o Quizlet acrescenta um modo interativo de praticar.
+> Os flashcards já estão disponíveis na aula. Conectar o Quizlet acrescenta um modo interativo de praticar.
+
+Until Quizlet is connected, show **Estudar os flashcards no GitHub** as the task's primary practice link. Do not also show the TSV unless import is the intended action.
 
 Do not ask a separate yes/no question before the control and do not block publication.
 
@@ -139,14 +157,17 @@ Do not publish sets for future topics without complete decks.
 
 ## Other integrations
 
+Apply the same projection rule to other capabilities:
+
+- show one current scheduler or task destination, not every calendar fallback;
+- show one artifact workspace link when it is the actual place to work;
+- show one external diagram only when it adds something beyond the canonical Mermaid view;
 - habits support consistency only;
-- external diagrams complement Mermaid;
-- Drive or another workspace may hold deliverables;
 - Airtable is a `github_to_airtable` read model;
 - Gmail or Outlook may send only configured summaries;
 - course platforms link precise approved lessons or exercises.
 
-Use human labels in visible resources. Keep provider authority, preflight and synchronization terminology in `state/integrations.json` and technical plan details.
+Use human labels in visible resources. Keep provider authority, preflight, fallbacks and synchronization terminology in the lesson, integration state and technical plan instead of repeating them in tasks.
 
 ## Idempotency and state
 
@@ -154,7 +175,7 @@ Inspect `state/integrations.json` and matching provider resources before writing
 
 ## Completion
 
-After publication, link the first ready lesson, primary task and assessment. Mention an optional alternative only when it changes what the learner can use now.
+After publication, link the first ready lesson, primary task and assessment. Mention an alternative only when the primary resource is unavailable or the learner explicitly asks for it.
 
 Do not lead with a publication report, provider inventory, PR status or CI result. Use:
 

@@ -16,6 +16,8 @@ assessment_form: .github/ISSUE_TEMPLATE/assessment-topic-000.yml
 
 # TOPIC-000 — Replace me
 
+> Este arquivo é o contrato interno da etapa para geração, validação e integrações. Ele pode permanecer legível, mas não é uma página de navegação principal para quem estuda. O cartão da ferramenta escolhida resume o necessário, e a aula completa é o material de estudo.
+
 ## O que você vai aprender
 
 Descreva uma capacidade observável que a pessoa desenvolverá.
@@ -38,7 +40,7 @@ Defina entre três e sete ações pequenas e verificáveis, normalmente com 10�
 
 ## Aula
 
-Quando `content_status: materialized`, apresente [a aula completa](../modules/TOPIC-000.md).
+Quando `content_status: materialized`, registre internamente [a aula completa](../modules/TOPIC-000.md).
 
 Quando `content_status: planned`, use:
 
@@ -48,7 +50,7 @@ Não mostre `materialized`, `planned`, “janela ativa” ou outros termos inter
 
 ## Prática
 
-Quando flashcards forem úteis, linke primeiro o deck Markdown para estudo, depois o TSV para importação e, quando realmente publicado, o conjunto externo atual.
+Registre os recursos reais associados à etapa para que o agente possa gerar a projeção correta. O contrato pode apontar para o deck Markdown, TSV e conjunto externo atual, mas a ferramenta de tarefas deve mostrar somente um recurso principal de prática conforme `instructions/40-publish-tasks.md`.
 
 Use linguagem equivalente a:
 
@@ -80,7 +82,11 @@ Não repita em todos os tópicos uma longa explicação sobre autoridade, checkl
 
 ## Avaliação
 
-Quando a aula estiver pronta, linke a rubrica e o formulário direto. Apresente o comando natural:
+Quando a aula estiver pronta, registre o formulário direto e mantenha o caminho da rubrica no frontmatter para uso do avaliador e das validações.
+
+Não apresente a rubrica YAML como link normal no cartão, na resposta de conclusão ou na navegação principal. Mostre à pessoa os critérios observáveis resumidos em **Para concluir esta etapa**.
+
+Apresente o comando natural:
 
 `Terminei <título da aula>. Avalie minhas respostas.`
 

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Validate learner-facing language, flashcards, assessment links and source sections."""
+"""Validate learner-facing language, task projections, flashcards, assessment links and source sections."""
 
 from __future__ import annotations
 
@@ -54,6 +54,13 @@ def require_terms(path: str, terms: list[str]) -> None:
             fail(f"{path} is missing learner-experience term: {term}")
 
 
+def forbid_terms(path: str, terms: list[str]) -> None:
+    content = text(path)
+    for term in terms:
+        if term in content:
+            fail(f"{path} retains obsolete learner-experience term: {term}")
+
+
 def validate_contracts() -> None:
     require_terms("templates/module.md", [
         "flashcards_study: null",
@@ -61,11 +68,14 @@ def validate_contracts() -> None:
         "issues/new?template=assessment-topic-000.yml",
         "## Como este conteúdo foi construído",
         "## Fontes e caminhos para aprofundar",
+        "cartão mostra somente um recurso principal de prática",
         "Terminei <título da aula>. Avalie minhas respostas.",
     ])
     require_terms("templates/topic.md", [
         "## O que você vai aprender",
         "## Por que isso importa para você",
+        "não é uma página de navegação principal",
+        "Não apresente a rubrica YAML como link normal",
         "Esta aula será preparada automaticamente",
     ])
     require_terms("instructions/phase-completion.md", [
@@ -74,13 +84,32 @@ def validate_contracts() -> None:
         "Organize minha trilha nas ferramentas que escolhemos.",
     ])
     require_terms("instructions/40-publish-tasks.md", [
-        "Human card titles",
-        "Você pode começar por aqui",
+        "One primary resource per capability",
+        "one current practice link",
+        "Do not link internal topic contracts",
+        "show only **Praticar no Quizlet**",
+        "The future card must stand on its own",
         "Sua sessão de estudo",
     ])
+    forbid_terms("instructions/40-publish-tasks.md", [
+        "**Pratique:** <Markdown>, <Quizlet quando real>, <TSV para importação>",
+        "while preserving local links",
+        "Link only the topic overview or contract",
+    ])
     require_terms("docs/learner-facing-language.md", [
-        "O que não deve aparecer por padrão após sucesso",
+        "Uma interface não é um inventário",
+        "um único recurso principal",
+        "contratos internos em `study/topics/`",
         "Terminei <título da aula>. Avalie minhas respostas.",
+    ])
+    require_terms("templates/chatgpt-project-instructions.md", [
+        "not an inventory of repository artifacts",
+        "one primary practice link available now",
+        "Do not link `study/topics/` contracts",
+    ])
+    require_terms("AGENTS.md", [
+        "A task backend is not a repository inventory",
+        "Do not link topic contracts, rubric YAML, state files or synchronization records",
     ])
     require_terms("docs/content-quality-and-sources.md", [
         "no mínimo três fontes",
@@ -175,7 +204,7 @@ def validate_generated_modules() -> None:
 def main() -> None:
     validate_contracts()
     validate_generated_modules()
-    print("Natural learner language, source-rich lessons, assessments and flashcards passed.")
+    print("Natural learner language, concise task projections, source-rich lessons, assessments and flashcards passed.")
 
 
 if __name__ == "__main__":
