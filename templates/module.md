@@ -84,7 +84,9 @@ Quando o tópico tiver definições, comandos, fórmulas, classificações, comp
 - gere o TSV com colunas `Front`, `Back` e `Tags`;
 - gere o Markdown com cartões expansíveis usando `<details>` e `<summary>`.
 
-Apresente primeiro **Estudar os flashcards no GitHub** e depois **Baixar ou importar o TSV**. Quando existir um conjunto real no Quizlet, inclua também **Praticar no Quizlet**, sem remover os arquivos locais.
+Dentro da aula, mantenha as alternativas duráveis: **Estudar os flashcards no GitHub**, **Baixar ou importar o TSV** e, quando existir um conjunto real, **Praticar no Quizlet**. A pessoa pode escolher o formato que melhor ajuda.
+
+A ferramenta de tarefas não deve repetir todos esses links. Conforme `instructions/40-publish-tasks.md`, o cartão mostra somente um recurso principal de prática: Quizlet quando o conjunto atual existe; Markdown quando o recurso externo não está disponível; TSV apenas quando importação é a ação pretendida.
 
 Explique uma única vez, em linguagem natural: os flashcards ajudam a praticar; a etapa é concluída pela avaliação.
 
