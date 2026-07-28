@@ -1,139 +1,121 @@
 # Guided phase completion
 
-Use this contract at the end of every lifecycle phase.
+Use this contract at the end of every lifecycle phase. Read `docs/learner-facing-language.md` before composing the response.
 
-## Response goals
+## Internal completion
 
-Keep the completion response brief and action-oriented. Do not repeat full intake, diagnostic, curriculum, integration plan or state unless requested.
+Finish validation, review, correction, safe merge and configured rolling-window materialization before responding. Pull requests, checks and repository state remain the technical audit trail.
 
-Do not send a separate transition message immediately before repository work. Complete the active operation and send one final completion response.
+Do not send a transition message immediately before repository work. Complete the operation and send one final response.
 
-The response must contain, in this order:
+## Learner-facing response
 
-1. **Result** — what completed and whether it was validated.
-2. **Artifact** — primary links.
-3. **Review status** — PR approved/merged or annotated for one concrete decision.
-4. **Attention** — only material assumptions, required-provider failures, optional fallbacks or required actions.
-5. **Next step** — the next lifecycle action.
-6. **Continue command** — one exact copyable command.
+A successful response should answer, in this order:
 
-Internal validation, review, correction, safe merge and automatic rolling-window materialization required by the active operation must finish before responding.
+1. **What is ready** — one short sentence focused on the learner's outcome.
+2. **Where to go** — the one or two links needed now.
+3. **What to do next** — a concrete next action.
+4. **Continue naturally** — one short, copyable sentence.
+5. **Attention** — only when a real decision, missing connection or limitation changes the next action.
 
-Internal logs and diagnostic ZIP files are debugging aids, not primary learner artifacts. After a successful phase, do not attach, list or foreground them. Mention them only when the final operation remains blocked and owner inspection is necessary for a concrete decision.
+Do not foreground PR numbers, CI, commit hashes, branches, changed files, validator names, internal states or synchronization metadata after success. Provide technical details only when requested or when they explain a blocker that requires action.
 
-## Pull-request state
+## Technical review state
 
-Follow the configured phase-specific policy. `auto_when_unambiguous` permits merge only when checks, evidence, scope, privacy and consistency rules pass without a material interpretation decision. For `workflow.curriculum_merge_policy: agent_review_then_merge`, review, correct, validate, mark ready and merge when no pedagogical or integration-policy decision remains.
+Operational review still occurs internally. Record review and merge status in the PR and repository history. Do not require a fixed PR-status sentence in the learner-facing response.
 
-When the current PR head is unchanged, required checks are successful, the PR is mergeable, no unresolved review thread exists and no owner decision remains, finish immediately. Do not continue research, regenerate files or rerun unchanged checks.
+When a genuine unresolved decision exists, link the exact PR or comment and say plainly what decision is needed. Never ask the owner to review an entire PR merely because one exists.
 
-Use one review status:
+## Natural commands
 
-- `Revisão do PR: aprovada pelo agente e pelo CI; PR #<número> mesclado.`
-- `Revisão do PR: anotações adicionadas ao PR #<número>. Avalie somente os pontos marcados e responda no PR.`
-
-Never ask for whole-PR review when no unresolved decision exists.
-
-## Phase guidance
+Present natural commands by default and accept older technical commands as aliases.
 
 ### After intake setup
 
-Always return the direct clickable intake URL when the selected provider has a form. For manual YAML, return the exact configuration path instead.
+Return the direct intake link and use:
 
-For GitHub Issue Form or Jotform, use this continuation command:
+`Preenchi o formulário. Pode continuar.`
 
-`Enviei o formulário. Localize e importe a única submissão válida. Conclua e valide esta etapa; depois, inicie o diagnóstico proporcional com perguntas curtas, uma por vez.`
-
-Do not ask the owner to copy an issue number or submission ID by default.
+Do not ask for an issue or submission number unless deterministic lookup finds more than one valid candidate.
 
 ### After intake import
 
-Do not claim that providers were recommended or connected. Intake records preferences only.
+When diagnostic chaining was authorized, start the bounded diagnostic and ask the first short question. Otherwise use:
 
-If the owner explicitly authorized diagnostic chaining, begin `instructions/20-diagnostic.md` only after the intake source is resolved, the state validates and the intake PR is merged. State the proportional question budget and ask the first short question.
-
-If diagnostic chaining was not requested, use:
-
-`Inicie o diagnóstico proporcional desta trilha. Faça perguntas curtas, uma por vez. Não gere a trilha ainda.`
-
-If zero valid submissions are found, return the same direct intake link. If more than one valid submission remains, list only the candidates needed for disambiguation and request a choice.
+`Vamos fazer meu diagnóstico.`
 
 ### After diagnostic
 
-`Gere uma proposta de trilha com base no intake e no diagnóstico. Não publique tarefas ainda.`
+Use:
+
+`Crie minha trilha de estudos.`
 
 ### After curriculum generation
 
-State whether the configured strategy generated all modules or an initial rolling window. Link:
+State whether all lessons or only the first lessons are ready, using human language. Link the roadmap, the first ready lesson and useful local practice. Summarize only tools that help now.
 
-- the roadmap;
-- `study/integrations.md`;
-- the first materialized module;
-- local flashcards when generated.
-
-Summarize only the selected or recommended capability providers, not every known plugin. Make clear that no external resource was created during generation.
-
-Before the completion response, identify selected or recommended optional providers that have an immediate use in the materialized content window but whose access is not verified in the current ChatGPT Project. Use the platform Plugin Management capability to search for the exact app and render a nonblocking install/connect suggestion when all of these conditions hold:
-
-- the integration plan contains a concrete pedagogical or operational reason;
-- the provider is not declined, forbidden by `avoid` or disallowed by account-connection preferences;
-- the app is not already verified as connected;
-- the same provider has not already been suggested in the current completion operation.
-
-Prioritize at most three connection suggestions by immediate usefulness. Quizlet is eligible only when at least one materialized topic already has an approved local Markdown/TSV flashcard deck. Do not ask a text-only yes/no question before showing the available connection control. The suggestion requires an explicit user click, does not prove authorization, does not authorize external writes and must not block the local fallback or the next lifecycle command.
-
-Do not claim that an app was installed or connected merely because the suggestion was displayed. When the learner connects Quizlet after a fallback publication, use this return command:
-
-`Conectei o Quizlet ao ChatGPT. Verifique novamente e publique os flashcards dos tópicos materializados.`
+When a useful optional app is not connected, use the platform Plugin Management capability to render a nonblocking install/connect suggestion under `instructions/42-integration-preflight.md`. Do not ask a separate text-only confirmation first. A suggestion requires an explicit user click and does not prove authorization.
 
 Use:
 
-`Publique as tarefas da trilha nas integrações configuradas.`
+`Organize minha trilha nas ferramentas que escolhemos.`
+
+For Quizlet after connection, use:
+
+`Conectei o Quizlet. Crie meus flashcards.`
+
+The technical aliases remain accepted:
+
+- `Publique as tarefas da trilha nas integrações configuradas.`
+- `Conectei o Quizlet ao ChatGPT. Verifique novamente e publique os flashcards dos tópicos materializados.`
 
 ### When required publication is blocked
 
-Name only unavailable required providers and use:
+Name only the service that needs attention and explain its practical effect. Use a natural return command such as:
 
-`Conectei <providers> ao ChatGPT. Verifique novamente e continue a publicação.`
+`Conectei o Trello. Pode continuar.`
 
-Re-run probes and continue automatically when they pass. Do not include unavailable optional providers in the blocked list because they use fallbacks.
+Re-run access verification; a learner statement alone does not prove connection.
 
 ### After task and integration publication
 
-Do not begin an improvised lesson in chat by default. Link the first complete module, authoritative task and assessment form.
+Link the first ready lesson, its task and its assessment. Do not lead with a publication report or a list of providers.
 
-Briefly list optional providers that used fallbacks, such as local flashcards instead of Quizlet or Mermaid-only instead of an external visual workspace. Do not frame optional fallback as a failure of the course.
+Use the topic title in the command:
 
-When a useful optional provider used a fallback because it was not connected, a connection suggestion may be rendered once under `instructions/42-integration-preflight.md`. Continue the successful publication response regardless of whether the learner clicks it.
+`Terminei <título da aula>. Avalie minhas respostas.`
 
-Link the integration plan when the learner needs to understand why a provider was selected.
-
-Use:
-
-`Ao concluir o TOPIC-000 e enviar o formulário, escreva: "Finalizei o TOPIC-000. Avalie minhas respostas."`
-
-Do not require the learner to copy the issue number by default.
+Continue accepting `Finalizei o TOPIC-000. Avalie minhas respostas.` as a deterministic technical alias.
 
 ### After topic evaluation
 
-Report the resolved assessment issue, score and mastery. GitHub is the only source allowed to establish mastery.
+Report:
 
-When mastered, automatically materialize enough eligible planned topics to restore the configured lookahead window. Link the automatic materialization PR when one was needed and give the next ready module without asking for a generation command.
+- the score and a plain-language conclusion;
+- the strongest evidence and the most important next improvement;
+- the next ready lesson when mastered;
+- the focused review when more work is needed.
 
-When recovery is required, link the focused recovery issue and authoritative task. Optional reminders, habits, schedules or flashcards may support recovery but are not evidence of mastery.
+When mastered, restore the configured lookahead automatically. Do not mention the automatic content PR unless requested or unless it failed.
 
-Report deferred optional synchronization only when it changes what the learner can use immediately.
+Natural commands:
 
-Normal command:
+- `Terminei <título da aula>. Avalie minhas respostas.`
+- `Terminei a revisão de <título da aula>.`
 
-`Finalizei o TOPIC-000. Avalie minhas respostas.`
+Technical aliases remain accepted:
 
-Recovery command:
+- `Finalizei o TOPIC-000. Avalie minhas respostas.`
+- `Finalizei a recuperação do TOPIC-000. Avalie minhas respostas.`
 
-`Finalizei a recuperação do TOPIC-000. Avalie minhas respostas.`
+Only request an explicit issue number when multiple valid candidates remain.
 
-Only request an explicit issue number when deterministic lookup finds more than one valid candidate.
+## Optional connection suggestions
 
-## Concision rule
+Use Plugin Management only for selected or recommended optional providers with immediate value in the ready content window. Do not suggest declined, forbidden, irrelevant or already connected providers. Show at most one suggestion per provider and at most three connection suggestions in one completion response. Continue with the repository-native alternative without waiting for a click.
 
-Detailed questions, provider explanations, scores, state and diffs belong in issues, pull requests and repository artifacts. Surface only meaningful results and next actions in chat.
+## Concision and visibility
+
+Detailed provider explanations, source mappings, scores, diffs, PR state and synchronization metadata belong in repository artifacts. Surface them in chat only when they change what the learner should do now.
+
+Internal logs and diagnostic ZIP files are debugging aids. Do not attach or foreground them after success.
