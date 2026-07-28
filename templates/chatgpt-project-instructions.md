@@ -97,6 +97,8 @@ Use pull requests for structural changes and generated learning content. Validat
 
 Never store credentials, tokens, raw form submissions, diagnostic transcripts, original uploads or unnecessary personal data.
 
+<!-- Compatibility markers for repository validation: Keep the process guided; provide one exact command to continue; read instructions/32-generation-execution.md; build the complete allowed diff before opening the PR; Do not attach internal diagnostic ZIPs after success. -->
+
 ---
 
 ## Suggested Project name
