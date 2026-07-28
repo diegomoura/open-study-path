@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Validate deterministic intake discovery with natural learner commands."""
+"""Validate marker-first intake discovery and natural learner commands."""
 
 from __future__ import annotations
 
@@ -8,6 +8,8 @@ from pathlib import Path
 from typing import Any
 
 import yaml
+
+from intake_resolution import CURRENT_MARKER
 
 ROOT = Path(__file__).resolve().parents[1]
 NATURAL_COMMAND = "Preenchi o formulário. Pode continuar."
@@ -41,15 +43,20 @@ def load_yaml(path: str) -> Any:
 def main() -> None:
     require("instructions/05-configure-intake.md", [
         "https://github.com/OWNER/REPOSITORY/issues/new?template=create-study-path.yml",
-        NATURAL_COMMAND,
+        CURRENT_MARKER,
+        "study-request",
+        "intake:imported",
         "Do not require an issue number",
         "older forms",
     ])
     require("instructions/10-intake.md", [
-        "study-request",
+        "scripts/intake_resolution.py",
+        CURRENT_MARKER,
         CURRENT_PREFIX,
         LEGACY_PREFIX,
-        "expected field headings",
+        "Matching headings alone",
+        "repairable consistency signals",
+        "unsupported",
         "exactly one valid candidate",
         "When none remain",
         "more than one remains",
@@ -69,10 +76,39 @@ def main() -> None:
         "Ask for an issue number only when multiple candidates remain",
         "Internal review, correction, CI, safe merge",
     ])
+    require("AGENTS.md", [
+        "current intake marker",
+        "legacy submissions",
+        "Matching headings alone",
+    ])
 
     issue_form = load_yaml(".github/ISSUE_TEMPLATE/create-study-path.yml")
     if issue_form.get("title") != "[Nova trilha] ":
         fail("new intake form must use the human title prefix")
+    markdown = "\n".join(
+        str(block.get("attributes", {}).get("value", ""))
+        for block in issue_form.get("body", [])
+        if isinstance(block, dict) and block.get("type") == "markdown"
+    )
+    if markdown.count(CURRENT_MARKER) != 1:
+        fail("intake Issue Form must contain exactly one current hidden marker")
+
+    for path in [
+        "scripts/intake_resolution.py",
+        "scripts/test_intake_resolution.py",
+        "scripts/ensure_repository_labels.py",
+        "scripts/test_repository_labels.py",
+    ]:
+        if not (ROOT / path).is_file():
+            fail(f"missing intake regression asset: {path}")
+
+    workflow = text(".github/workflows/validate-template.yml")
+    for command in [
+        "python scripts/test_intake_resolution.py",
+        "python scripts/test_repository_labels.py",
+    ]:
+        if command not in workflow:
+            fail(f"validation workflow is missing: {command}")
 
     manifest = load_yaml("instructions/manifest.yml")
     phases = {
@@ -86,7 +122,7 @@ def main() -> None:
     if intake.get("stop_after_phase") is not True:
         fail("intake must stop by default when chaining was not requested")
 
-    print("Natural deterministic intake resolution and diagnostic chaining passed.")
+    print("Marker-first deterministic intake resolution and diagnostic chaining passed.")
 
 
 if __name__ == "__main__":
