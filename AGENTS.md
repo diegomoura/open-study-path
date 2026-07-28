@@ -12,6 +12,8 @@ Repository metadata such as reported size, code-search status, search results or
 
 A derived instance retains `.open-study-path/template.yml`; the instance marker takes precedence without replacing the inherited template marker. Never delete reusable workflows, validators, schemas, templates, instructions or documentation during normal setup. Apply `instructions/02-setup-execution.md` during the first chat.
 
+A GitHub intake is ready only when the form contains the current intake marker and repository labels `study-request` and `intake:imported` exist. Provision missing labels before reporting setup success. During import, current marked submissions may repair title and discovery label after unique resolution; legacy submissions require label, recognized title prefix and expected headings together. Matching headings alone never prove intake identity.
+
 ## Guided lifecycle
 
 Read `instructions/manifest.yml`, `instructions/phase-completion.md` and `docs/learner-facing-language.md` before lifecycle work.
