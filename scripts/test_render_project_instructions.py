@@ -5,10 +5,14 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import yaml
+
 from render_project_instructions import PLACEHOLDER, render_instructions
 
 ROOT = Path(__file__).resolve().parents[1]
 TEMPLATE = ROOT / "templates/chatgpt-project-instructions.md"
+WORKFLOW = ROOT / ".github/workflows/render-project-instructions.yml"
+MARKER = ROOT / ".open-study-path/template.yml"
 
 
 def main() -> None:
@@ -30,6 +34,26 @@ def main() -> None:
     renamed = render_instructions(rendered, renamed_repository)
     if first_repository in renamed or renamed_repository not in renamed:
         raise SystemExit("repository rename was not propagated")
+
+    if not WORKFLOW.is_file():
+        raise SystemExit("automatic Project Instructions workflow is missing")
+    workflow = WORKFLOW.read_text(encoding="utf-8")
+    for term in [
+        "github.repository != 'diegomoura/open-study-path'",
+        "github.event.repository.default_branch",
+        "contents: write",
+        "scripts/render_project_instructions.py",
+        'git commit -m "chore: prepare ChatGPT project instructions"',
+    ]:
+        if term not in workflow:
+            raise SystemExit(f"renderer workflow is missing: {term}")
+
+    marker = yaml.safe_load(MARKER.read_text(encoding="utf-8"))
+    setup = marker.get("instance_setup", {})
+    if setup.get("chatgpt_project_instructions_renderer") != "scripts/render_project_instructions.py":
+        raise SystemExit("template marker does not register the renderer")
+    if setup.get("chatgpt_project_instructions_workflow") != ".github/workflows/render-project-instructions.yml":
+        raise SystemExit("template marker does not register the renderer workflow")
 
     print("Automatic Project Instructions rendering passed.")
 
