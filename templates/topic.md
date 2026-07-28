@@ -10,13 +10,14 @@ estimated_hours: 0
 prerequisites: []
 module: study/modules/TOPIC-000.md
 flashcards: null
+flashcards_study: null
 assessment: study/assessments/TOPIC-000.yml
 assessment_form: .github/ISSUE_TEMPLATE/assessment-topic-000.yml
 ---
 
 # TOPIC-000 — Replace me
 
-> Este arquivo é o contrato interno da etapa para geração, validação e integrações. Ele pode permanecer legível, mas não é uma página de navegação principal para quem estuda. O cartão da ferramenta escolhida resume o necessário, e a aula completa é o material de estudo.
+> Este arquivo é o contrato interno da etapa para geração, validação e integrações. Ele concentra identidade, versão, duração e caminhos operacionais para que a aula comece diretamente pelo conteúdo. Ele pode permanecer legível, mas não é uma página de navegação principal para quem estuda.
 
 ## O que você vai aprender
 
@@ -40,7 +41,7 @@ Defina entre três e sete ações pequenas e verificáveis, normalmente com 10�
 
 ## Aula
 
-Quando `content_status: materialized`, registre internamente [a aula completa](../modules/TOPIC-000.md).
+Quando `content_status: materialized`, registre internamente [a aula completa](../modules/TOPIC-000.md). A aula publicada não recebe frontmatter YAML; ela começa diretamente pelo título e pela orientação de estudo.
 
 Quando `content_status: planned`, use:
 
