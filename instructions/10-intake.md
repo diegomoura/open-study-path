@@ -18,22 +18,43 @@ Continue accepting older technical intake commands as aliases.
 
 ## GitHub Issue Form
 
-Search only the instance repository. A valid candidate should satisfy all available signals:
+Search only the instance repository. Apply the algorithm in `scripts/intake_resolution.py`; do not replace it with similarity or newest-issue heuristics.
+
+### Current marked submissions
+
+A current candidate must satisfy all of these identity and state checks:
 
 - it is an issue, not a pull request;
-- it has the `study-request` label;
-- its title starts with the current `[Nova trilha]` prefix or the legacy `[Study Path]:` prefix;
+- its body contains exactly one supported marker: `<!-- open-study-path:intake form_id=create-study-path version=2 -->`;
 - its body contains the expected field headings from `.github/ISSUE_TEMPLATE/create-study-path.yml`;
-- it is not already in `state/intake-summary.json.source_reference`;
+- it is not already identified by `state/intake-summary.json.source_reference`;
 - it does not have the `intake:imported` label.
 
-Use an explicit issue number immediately when provided, after verifying the form signals.
+For a uniquely resolved current candidate, the title prefix and `study-request` label are repairable consistency signals. Add the missing label and normalize the title to the current `[Nova trilha]` prefix before import. Do not rewrite the issue body or the learner's answers.
+
+If any `open-study-path:intake` marker is present but its form ID, version, count or syntax is unsupported, reject that issue. Do not reinterpret it as a legacy submission.
+
+### Legacy unmarked submissions
+
+An issue without an intake marker is a valid legacy candidate only when every legacy identity signal is present together:
+
+- label `study-request`;
+- current `[Nova trilha]` or legacy `[Study Path]:` title prefix;
+- expected form field headings;
+- no prior source reference;
+- no `intake:imported` label.
+
+Matching headings alone, a unique recent issue, similar answers or an edited title are never sufficient legacy identity. Do not silently weaken the filter because only one issue looks plausible.
+
+An explicit issue number narrows the search but does not bypass current or legacy identity checks.
+
+### Selection and import
 
 When the form was reported as submitted:
 
-1. search all candidates using the signals above;
+1. classify all candidates using the current-marker and legacy rules above;
 2. import automatically when exactly one valid candidate remains;
-3. when none remain, return the direct form link and explain that no valid submission was found yet;
+3. when none remain, return the direct form link and explain that no verifiable submission was found yet;
 4. when more than one remains, list candidate number, title and creation time and ask the owner to choose;
 5. never select an arbitrary newest repository issue.
 

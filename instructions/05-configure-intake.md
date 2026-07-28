@@ -18,20 +18,24 @@ Do not silently select Jotform or create external resources without the owner's 
 
 1. Confirm `.github/ISSUE_TEMPLATE/create-study-path.yml` exists in the target repository. Do not infer absence from repository size or search metadata.
 2. Read the exact repository identity from `.open-study-path/instance.yml`.
-3. Configure the GitHub Issue Form as ready with deterministic submission lookup.
-4. Build the direct URL:
+3. Confirm the form contains the current hidden identity marker:
+
+   `<!-- open-study-path:intake form_id=create-study-path version=2 -->`
+
+4. Verify repository labels `study-request` and `intake:imported` exist. Create only missing labels through the GitHub labels API or run **Prepare ChatGPT Project Instructions**, which invokes `scripts/ensure_repository_labels.py`. Read the labels again after provisioning.
+5. Configure the GitHub Issue Form as ready with deterministic submission lookup only after the marker and both labels are verified.
+6. Build the direct URL:
 
    `https://github.com/OWNER/REPOSITORY/issues/new?template=create-study-path.yml`
 
-5. Return it as a direct clickable link with a human label such as **Preencher meu formulário**.
-6. Ensure labels `study-request` and `intake:imported` can be used.
-7. Stop after setup and use the natural command:
+7. Return it as a direct clickable link with a human label such as **Preencher meu formulário**.
+8. Stop after setup and use the natural command:
 
    `Preenchi o formulário. Pode continuar.`
 
 The form is inherited reusable infrastructure. Do not edit, recreate or replace it during normal instance setup. Configure only the instance marker and `study.config.yml` unless a verified template defect requires a separate canonical-template fix.
 
-Do not create or submit an issue, import answers, run the diagnostic or generate curriculum during setup. Do not require an issue number.
+Do not mark setup or intake ready when label existence or the current marker cannot be verified. Do not create or submit an issue, import answers, run the diagnostic or generate curriculum during setup. Do not require an issue number.
 
 ### Compatibility
 

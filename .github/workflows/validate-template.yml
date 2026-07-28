@@ -39,6 +39,12 @@ jobs:
       - name: Validate deterministic intake resolution
         run: python scripts/validate_intake_resolution.py
 
+      - name: Test deterministic intake resolution
+        run: python scripts/test_intake_resolution.py
+
+      - name: Test repository label provisioning
+        run: python scripts/test_repository_labels.py
+
       - name: Validate configuration schema
         run: python scripts/validate_template.py schema
 
