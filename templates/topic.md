@@ -16,74 +16,88 @@ assessment_form: .github/ISSUE_TEMPLATE/assessment-topic-000.yml
 
 # TOPIC-000 — Replace me
 
-## Objective
+## O que você vai aprender
 
-Describe one observable capability the learner will gain.
+Descreva uma capacidade observável que a pessoa desenvolverá.
 
-## Why this matters
+## Por que isso importa para você
 
-Connect the topic to the learner's final goal or a diagnostic gap.
+Conecte a etapa ao objetivo final, à motivação registrada ou a uma lacuna observada no diagnóstico. Evite uma justificativa genérica que serviria para qualquer pessoa.
 
-## Prerequisites
+## O que você já precisa saber
 
-- None
+- Nada, ou indique as etapas anteriores em linguagem simples.
 
-## Learning activities
+## Seu plano para esta etapa
 
-Define between three and seven small, independently checkable actions. Each action should normally take 10–25 minutes and should not compress several distinct steps into one line. When materialized, include active use of the module's Mermaid visual model rather than treating it as decoration.
+Defina entre três e sete ações pequenas e verificáveis, normalmente com 10–25 minutos cada. Use verbos concretos e não misture leitura, vários exercícios, entrega e avaliação em uma única linha.
 
-- [ ] First focused activity (10–25 min)
-- [ ] Study and explain the topic's Mermaid visual model (10–25 min)
-- [ ] Third focused activity (10–25 min)
+- [ ] Primeira atividade focada (10–25 min)
+- [ ] Estudar e explicar o mapa visual da aula (10–25 min)
+- [ ] Aplicar o conteúdo em uma situação nova (10–25 min)
 
-## Complete module
+## Aula
 
-- When `content_status: materialized`, link [the complete study module](../modules/TOPIC-000.md), which must include at least the configured minimum number of explained Mermaid diagrams.
-- When `content_status: planned`, state that the lesson will be materialized automatically when it enters the active rolling window. Do not create a broken link or pretend the lesson exists.
+Quando `content_status: materialized`, apresente [a aula completa](../modules/TOPIC-000.md).
 
-## Formative practice and integrations
+Quando `content_status: planned`, use:
 
-- When atomic recall is pedagogically useful, set `flashcards` to `study/flashcards/TOPIC-000.tsv` and link the durable local file.
-- An external Quizlet set may complement the local file after publication, but never replace the repository fallback or determine mastery.
-- Link only topic-specific external artifacts approved in `study/integrations.md`, such as an editable Whimsical diagram or a Drive deliverable template.
-- Do not add links to providers that are merely available globally, unavailable to the Project or irrelevant to this topic.
-- Todoist reminders, Habitify habits, calendar sessions and formative scores are execution or consistency signals only.
+> Esta aula será preparada automaticamente quando você concluir as etapas necessárias. Você não precisa pedir a geração manualmente.
 
-## Assessment
+Não mostre `materialized`, `planned`, “janela ativa” ou outros termos internos no texto voltado para a pessoa.
 
-- When materialized, link [the scoring rubric](../assessments/TOPIC-000.yml) and the topic Issue Form.
-- Standard completion command: `Finalizei o TOPIC-000. Avalie minhas respostas.`
-- An explicit issue number remains an optional disambiguation fallback, not the default learner burden.
+## Prática
 
-## Deliverable
+Quando flashcards forem úteis, linke primeiro o deck Markdown para estudo, depois o TSV para importação e, quando realmente publicado, o conjunto externo atual.
 
-Describe the artifact or performance to produce.
+Use linguagem equivalente a:
 
-## Evidence
+> Os flashcards ajudam você a lembrar conceitos e identificar erros comuns. A avaliação ao final mostra se você consegue aplicar o conteúdo.
 
-Describe the evidence that can be submitted through the assessment form. External workspace links may provide evidence, but the evaluation result remains in GitHub.
+Linke somente recursos reais, específicos da etapa e aprovados no plano de integrações.
 
-## Mastery criteria
+## O que você vai produzir
 
-- [ ] Explain the concept without relying on notes
-- [ ] Interpret or reconstruct the central Mermaid visual model
-- [ ] Apply it in a new situation
-- [ ] Identify common mistakes and tradeoffs
-- [ ] Meet the rubric passing score without a critical misconception
+Descreva o artefato, decisão, explicação, projeto ou desempenho esperado.
 
-Checklist completion, reminders, habits, calendar attendance, external-course completion and formative scores do not satisfy these criteria by themselves.
+## Como mostrar o que aprendeu
 
-## Resources
+Explique a evidência que poderá ser enviada pelo formulário. Links externos podem apoiar a evidência, mas não devem substituir uma resposta compreensível.
 
-### Required
+## Para concluir esta etapa
 
-- Name a specific primary or official work and include a canonical locator such as section, chapter, book, article or letter number. Edition, translation and URL may remain pending when clearly identified.
+Escreva critérios observáveis em linguagem direta:
 
-### Optional
+- [ ] Explicar a ideia principal sem depender das notas.
+- [ ] Interpretar ou reconstruir o mapa visual central.
+- [ ] Aplicar o conteúdo a uma situação nova.
+- [ ] Reconhecer erros e limites importantes.
+- [ ] Alcançar a pontuação mínima sem um equívoco crítico.
 
-- Add enrichment resources with the same precision when practical.
-- For external courses, identify the exact section or lesson, access condition, active effort and free or official alternative when the resource may be paid.
+Não repita em todos os tópicos uma longa explicação sobre autoridade, checklists, calendários e integrações. Use uma frase curta apenas quando necessário:
 
-## Prompt to start a study chat
+> Marcar atividades ajuda a acompanhar o avanço; a etapa é concluída depois da avaliação.
 
-Use the complete module as the teaching source when it is materialized. The default flow is self-study followed by submission through the topic Issue Form. Chat guidance and optional providers may supplement the module, but they must not replace the durable assessment issue and rubric.
+## Avaliação
+
+Quando a aula estiver pronta, linke a rubrica e o formulário direto. Apresente o comando natural:
+
+`Terminei <título da aula>. Avalie minhas respostas.`
+
+Continue aceitando `Finalizei o TOPIC-000. Avalie minhas respostas.` como alias técnico.
+
+## Fontes principais
+
+Liste as fontes mais importantes para esta etapa com localizador preciso. A aula completa deve explicar como cada fonte foi utilizada e incluir links verificados quando disponíveis.
+
+### Essenciais
+
+- Fonte primária, oficial ou documentação com capítulo, seção, artigo, página ou versão.
+
+### Para aprofundar
+
+- Recurso complementar com objetivo claro: artigo, vídeo, aula aberta, exercício, curso, TCC, dissertação, livro ou paper.
+
+## Ao estudar com o ChatGPT
+
+Use a aula completa como fonte principal quando ela estiver pronta. O chat pode explicar de outra forma, fazer perguntas e ajudar na prática, mas não deve improvisar um conteúdo desconectado das fontes e do contrato desta etapa.

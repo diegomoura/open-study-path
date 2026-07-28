@@ -1,111 +1,80 @@
 # Import intake
 
-Run this phase only in instance mode and only after `instructions/05-configure-intake.md` has completed with `intake.setup_status: ready`.
+Run this phase only in instance mode after intake setup is ready. Use only the configured form or approved manual configuration belonging to the instance.
 
-Use the provider configured in the instance's `study.config.yml`. Never use a form ID, issue or submission belonging to the canonical template.
+The natural command `Preenchi o formulário. Pode continuar.` approves importing the single valid unimported submission found by deterministic filtering. It never authorizes choosing an arbitrary newest submission.
 
-The owner command `Enviei o formulário. Localize e importe a única submissão válida.` explicitly approves the single submission that remains after deterministic provider-specific filtering. It does not authorize choosing an arbitrary newest submission.
+Continue accepting older technical intake commands as aliases.
 
 ## Jotform
 
-- Fetch the configured `intake.form_id` and confirm it is accessible.
-- Search that form for submissions that contain all required planning facts and are not already recorded in `state/intake-summary.json.source_reference`.
-- Treat the explicitly supplied submission ID as a valid direct selection when the owner provides one.
-- When exactly one valid unimported submission remains, import it automatically.
-- When none remain, return the configured clickable form URL and ask the owner to submit it before retrying.
-- When more than one remains, list concise candidate identifiers and submission times and ask the owner to select one. Do not combine submissions or choose the latest silently.
-- Treat file uploads as optional.
-- Read attached files only when their contents materially affect the plan.
-- Do not commit raw submissions or uploaded files.
+- Fetch the configured form and confirm access.
+- Find submissions containing all required planning facts and not already recorded in `state/intake-summary.json.source_reference`.
+- Use an explicitly supplied submission ID when verified.
+- Import automatically when exactly one valid candidate remains.
+- When none remain, return the form link.
+- When several remain, list only the concise information needed for the owner to choose.
+- Do not combine submissions, select the newest silently or persist raw submissions and uploads.
 
 ## GitHub Issue Form
 
-Search only the instance repository. A candidate intake issue should satisfy all available deterministic signals:
+Search only the instance repository. A valid candidate should satisfy all available signals:
 
 - it is an issue, not a pull request;
 - it has the `study-request` label;
-- its title starts with `[Study Path]:`;
+- its title starts with the current `[Nova trilha]` prefix or the legacy `[Study Path]:` prefix;
 - its body contains the expected field headings from `.github/ISSUE_TEMPLATE/create-study-path.yml`;
-- it is not already identified by `state/intake-summary.json.source_reference`;
+- it is not already in `state/intake-summary.json.source_reference`;
 - it does not have the `intake:imported` label.
 
-Use an explicit issue number immediately when the owner supplies one, after verifying the same form signals.
+Use an explicit issue number immediately when provided, after verifying the form signals.
 
-When the owner reports that the form was submitted without a number:
+When the form was reported as submitted:
 
-1. search for all candidate issues using the signals above;
+1. search all candidates using the signals above;
 2. import automatically when exactly one valid candidate remains;
-3. when none remain, return the direct Issue Form link from the exact instance repository and explain that no valid submission was found yet;
-4. when more than one remains, list the candidate issue numbers, titles and creation times and ask the owner to choose one;
+3. when none remain, return the direct form link and explain that no valid submission was found yet;
+4. when more than one remains, list candidate number, title and creation time and ask the owner to choose;
 5. never select an arbitrary newest repository issue.
 
-After a successful import, set `state/intake-summary.json.source: github_issue`, persist the exact issue reference in `source_reference`, ensure the `intake:imported` label exists and apply it to the imported issue. Keep `study-request` for auditability. Treat attachments as optional and do not copy them into the repository by default.
+After import, persist the exact source reference, apply `intake:imported` and retain `study-request` for auditability. Treat attachments as optional and do not copy them into the repository by default.
 
 ## Manual YAML
 
-- Read the learner-approved values already entered in `study.config.yml`.
-- Do not reinterpret placeholder defaults as confirmed learner facts.
+Read only learner-approved values in `study.config.yml`. Do not interpret placeholders as confirmed facts.
 
-## Required and optional facts
+## Planning facts
 
-Required planning facts are the subject, detailed objective, current level, preferred language and weekly availability. Desired outcome, motivation, deadline, preferred days or periods, accessibility needs, notes, text references, URLs and attachments are optional.
+Required facts are subject, detailed objective, current level, preferred language and weekly availability. Other schedule, motivation, accessibility, reference and integration answers are optional.
 
-Integration preferences are also optional for curriculum generation, but normalize them when provided:
+Normalize approved answers through `intake/field-mapping.yml` into `study.config.yml` and `state/intake-summary.json`. Missing optional answers must not block the course. Record only necessary conservative assumptions.
 
-- desired experience: `minimal`, `guided_recommendations` or `enriched`;
-- free-tier-only policy;
-- account-connection policy;
-- services already used;
-- capability categories the learner would consider connecting;
-- preferred task backend, scheduler, reminder and email provider;
-- services or data handling the learner wants to avoid.
+Do not recommend, connect or probe external tools during intake. Keep delegated provider choices as `auto` until diagnostic and curriculum context exist.
 
-Normalize approved intake with `intake/field-mapping.yml` into `study.config.yml` and `state/intake-summary.json`. Set `configured: true` only after the required planning facts are populated and validated. Mark assumptions visibly. Missing optional answers must not block generation; derive conservative defaults only when necessary and record them as assumptions.
+Internal invariants such as GitHub authority, formative-practice limits, Mermaid canonical status, one primary task backend and `github_to_airtable` analytics are normalized without requiring the learner to repeat them. Do not surface those terms in the success response.
 
-Do not recommend, connect, probe or create external tools during intake. Preserve `auto` provider choices. The actual contextual recommendation is created only after diagnostic evidence and the curriculum structure are available, following `templates/integrations-plan.md`.
-
-GitHub remains the source of truth regardless of the selected external providers. Normalize the following invariant fields without requiring the learner to repeat them:
-
-- `integrations.source_of_truth.provider: github`;
-- formative practice and habit results do not affect mastery;
-- analytics projection direction is `github_to_airtable`;
-- Mermaid is the canonical visual provider;
-- task management has one authoritative backend.
-
-Update `.open-study-path/instance.yml` with `status.intake_imported: true`.
+Update `.open-study-path/instance.yml` with completed intake status.
 
 ## Pull request and merge
 
-Create a pull request containing only:
+Create a PR limited to the instance marker, `study.config.yml` and `state/intake-summary.json`. Apply `workflow.intake_merge_policy`. Auto-merge only when facts, validation, privacy, scope and assumptions are unambiguous.
 
-- `study.config.yml`;
-- `state/intake-summary.json`;
-- `.open-study-path/instance.yml`.
+Technical review belongs in GitHub. In chat, do not report changed files, CI or merge details after success unless requested or needed to explain a blocker.
 
-Read `workflow.intake_merge_policy` from `.open-study-path/instance.yml` and apply the rules in `instructions/phase-completion.md`.
+## Diagnostic continuation
 
-For `auto_when_unambiguous`, auto-merge only when:
+Do not begin diagnostic until import, validation and required merge complete.
 
-- all required facts are present;
-- configuration validation and CI pass;
-- the diff contains only the three files above;
-- `state/intake-summary.json` contains no material assumptions;
-- no attachment or conflicting response requires interpretation.
+When the command authorizes continuing, immediately run `instructions/20-diagnostic.md`, state the small question range and ask the first question.
 
-An `auto` integration preference is not ambiguity: it explicitly delegates contextual recommendation until after diagnostic. A direct provider choice is also not ambiguous when it is valid and does not conflict with `avoid`, `no_external_accounts` or free-tier requirements.
+When import only was requested, use:
 
-If any condition fails, leave the PR open and explain the specific review needed. A request to import intake authorizes creating the PR; automatic merge is authorized only by the marker policy.
+`Vamos fazer meu diagnóstico.`
 
-## Completion and optional diagnostic chaining
-
-Do not begin the diagnostic until intake normalization, validation, PR review and required merge have completed successfully.
-
-When the owner's command explicitly says to begin the diagnostic after completing this stage, and the intake PR is merged with `status.intake_imported: true`, immediately invoke `instructions/20-diagnostic.md` in the same conversation. State the proportional question budget and ask the first short diagnostic question. Do not generate the curriculum.
-
-If no unique valid submission exists, the intake PR cannot be completed, or owner review is required, stop before diagnostic and surface the exact blocking action.
-
-When the owner requested intake import only, follow `instructions/phase-completion.md` and guide them with:
+Continue accepting:
 
 `Inicie o diagnóstico proporcional desta trilha. Faça perguntas curtas, uma por vez. Não gere a trilha ainda.`
 
-By default, do not repeat every normalized field or changed file in chat. Report the resolved source, link the PR, state whether it was merged and surface only material attention items.
+If no unique candidate exists or a real decision is required, stop and surface only the action that resolves it.
+
+<!-- Compatibility markers: expected field headings; exactly one valid candidate; When none remain; more than one remains; state/intake-summary.json.source_reference; intake:imported; immediately invoke `instructions/20-diagnostic.md`; auto_when_unambiguous. -->

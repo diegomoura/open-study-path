@@ -1,6 +1,13 @@
 # Generate and approve learning path
 
-Generate a complete dependency-aware roadmap and concise contract for every topic. Materialize detailed teaching content according to the configured content-generation strategy. Generate a contextual integration plan, but do not publish external resources during this phase.
+Generate a complete dependency-aware roadmap and concise contract for every topic. Materialize detailed teaching content according to the configured strategy. Generate a contextual integration plan, but do not publish external resources during this phase.
+
+Read before generating:
+
+- `docs/learner-facing-language.md`;
+- `docs/content-quality-and-sources.md`;
+- `docs/mermaid-visual-learning.md`;
+- `docs/integration-capabilities.md`.
 
 ## Planning contract
 
@@ -8,207 +15,163 @@ Always create upfront:
 
 - `study/roadmap.md` with the complete topic graph and estimated schedule;
 - one concise contract per topic under `study/topics/` using `templates/topic.md`;
-- observable objectives, prerequisites, effort, deliverables, evidence, mastery criteria and precise resources for every topic;
-- `study/integrations.md` using `templates/integrations-plan.md`, with recommendations derived from the actual course and learner preferences.
+- observable objectives, prerequisites, effort, deliverables, evidence, completion criteria and precise resources;
+- `study/integrations.md` using `templates/integrations-plan.md`.
 
-The learner must be able to see the whole path even when future lessons have not yet been materialized.
+The learner must be able to understand the whole path without reading workflow terminology. In learner-facing prose, translate `materialized` to “aula pronta” and `planned` to “aula futura”. Keep internal values in frontmatter and state files.
+
+## Personalization
+
+Use intake and diagnostic evidence to personalize:
+
+- why each topic matters;
+- examples and scenarios;
+- difficulty and prerequisite retrieval;
+- preferred formats and accessibility;
+- practice balance;
+- source and media selection;
+- next-step language.
+
+Do not manufacture intimacy or expose unnecessary personal data. A personalized sentence must be traceable to an approved learner goal, preference or diagnostic observation.
 
 ## Topic and task granularity
 
-A topic is an independently assessable capability, not merely a small task. Prefer more focused topics when a capability can be split without losing conceptual coherence, but do not create a separate topic for every reading or exercise.
-
-Read `content_generation.granularity` from `.open-study-path/instance.yml`. Defaults are:
-
-- three to seven execution actions per topic;
-- normally 10–25 minutes per action;
-- normally 45–90 minutes per topic;
-- split a topic above 120 minutes when it contains separable assessable capabilities.
-
-Every activity must be independently checkable. Do not compress reading, several exercises, a deliverable and assessment into one vague checklist item.
+A topic is an independently assessable capability, not a reading or administrative action. Use three to seven focused actions, normally 10–25 minutes each. Prefer topics around 45–90 minutes and split above 120 minutes when responsibly separable.
 
 ## Content-generation strategy
-
-Read `content_generation` from `.open-study-path/instance.yml`.
 
 For `adaptive_rolling_window`:
 
 1. generate the complete roadmap and every topic contract;
-2. when the curriculum contains at most `full_upfront_max_topics` and at most `full_upfront_max_hours`, materialize every topic;
-3. otherwise materialize only the first deterministic window of `lookahead_topics` topics;
-4. choose the initial window in topological order, beginning with root topics and then topics whose prerequisites are already selected in the same lookahead chain;
-5. mark future contracts with `content_status: planned` and do not create their module, rubric or assessment form yet.
+2. generate all detailed content only when the curriculum is within both configured full-upfront thresholds;
+3. otherwise materialize only the first deterministic lookahead window;
+4. choose it in topological order;
+5. keep future contracts `content_status: planned` without broken module, rubric or form links.
 
 For every materialized topic, create:
 
-- one complete lesson under `study/modules/` using `templates/module.md`;
-- one scoring rubric under `study/assessments/` using `templates/assessment-rubric.yml`;
-- one GitHub Issue Form under `.github/ISSUE_TEMPLATE/assessment-topic-<number>.yml` using `templates/topic-assessment-issue-form.yml`;
-- `content_status: materialized`, a positive `content_version` and `materialized_at` in the topic contract;
-- both a learner-facing Markdown flashcard deck and an importable TSV file under `study/flashcards/` when the topic contains enough atomic recall material and formative practice is selected or recommended.
-
-`study/topics/` is the compact contract and index. `study/modules/` contains the content the learner actually studies. A planned topic must never contain broken module links or imply that its detailed lesson already exists.
+- a complete module under `study/modules/`;
+- a 100-point rubric under `study/assessments/`;
+- a GitHub Issue Form under `.github/ISSUE_TEMPLATE/`;
+- paired Markdown and TSV flashcards when useful;
+- positive content version and materialization date.
 
 ## Complete-content contract
 
-Every materialized module must be self-contained enough for the configured study time and learner level. It must include:
+Every ready lesson must be self-contained for the configured time and level. It must include:
 
-1. objectives and usage guidance;
-2. a granular execution plan;
-3. prerequisite retrieval questions;
-4. actual explanatory content written in clear language;
-5. definitions, relationships, limits and nuances;
-6. at least one explained Mermaid visual model;
+1. a personal orientation and clear outcome;
+2. a granular study session;
+3. prerequisite retrieval;
+4. actual explanatory content;
+5. definitions, relationships, limits and nuance;
+6. at least one explained Mermaid model;
 7. at least two worked examples;
-8. common misconceptions and corrections;
+8. common errors and corrections;
 9. guided practice with hints;
-10. independent practice and the required deliverable;
+10. independent practice and deliverable;
 11. active-recall synthesis;
-12. exact assessment-submission instructions with a direct clickable form URL;
-13. precise references.
+12. direct assessment action;
+13. **How this content was built** provenance;
+14. **Other ways to learn** when useful;
+15. **Sources and paths to deepen** with verified links and locators.
 
-Do not generate modules that merely say “read”, “study”, “reflect” or “discuss” without teaching the underlying content.
+Reject modules that merely instruct the learner to read, study, watch, reflect or discuss without teaching the underlying content.
+
+## Source and provenance contract
+
+For every materialized module:
+
+- inspect every source before including it;
+- use three to seven curated sources by default;
+- include at least one primary or official source when one exists;
+- include at least one reliable explanatory source;
+- include a complementary format such as video, open lecture, podcast, interactive demonstration or precise course lesson when it adds real pedagogical value and is available;
+- explain how each source was used;
+- record chapter, section, page, DOI, version, lesson, exercise or timestamp;
+- distinguish sourced claims from agent-created diagrams, examples and exercises;
+- do not cite a plugin response instead of the original document;
+- provide a free or official alternative for potentially paid resources;
+- keep the lesson understandable without opening external links.
+
+For empirical, scientific, medical, legal, financial, product or current claims, verify current authoritative sources. For technical subjects, prefer official documentation, standards and primary repositories. For books, papers, TCCs and dissertations, describe their evidential role accurately rather than treating every publication as consensus.
+
+## Videos and courses
+
+Use videos when they provide a useful alternative explanation or demonstration. Include title, creator or institution, direct link, duration or recommended timestamp, language/legends when relevant and one active task.
+
+Use Coursera, edX, Udemy, Khan Academy or other catalogs only at the exact section, lesson or exercise level. Include purpose, effort, access condition and evidence. Never assign an entire course as one vague task.
 
 ## Visual learning with Mermaid
 
-Read `content_generation.visual_learning` from `.open-study-path/instance.yml`. When absent, use the template defaults documented in `docs/mermaid-visual-learning.md`.
-
-The roadmap must contain a Mermaid diagram representing the actual topic dependency graph, not a generic lifecycle placeholder.
-
-Every materialized module must contain at least `minimum_diagrams_per_materialized_module` fenced Mermaid diagrams. The default is one. Use more than one when a complex topic contains distinct structures, flows or interactions that benefit from separate views.
-
-Choose a diagram type that matches the subject:
-
-- nontechnical or conceptual topics: decision trees, causal flows, category maps, timelines, state changes and comparison paths;
-- programming and software design: flowcharts, sequence diagrams, state diagrams, class diagrams, entity relationships and dependency graphs;
-- cloud and infrastructure topics: architecture or data-flow views using flowcharts and subgraphs, plus sequence diagrams when interactions matter;
-- processes and procedures: flowcharts, state diagrams and timelines.
-
-A diagram is a teaching artifact, not decoration. Introduce what it represents and explain immediately afterwards what the learner should notice. Keep labels readable, avoid unsupported Mermaid features and raw HTML, and ensure the diagram renders in GitHub Markdown.
-
-Do not use a diagram to replace necessary prose, examples or practice. Use it to make relationships, decisions, sequences, states or architecture easier to understand.
+The roadmap must show the actual topic dependency graph. Every materialized module contains at least the configured number of explained Mermaid diagrams. A diagram is a teaching artifact, not decoration. Use multiple focused diagrams when one would mix distinct structures or flows.
 
 ## Contextual integration recommendation
 
-Read `study.config.yml`, `state/intake-summary.json`, `state/diagnostic-summary.json`, the complete roadmap and the initial materialized modules. Follow `docs/integration-capabilities.md` and create `study/integrations.md`.
+Recommend only capabilities supported by concrete course signals. Explain them in learner language in the visible part of `study/integrations.md`; keep preflight, authority and state classifications inside its technical details section and `state/integrations.json`.
 
-Do not recommend every available provider. Select only capabilities supported by concrete signals from the course, learner, schedule or desired deliverables. For every recommended or explicitly requested provider, explain:
+Apply contextual defaults:
 
-1. what it is in plain language;
-2. why it fits this specific course;
-3. how and when it will be used;
-4. expected free-tier use and possible limitations;
-5. minimum data read or written;
-6. what authority it has and does not have;
-7. a provider-independent fallback;
-8. whether its preflight is required or optional;
-9. the decision state: `selected`, `recommended`, `declined` or `unavailable`.
+- Consensus supports empirical research but never replaces original citations;
+- Quizlet supports meaningful atomic recall and always has Markdown/TSV fallback;
+- Trello is preferred for rich courses; Todoist may be simpler or reminder-only;
+- Reclaim supports adaptive scheduling; Google/Outlook provide fixed blocks;
+- Habitify supports consistency only;
+- Mermaid remains canonical even with an external visual workspace;
+- Google Drive may hold deliverables;
+- Airtable remains a `github_to_airtable` projection;
+- course and media platforms are resource discovery, not progress authority.
 
-Resolve `auto` choices conservatively into concrete providers in `study.config.yml` only when the intake policy permits recommendation. Respect `already_uses`, `willing_to_connect`, `avoid`, `account_connections`, `experience` and `free_tier_only`. When external accounts are forbidden, use repository-native fallbacks.
+### Optional research probes
 
-Apply these defaults contextually:
-
-- **Consensus:** preferred for empirical claims, scientific topics, psychology, education, health and evidence comparison. It is supporting research, not curriculum authority. For APIs, programming, cloud and standards, prefer official documentation and primary technical sources.
-- **Quizlet:** preferred for meaningful sets of terms, definitions, commands, formulas, comparisons, classifications or common errors. Ace Quiz Maker and local Markdown/TSV flashcards are fallbacks. Formative scores never affect mastery.
-- **Trello:** preferred task backend for rich or long courses with links, checklists, recovery and roadmap visibility.
-- **Todoist:** may replace Trello for a short or simple course, or act only as an auxiliary recurring reminder. When auxiliary, it cannot change the authoritative task state.
-- **Reclaim:** preferred when availability varies or focus blocks should be protected and rescheduled. Google Calendar or Outlook Calendar are fixed-schedule fallbacks. Do not require paid capabilities.
-- **Habitify:** use only when consistency is a material risk, with at most three default habits. Habit completion never affects mastery.
-- **Whimsical:** use for editable, collaborative or spatial external diagrams. Mermaid remains canonical and sufficient.
-- **Google Drive:** use when the course needs Docs, Sheets, Slides or external deliverables. GitHub keeps the approved content and assessment result.
-- **Airtable:** use only as a `github_to_airtable` analytical projection. It cannot promote mastery or overwrite canonical progress.
-- **Coursera, edX, Udemy and Khan Academy:** use as resource discovery. Select precise sections or exercises with objective, time and evidence; never assign an entire course as one vague task. Paid resources require a free or official alternative.
-
-### Optional research probes during generation
-
-When Consensus or another optional research provider is selected and available, perform a harmless read-only probe before using it. If the probe fails, record the provider as unavailable in the integration plan and use primary sources, official documentation and web research. Optional research availability must not block generation.
-
-Every externally discovered claim or resource included in the curriculum must be represented by a precise, reviewable reference in the module. A plugin response alone is not a durable citation.
+Use harmless reads when a selected research provider supports them. If unavailable, continue with primary sources, official documentation and web research. Every externally discovered claim or resource included in a lesson must have a durable original reference.
 
 ### Durable and usable flashcards
 
-When flashcards are pedagogically useful, generate both:
+When useful, generate:
 
-- `study/flashcards/TOPIC-000.md` from `templates/flashcards.md`, with each question in `<summary>` and its answer inside a `<details>` block so the learner can study directly in GitHub;
-- `study/flashcards/TOPIC-000.tsv` with columns `Front`, `Back` and `Tags`, containing the same deck for import into Quizlet or another compatible tool.
+- `study/flashcards/TOPIC-000.md` with expandable `<details>` cards;
+- `study/flashcards/TOPIC-000.tsv` with `Front`, `Back` and `Tags`.
 
-Set `flashcards_study` and `flashcards` in the module frontmatter. Link the Markdown deck first as the primary study experience and the TSV second as the import/download format. Include definitions, distinctions, retrieval prompts and misconception corrections. Do not claim an external set exists until publication has actually created it and stored its URL in `state/integrations.json`.
+Link the Markdown deck first, the TSV second and the external set only after it exists in integration state.
 
 ## Assessments
 
-Every materialized topic assessment must contain five substantial prompts covering conceptual understanding, analysis, transfer to a new case, misconception correction and independent evidence. The rubric must total 100 points, define `passing_score`, identify critical misconceptions and support focused recovery.
+Each assessment contains five substantial prompts covering understanding, analysis, transfer, misconception correction and evidence. Issue Forms include labels, hidden topic marker and complete prefilled title.
 
-Issue Forms are the durable submission channel. They must include:
+Use a natural learner command in visible copy:
 
-- labels `assessment` and `assessment:submitted`;
-- the hidden marker `open-study-path:assessment topic_id=TOPIC-000`;
-- a complete prefilled title `[Avaliação] TOPIC-000 — <topic title>` so the learner does not need to type a title;
-- the standard learner command:
+`Terminei <título da aula>. Avalie minhas respostas.`
+
+Continue accepting:
 
 `Finalizei o TOPIC-000. Avalie minhas respostas.`
 
-The module must contain a direct clickable URL built from the exact instance repository:
+The module contains the direct clickable Issue Form URL. Never expose only the YAML filename. Deterministic resolution relies on labels, hidden marker and history; the editable title is a useful signal, not the sole authority.
 
-`https://github.com/OWNER/REPOSITORY/issues/new?template=assessment-topic-000.yml`
+## Roadmap and contracts language
 
-Do not present only the internal YAML filename. GitHub keeps the title editable, so deterministic assessment resolution must rely primarily on labels, the hidden topic marker and prior-attempt state; the title is a useful signal, not the sole authority.
+Roadmaps and topic contracts should emphasize:
 
-An explicit issue number is supported only as a disambiguation fallback. Never assume that an arbitrary newest repository issue is the assessment.
+- what the learner will be able to do;
+- why it matters for their goal;
+- what is ready now;
+- what will be prepared next;
+- how to know the stage is complete;
+- where the supporting sources are.
 
-Quizlet, Ace Quiz Maker, Habitify, Todoist completion and calendar attendance are optional practice or execution signals. They do not replace the GitHub assessment, rubric and durable evidence history.
-
-## Scope and effort
-
-Make the scope explicit. When the proposed effort cannot satisfy the learner's complete long-term objective, label the result as an introductory cycle rather than implying comprehensive mastery.
-
-Distinguish active study time from elapsed time required for real-world practice. Weekly dates are projections, not structural curriculum units.
-
-## Resources
-
-Prefer primary or official resources. Every required resource must name a specific work and canonical locator such as section, chapter, book or letter number. Edition, translation and URL selection may remain pending when clearly identified.
-
-For external course catalogs, identify the exact course, section, lesson or exercise. Mark whether access is public, requires an existing account or may be paid. A potentially paid resource must have a free or official alternative.
+Do not foreground generation thresholds, topological order, PR status, CI or internal classifications in learner-facing sections.
 
 ## Pull request and automatic review
 
-Open a draft pull request. The initial-generation diff may include:
+Open a draft PR containing only allowed curriculum artifacts. Run `instructions/35-review-curriculum.md`, correct resolvable issues, validate, self-review and merge under the configured policy when no material decision remains.
 
-- `.open-study-path/instance.yml`;
-- `study.config.yml` when resolving permitted `auto` capability choices;
-- `study/roadmap.md`;
-- `study/integrations.md`;
-- `study/topics/`;
-- modules, Markdown/TSV flashcard pairs, rubrics and Issue Forms only for topics selected by the configured initial window.
-
-Set `status.curriculum_proposed: true` and keep `status.curriculum_approved: false` while drafting.
-
-Before completing this phase, automatically execute `instructions/35-review-curriculum.md`. Correct every issue that can be resolved from approved intake, diagnostic evidence and repository contracts.
-
-For `workflow.curriculum_merge_policy: agent_review_then_merge`:
-
-1. review and correct the proposal branch;
-2. run all required checks;
-3. self-review the final diff, rolling-window selection, Mermaid rendering, references and integration recommendations;
-4. set `status.curriculum_approved: true` only when review passes;
-5. rerun checks;
-6. mark the draft ready;
-7. merge when no pedagogical or integration-policy decision remains unresolved.
-
-Do not attempt to formally approve a pull request authored by the same account. Contract verification, final diff review and successful CI constitute operational review.
-
-## Review status in chat
-
-After successful review and merge, use:
-
-`Revisão do PR: aprovada pelo agente e pelo CI; PR #<número> mesclado.`
-
-When owner input is genuinely required, add concrete annotations to the PR and use:
-
-`Revisão do PR: anotações adicionadas ao PR #<número>. Avalie somente os pontos marcados e responda no PR.`
-
-Do not ask the owner to review the entire PR when no unresolved decision exists.
+Operational review and CI are recorded in GitHub. The learner-facing response does not require a fixed PR-status sentence.
 
 ## Completion
 
-Do not create cards, tasks, calendar events, habits, flashcard sets, external diagrams, Drive artifacts, Airtable rows or notifications during generation. Complete the phase using `instructions/phase-completion.md`, link `study/integrations.md`, and guide to:
+Create no external tasks, sets, events, notifications or workspaces during generation. Complete using `instructions/phase-completion.md` and guide naturally to:
 
-`Publique as tarefas da trilha nas integrações configuradas.`
+`Organize minha trilha nas ferramentas que escolhemos.`
+
+Continue accepting `Publique as tarefas da trilha nas integrações configuradas.` as an alias.

@@ -1,54 +1,56 @@
-name: Criar trilha de estudos
-description: Onboarding zero-config para uma instância do Open Study Path
-title: "[Study Path]: "
+name: Criar minha trilha de estudos
+description: Conte o que você quer aprender e como gostaria de estudar.
+title: "[Nova trilha] "
 labels: ["study-request"]
 body:
   - type: markdown
     attributes:
       value: |
-        Use este formulário somente em um fork ou repositório criado a partir do template.
-        Informe apenas dados necessários ao planejamento. Não inclua segredos ou dados pessoais desnecessários.
-        Campos, anexos e integrações opcionais não bloqueiam a geração da trilha.
-        Depois do diagnóstico, o agente explicará e recomendará somente as ferramentas adequadas a este curso. GitHub continuará sendo a fonte de verdade do conteúdo, avaliações e domínio.
+        # Vamos criar uma trilha que faça sentido para você
+
+        Responda apenas o que for útil para o planejamento. Você poderá ajustar a trilha depois. Não inclua senhas, documentos sensíveis ou informações pessoais desnecessárias.
+
+        Depois deste formulário, faremos um diagnóstico curto para escolher o melhor ponto de partida.
 
   - type: input
     id: path_name
     attributes:
-      label: Nome da trilha
-      description: Opcional.
+      label: Como gostaria de chamar esta trilha?
+      description: Opcional. Pode ser algo simples, como “Fundamentos de IA”.
 
   - type: input
     id: subject
     attributes:
       label: O que você quer aprender?
-      placeholder: "Exemplo: engenharia de aplicações com IA"
+      placeholder: "Exemplo: criar aplicações com inteligência artificial"
     validations:
       required: true
 
   - type: textarea
     id: objective
     attributes:
-      label: Descreva detalhadamente seu objetivo
-      description: Inclua escopo, contexto e assuntos que deseja incluir ou excluir.
+      label: Conte um pouco mais sobre seu objetivo
+      description: Inclua assuntos importantes, contexto de uso e algo que prefere deixar de fora.
+      placeholder: "Quero aprender para..."
     validations:
       required: true
 
   - type: textarea
     id: desired_outcome
     attributes:
-      label: Qual resultado concreto gostaria de alcançar?
-      description: Opcional.
+      label: O que você gostaria de conseguir fazer ao final?
+      description: Opcional. Pense em um resultado observável, projeto ou decisão que gostaria de realizar melhor.
 
   - type: textarea
     id: motivation
     attributes:
-      label: Por que deseja estudar isso?
-      description: Opcional.
+      label: Por que isso é importante para você agora?
+      description: Opcional. Essa resposta ajuda a tornar exemplos e prioridades mais relevantes.
 
   - type: dropdown
     id: current_level
     attributes:
-      label: Qual é seu nível atual?
+      label: Como você descreve seu nível atual?
       options:
         - Nenhum conhecimento
         - Iniciante
@@ -60,19 +62,19 @@ body:
   - type: textarea
     id: prior_knowledge
     attributes:
-      label: Conhecimentos e experiências anteriores
-      description: Opcional. Liste apenas o que for relevante para esta trilha.
+      label: O que você já conhece ou já tentou?
+      description: Opcional. Liste somente experiências relacionadas a esta trilha.
 
   - type: textarea
     id: references
     attributes:
-      label: Textos, URLs ou anexos de referência
-      description: Opcional. Cole textos e URLs ou arraste arquivos para este campo. Não anexe arquivos sensíveis.
+      label: Existe algum material que você gostaria que fosse considerado?
+      description: Opcional. Cole textos e links ou anexe arquivos não sensíveis. As fontes serão verificadas antes de entrar nas aulas.
 
   - type: input
     id: preferred_language
     attributes:
-      label: Em qual idioma deseja receber o conteúdo?
+      label: Em qual idioma prefere estudar?
       value: pt-BR
     validations:
       required: true
@@ -80,23 +82,23 @@ body:
   - type: input
     id: weekly_hours
     attributes:
-      label: Quantas horas por semana você possui?
-      placeholder: "6"
-      description: Informe um número positivo.
+      label: Quanto tempo por semana você consegue reservar?
+      placeholder: "2"
+      description: Informe um número aproximado de horas.
     validations:
       required: true
 
   - type: input
     id: deadline
     attributes:
-      label: Existe uma data limite?
+      label: Existe uma data importante?
       placeholder: YYYY-MM-DD
       description: Opcional.
 
   - type: checkboxes
     id: preferred_days
     attributes:
-      label: Quais dias prefere estudar?
+      label: Em quais dias costuma ser mais fácil estudar?
       description: Opcional.
       options:
         - label: Segunda-feira
@@ -110,7 +112,7 @@ body:
   - type: checkboxes
     id: preferred_periods
     attributes:
-      label: Quais períodos prefere?
+      label: Qual período costuma funcionar melhor?
       description: Opcional.
       options:
         - label: Manhã
@@ -120,22 +122,22 @@ body:
   - type: checkboxes
     id: learning_formats
     attributes:
-      label: Quais formatos de aprendizagem prefere?
-      description: Opcional.
+      label: Quais formas de aprender ajudam mais você?
+      description: Opcional. A trilha pode combinar vários formatos quando isso realmente ajudar.
       options:
-        - label: Documentação
-        - label: Livros
-        - label: Vídeos
-        - label: Cursos
-        - label: Exercícios
+        - label: Explicações escritas e documentação
+        - label: Livros e textos longos
+        - label: Vídeos e aulas abertas
+        - label: Cursos estruturados
+        - label: Exercícios práticos
         - label: Projetos
-        - label: Discussões
+        - label: Discussões e perguntas
         - label: Flashcards
 
   - type: dropdown
     id: theory_practice_balance
     attributes:
-      label: Qual equilíbrio prefere entre teoria e prática?
+      label: Como prefere equilibrar explicação e prática?
       description: Opcional.
       options:
         - Mais teoria
@@ -145,8 +147,8 @@ body:
   - type: checkboxes
     id: assessment_style
     attributes:
-      label: Como prefere ser avaliado?
-      description: Opcional. A evidência oficial continuará registrada nas avaliações do GitHub.
+      label: Como prefere mostrar o que aprendeu?
+      description: Opcional. As atividades escolhidas serão adaptadas ao conteúdo.
       options:
         - label: Quizzes
         - label: Exercícios
@@ -157,32 +159,35 @@ body:
   - type: textarea
     id: accessibility_needs
     attributes:
-      label: Necessidades de acessibilidade ou restrições
+      label: Existe alguma necessidade de acessibilidade ou restrição que devemos considerar?
       description: Opcional.
 
   - type: markdown
     attributes:
       value: |
-        ## Experiência com integrações
-        As ferramentas abaixo enriquecem o curso, mas são opcionais. O agente fará uma recomendação contextual depois do diagnóstico, explicando para que serve cada ferramenta, como será usada, possíveis limites do plano gratuito, dados acessados, fallback e qual sistema mantém a verdade.
+        ## Ferramentas opcionais
+
+        Algumas ferramentas podem deixar o acompanhamento, a prática ou a agenda mais convenientes. Elas só serão sugeridas quando houver um benefício concreto, e a trilha continuará funcionando no GitHub quando você não quiser conectá-las.
+
+        <!-- contrato técnico: GitHub é a fonte de verdade; integrações são opcionais -->
 
   - type: dropdown
     id: integration_experience
     attributes:
-      label: Quanto enriquecimento externo você deseja?
-      description: Mínimo usa principalmente GitHub/Markdown. Guiado recomenda apenas ferramentas úteis. Enriquecido considera mais recursos opcionais.
+      label: Como você prefere organizar a experiência?
+      description: Você poderá mudar de ideia depois.
       options:
-        - Recomendações guiadas
-        - Experiência mínima
-        - Experiência enriquecida
+        - Quero sugestões de ferramentas quando forem úteis
+        - Quero algo simples, principalmente no GitHub
+        - Quero uma experiência mais interativa com ferramentas externas
     validations:
       required: true
 
   - type: dropdown
     id: free_tier_only
     attributes:
-      label: O curso deve funcionar apenas com recursos gratuitos?
-      description: Mesmo quando a resposta for Não, nenhum recurso pago poderá ser obrigatório sem alternativa gratuita.
+      label: A trilha deve funcionar somente com opções gratuitas?
+      description: Mesmo escolhendo “Não”, nenhum recurso pago será o único caminho para estudar.
       options:
         - Sim
         - Não
@@ -192,54 +197,54 @@ body:
   - type: dropdown
     id: account_connections
     attributes:
-      label: Como deseja tratar novas conexões de conta?
+      label: Quando uma ferramenta puder ajudar, o que devemos fazer?
       options:
-        - Perguntar antes de conectar cada serviço
-        - Usar somente serviços que eu já conectei
-        - Não usar contas externas
+        - Perguntar antes de sugerir ou conectar cada serviço
+        - Usar somente ferramentas que eu já conectei
+        - Manter tudo sem contas externas
     validations:
       required: true
 
   - type: checkboxes
     id: already_uses
     attributes:
-      label: Quais serviços você já utiliza?
-      description: Opcional. Marque apenas contas ou ferramentas que já conhece.
+      label: Quais ferramentas você já usa?
+      description: Opcional. Marcar aqui não conecta automaticamente nenhuma conta.
       options:
-        - label: Trello — quadro visual rico para tópicos, checklists, links e estados
-        - label: Todoist — tarefas pessoais simples, prioridades, recorrências e lembretes
-        - label: Google Calendar — blocos fixos de estudo e lembretes
-        - label: Outlook Calendar — agenda Microsoft e blocos de estudo
-        - label: Reclaim — agenda adaptativa que protege e reorganiza tempo de foco
-        - label: Quizlet — flashcards e recuperação ativa; não substitui a avaliação oficial
-        - label: Consensus — pesquisa de literatura científica e descoberta de fontes
-        - label: Habitify — hábitos e consistência; não determina domínio
-        - label: Whimsical — diagramas externos interativos; Mermaid permanece canônico
-        - label: Google Drive — documentos, planilhas, apresentações e entregáveis
-        - label: Airtable — dashboards derivados; não é fonte de verdade
+        - label: Trello — quadro visual com etapas e checklists
+        - label: Todoist — tarefas e lembretes simples
+        - label: Google Calendar — horários fixos de estudo
+        - label: Outlook Calendar — agenda Microsoft
+        - label: Reclaim — agenda que reorganiza blocos de foco
+        - label: Quizlet — flashcards interativos
+        - label: Consensus — busca de estudos e artigos científicos
+        - label: Habitify — acompanhamento de hábitos
+        - label: Whimsical — mapas e diagramas interativos
+        - label: Google Drive — documentos, planilhas e apresentações
+        - label: Airtable — painéis e organização de dados
         - label: Notion — notas ou biblioteca auxiliar
 
   - type: checkboxes
     id: willing_to_connect
     attributes:
-      label: Quais serviços você aceitaria conectar se forem recomendados?
-      description: Opcional. Marcar não conecta nada automaticamente.
+      label: O que você aceitaria conectar se houver um bom motivo?
+      description: Opcional. Você verá a sugestão e decidirá antes de qualquer conexão.
       options:
         - label: Ferramenta de tarefas, como Trello ou Todoist
-        - label: Agenda adaptativa ou calendário, como Reclaim, Google ou Outlook
+        - label: Agenda, como Reclaim, Google ou Outlook
         - label: Flashcards, como Quizlet
         - label: Pesquisa acadêmica, como Consensus
         - label: Hábitos, como Habitify
         - label: Diagramas externos, como Whimsical
-        - label: Workspace de entregáveis, como Google Drive
-        - label: Dashboard analítico, como Airtable
-        - label: Catálogo de cursos, como Coursera, edX, Udemy ou Khan Academy
+        - label: Arquivos e entregáveis, como Google Drive
+        - label: Painel analítico, como Airtable
+        - label: Cursos e aulas externas, como Coursera, edX, Udemy ou Khan Academy
 
   - type: dropdown
     id: task_manager
     attributes:
-      label: Onde prefere acompanhar as tarefas?
-      description: Trello é o padrão para cursos ricos. Todoist é adequado para uma experiência simples. Apenas um backend manterá o estado operacional autoritativo.
+      label: Onde gostaria de acompanhar suas etapas?
+      description: Trello oferece uma visão mais rica; Todoist é mais simples. Também é possível manter tudo no GitHub.
       options:
         - Deixar o agente recomendar
         - Trello
@@ -252,8 +257,8 @@ body:
   - type: dropdown
     id: scheduling_provider
     attributes:
-      label: Como prefere planejar as sessões de estudo?
-      description: Reclaim é preferido para agenda adaptativa; Google ou Outlook oferecem blocos fixos. A trilha nunca exigirá assinatura paga.
+      label: Gostaria de reservar horários de estudo em alguma agenda?
+      description: Reclaim ajuda quando a rotina varia; Google ou Outlook criam blocos fixos.
       options:
         - Deixar o agente recomendar
         - Reclaim
@@ -266,8 +271,8 @@ body:
   - type: dropdown
     id: todoist_reminders
     attributes:
-      label: Deseja considerar o Todoist apenas para lembretes recorrentes?
-      description: Opcional. Nesse modo, concluir um lembrete não conclui o tópico no backend principal.
+      label: Gostaria de considerar lembretes recorrentes no Todoist?
+      description: Opcional.
       options:
         - Deixar o agente recomendar
         - Sim
@@ -276,8 +281,8 @@ body:
   - type: dropdown
     id: email_summaries
     attributes:
-      label: Deseja receber resumos por e-mail quando houver provedor compatível?
-      description: Opcional. Chat continua sendo o fallback.
+      label: Gostaria de receber algum resumo por e-mail?
+      description: Opcional. O chat continuará mostrando as informações principais.
       options:
         - Não
         - Gmail
@@ -286,19 +291,19 @@ body:
   - type: textarea
     id: integration_notes
     attributes:
-      label: Restrições ou preferências sobre integrações
-      description: Opcional. Informe serviços que deseja evitar, limites de privacidade ou contexto corporativo.
+      label: Alguma preferência ou limite sobre ferramentas externas?
+      description: Opcional. Informe serviços que deseja evitar, limites de privacidade ou regras do ambiente de trabalho.
 
   - type: textarea
     id: additional_notes
     attributes:
-      label: Observações adicionais
+      label: Há mais alguma coisa que devemos considerar?
       description: Opcional.
 
   - type: checkboxes
     id: consent
     attributes:
-      label: Consentimento
+      label: Antes de enviar
       options:
-        - label: Entendo que informações normalizadas necessárias ao planejamento poderão ser salvas neste repositório, sem persistir a submissão bruta, anexos originais, credenciais ou dados pessoais desnecessários.
+        - label: Entendo que apenas informações necessárias ao planejamento poderão ser organizadas no meu repositório, sem salvar a submissão bruta, credenciais ou dados pessoais desnecessários.
           required: true

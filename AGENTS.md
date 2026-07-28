@@ -1,203 +1,123 @@
 # Agent Operating Contract
 
-Read this file before changing this repository or any repository derived from it.
+Read this file before changing this repository or an instance derived from it.
 
 ## Repository mode
 
-The canonical repository is in template mode when `.open-study-path/template.yml` exists and `.open-study-path/instance.yml` does not. Template mode may improve reusable instructions, schemas, validators and templates, but must never create learner-specific state, curriculum or external resources.
+The canonical repository is template mode when `.open-study-path/template.yml` exists and `.open-study-path/instance.yml` does not. It may improve reusable contracts, but must not contain learner-specific state or curriculum.
 
-A derived repository is in instance mode only when `.open-study-path/instance.yml` exists. Its `repository` field is the persistent source of truth. Stop writes when it conflicts with the explicit Project repository.
+An instance is valid only when `.open-study-path/instance.yml` exists. Its `repository` field is the persistent identity. Stop writes when it conflicts with the explicit Project repository.
 
 ## Guided lifecycle
 
-Read `instructions/manifest.yml` and `instructions/phase-completion.md` before every lifecycle operation. Internal validation, review, correction, safe merge and configured rolling-window materialization belong to the active operation and must finish before responding.
+Read `instructions/manifest.yml`, `instructions/phase-completion.md` and `docs/learner-facing-language.md` before lifecycle work.
 
-At a phase boundary, return a brief result, primary links, PR review status, material attention items, next action and one exact command.
+Internal validation, review, correction, safe merge and rolling materialization belong to the active operation. Complete them before responding.
+
+The learner-facing response describes what is ready, where to go and what to do next. Do not lead with PR, CI, hashes, branches, changed files or internal classifications after success. Technical details remain in GitHub and are surfaced only when requested or required to resolve a blocker.
 
 ## Setup, intake and diagnostic
 
-- Never turn the canonical template into an instance.
+- Never convert the canonical template into an instance.
 - Never request API keys, tokens or passwords.
-- Import only an explicitly approved intake reference.
-- Treat diagnosis as bounded placement, not teaching.
-- Ask one short diagnostic question at a time.
-- For `none` or `beginner`, target 3–5 and hard-limit 7 questions unless comprehensive assessment is explicitly requested.
-- For `intermediate` or `advanced`, target 4–7 and hard-limit 10.
-- Persist structured summaries, not raw transcripts.
-- Normalize integration preferences, but do not probe, connect or recommend providers before diagnostic evidence and the curriculum structure are available.
+- Import only an approved intake source.
+- Persist structured summaries, not raw submissions or diagnostic transcripts.
+- Treat diagnostic as bounded placement, not teaching.
+- Ask one short question at a time.
+- For beginner or no prior knowledge, target 3–5 and hard-limit 7 unless comprehensive assessment is explicitly requested.
+- Do not recommend or probe providers before diagnostic and curriculum context exist.
 
-## Complete roadmap and adaptive content generation
+## Roadmap and adaptive content
 
-Initial generation always creates:
+Initial generation creates the complete roadmap, every topic overview and an integration plan. Detailed lessons follow configured content-generation strategy.
 
-- the complete dependency graph in `study/roadmap.md`;
-- one concise approved contract for every topic in `study/topics/`;
-- objectives, prerequisites, effort, deliverables, evidence, mastery criteria and precise resources for the entire path;
-- a contextual `study/integrations.md` explaining only the capabilities useful for this course.
+A small course may prepare every lesson. A larger course prepares the configured lookahead and automatically creates future lessons as verified progress advances.
 
-Read `content_generation` from `.open-study-path/instance.yml`.
+Keep internal `planned` and `materialized` values in metadata. In visible copy use “aula futura” and “aula pronta”. Do not expose rolling-window, topological-order or generation-threshold terminology unless technical details are requested.
 
-The default `adaptive_rolling_window` strategy behaves as follows:
+## Granularity and teaching quality
 
-- a curriculum within both `full_upfront_max_topics` and `full_upfront_max_hours` may materialize every topic immediately;
-- a larger curriculum materializes only `lookahead_topics` in deterministic topological order;
-- future topic contracts remain `content_status: planned` until they enter the active window;
-- planned topics must not contain broken links or imply that detailed content exists.
+A topic is one coherent independently assessable capability. Use three to seven focused actions, normally 10–25 minutes each, and prefer 45–90 minutes per topic.
 
-For every materialized topic, create a complete module, 100-point rubric and discoverable assessment Issue Form. Set `content_status: materialized`, increment `content_version` and record `materialized_at`. Generate durable local flashcards when the topic contains useful atomic recall material.
+A topic overview is not a lesson. Every ready module must teach with:
 
-## Granularity
+- personal orientation and clear outcome;
+- prerequisite retrieval;
+- explanatory content and nuance;
+- at least two worked examples;
+- useful Mermaid visual models;
+- misconceptions and corrections;
+- guided and independent practice;
+- active recall;
+- deliverable and assessment instructions;
+- provenance, inspected sources and useful alternative formats.
 
-A topic is one coherent independently assessable capability. It is not merely a reading or an administrative task.
+Read `docs/content-quality-and-sources.md`. Every ready lesson normally uses three to seven curated sources, including a primary or official source when available and a reliable explanatory source. Add videos, open lectures, podcasts, interactive resources or precise course lessons only when they improve learning. Record purpose, access and a precise locator or timestamp.
 
-Use configured granularity defaults:
-
-- three to seven focused actions per topic;
-- normally 10–25 minutes per action;
-- normally 45–90 minutes per topic;
-- split a topic above 120 minutes when it contains separable assessable capabilities.
-
-Prefer small independently checkable tasks, but do not inflate the number of topics by turning every exercise into a separate assessment.
-
-A topic contract is not the lesson. Every materialized module must teach with explanatory content, prerequisite retrieval, a granular execution plan, at least two worked examples, misconceptions, guided practice, independent practice, active recall, deliverable instructions and precise references.
+Do not cite a plugin response instead of the original source. Do not add uninspected links, invent citations or turn a lesson into a reading list.
 
 ## Mermaid visual learning
 
-Read `content_generation.visual_learning` and `docs/mermaid-visual-learning.md`.
-
-- Every generated roadmap must contain a Mermaid diagram of the actual topic dependency graph.
-- Every materialized module must contain at least the configured minimum number of useful Mermaid diagrams; the default is one.
-- Introduce each diagram and explain afterwards what the learner should notice and what the model omits.
-- Use conceptual maps, decision trees, causal flows, timelines and state changes for nontechnical subjects.
-- Use architecture, dependency, sequence, state, class and data-flow views for programming, AWS and other technical subjects.
-- Prefer multiple focused diagrams for complex topics rather than one crowded diagram.
-- Ensure Mermaid syntax renders in GitHub. Avoid raw HTML, unsupported features, decorative diagrams and generic diagrams unrelated to the topic.
-- A diagram supplements prose, examples and practice; it never replaces them.
+Every roadmap contains the actual topic dependency graph. Every ready module contains the configured minimum number of explained Mermaid diagrams. A diagram supplements prose and practice; it does not replace them.
 
 ## Capability-based integrations
 
-Read `docs/integration-capabilities.md`, `study.config.yml`, `study/integrations.md` when generated and `state/integrations.json`.
+Read `docs/integration-capabilities.md`, `study.config.yml`, `study/integrations.md` and `state/integrations.json`.
 
-GitHub remains the only source of truth for curriculum, content, assessment, mastery and verified progress.
+GitHub stores curriculum, lessons, assessments and verified progress. Exactly one task backend tracks execution. Other tools enrich practice, time, reminders, artifacts or analytics.
 
-Every provider recommendation must explain what it is, why it fits the specific course, how and when it will be used, expected access or free-tier constraints, minimum data, authority boundaries, fallback, preflight class and decision state. Do not dump a catalog of available apps.
+- Consensus supports empirical research but original sources remain durable citations.
+- Quizlet supports useful flashcards; Markdown and TSV remain local alternatives.
+- Trello is preferred for rich courses; Todoist may be simpler or reminder-only.
+- Reclaim supports adaptive scheduling; Google/Outlook provide fixed blocks.
+- Habitify supports consistency only.
+- Mermaid remains canonical with any external diagram workspace.
+- Drive may store deliverables.
+- Airtable remains a `github_to_airtable` projection.
+- Coursera, edX, Udemy, Khan Academy, YouTube and other media sources must point to precise useful lessons, sections, exercises or timestamps.
 
-Use these rules:
+Optional providers never block the GitHub/Markdown path. Before external writes, run `instructions/42-integration-preflight.md`. Store only safe external identifiers and synchronization metadata.
 
-- Consensus is preferred supporting research for empirical or scientific topics, but primary sources and official documentation remain durable references.
-- Quizlet is preferred for flashcards when atomic recall is useful. Local TSV/Markdown flashcards are the durable fallback. Quizlet and Ace Quiz Maker never affect mastery.
-- Use a single authoritative task backend. Trello is preferred for rich courses; Todoist may replace it for simple courses.
-- Todoist may be auxiliary for recurring reminders only when it cannot modify authoritative task state.
-- Reclaim is preferred for adaptive focus scheduling; Google or Outlook Calendar are fixed-schedule fallbacks. Never require a paid feature.
-- Habitify records consistency only, with at most three default habits, and never affects mastery.
-- Mermaid is canonical. Whimsical or another external visual workspace is optional and must link to an equivalent canonical view.
-- Google Drive or another artifact workspace may store deliverables, but approved content and assessment results remain in GitHub.
-- Airtable is strictly a `github_to_airtable` analytical projection. It cannot promote mastery, overwrite scores or become a second task backend.
-- Coursera, edX, Udemy and Khan Academy are resource-discovery providers. Select precise sections with objective, effort, access and evidence. Paid resources require a free or official alternative.
-- Optional providers never block the core GitHub/Markdown path.
+## Repository execution and review
 
-Before external writes, classify each selected capability as `required_for_selected_publication`, `optional_probe` or `not_enabled`. Required providers must pass harmless probes before atomic writes. Optional provider failures activate fallbacks and continue.
+Read `instructions/32-generation-execution.md` for generation and materialization. Keep every commit within phase scope. Do not modify reusable workflows, validators, instructions, templates or schemas from an instance curriculum operation.
 
-Every external resource stored in `state/integrations.json` must include capability, provider, safe external identifier, URL when available, topic, content version, authority, synchronization status and timestamp. Reuse exact resources; do not create duplicates.
+Create curriculum PRs as drafts, correct resolvable issues, run checks, self-review and merge under the configured policy when no genuine decision remains. Record technical review state in GitHub.
 
-## Efficient repository execution
+Do not require a fixed “PR approved and merged” sentence in chat. Link a PR only when a concrete unresolved decision requires owner input or when technical details are requested.
 
-Read `instructions/32-generation-execution.md` for curriculum generation and rolling materialization.
+## Publication and task language
 
-Build the complete allowed diff and run the local validation suite before the first remote push or PR when a checkout is available. CI is confirmation, not the primary linter. Prefer one coherent proposal commit and focused correction commits rather than file-by-file publication.
+Read `instructions/40-publish-tasks.md` and `instructions/42-integration-preflight.md`.
 
-Every intermediate and final commit must remain within the active phase scope. In an instance curriculum operation, never modify workflows, validators, validator tests, reusable instructions, templates or schemas, even temporarily. Diagnose learner content from the repository code and exact logs without instrumentation commits or unrelated web searches.
+Create one task per topic. Use human titles such as `1. Agência sem garantia`, not `[TOPIC-001]`, unless technical IDs were requested.
 
-When the current unchanged head has successful required checks, is mergeable, has no unresolved review thread and needs no owner decision, finish immediately: mark ready, merge under the configured policy and return the completion response. Do not keep researching or rerunning unchanged checks.
+A ready card says what the learner will do, how long it may take, where the lesson and practice are, what to produce and how to finish. A future card says that the lesson will be prepared automatically after prerequisites.
 
-## Curriculum review and merge
+Do not repeat “source of truth”, “authority”, `planned`, `materialized`, preflight or synchronization language in every card.
 
-Read `instructions/30-generate-path.md`, `instructions/32-generation-execution.md`, `instructions/35-review-curriculum.md` and `workflow.curriculum_merge_policy`.
+Natural commands presented to the learner:
 
-Create curriculum and materialization PRs as drafts. Correct every resolvable issue, run required checks, self-review the final diff and merge under `agent_review_then_merge` when no pedagogical or integration-policy decision remains.
+- `Preenchi o formulário. Pode continuar.`
+- `Vamos fazer meu diagnóstico.`
+- `Crie minha trilha de estudos.`
+- `Organize minha trilha nas ferramentas que escolhemos.`
+- `Conectei o Quizlet. Crie meus flashcards.`
+- `Terminei <título da aula>. Avalie minhas respostas.`
+- `Terminei a revisão de <título da aula>.`
 
-Do not formally approve a PR authored by the same account. CI, contract checks and final diff review constitute operational review.
+Continue accepting existing topic-ID and technical commands as aliases.
 
-Use one status:
+## Assessment resolution
 
-- `Revisão do PR: aprovada pelo agente e pelo CI; PR #<número> mesclado.`
-- `Revisão do PR: anotações adicionadas ao PR #<número>. Avalie somente os pontos marcados e responda no PR.`
+Read `instructions/55-evaluate-topic.md`. Resolve submissions using labels, hidden marker, history and title as a consistency signal. Never choose an arbitrary newest issue. Ask for an issue number only when multiple valid candidates remain.
 
-Never ask for a generic second review command when no unresolved decision exists.
+Grade every response independently, calculate 0–100, comment on the issue, persist a versioned attempt and update progress. No external provider sets completion.
 
-## Publication and integrations
+When mastered, run `instructions/57-materialize-next-content.md` automatically and return the next ready lesson. Do not foreground the content PR unless it failed or was requested.
 
-Read `instructions/40-publish-tasks.md` and `instructions/42-integration-preflight.md` before external writes.
-
-Initial required publication is atomic across configured required providers. Verify each required connection with a harmless read-only operation. Optional providers use fallbacks rather than blocking.
-
-Create one task per topic in the single authoritative backend:
-
-- materialized topics receive module, topic, assessment and optional flashcard links plus the granular module checklist;
-- planned topics receive objective, prerequisites, topic-contract link and a clear future-materialization state;
-- never attach nonexistent module or assessment links;
-- only dependency-ready materialized topics enter the provider's ready state.
-
-The task backend is an execution index, not the course-content repository. Reuse exact matching resources and state identifiers.
-
-Ensure assessment labels exist: `assessment`, `assessment:submitted`, `assessment:graded`, `assessment:recovery-required`.
-
-After publication, use:
-
-`Ao concluir o TOPIC-000 e enviar o formulário, escreva: "Finalizei o TOPIC-000. Avalie minhas respostas."`
-
-## Deterministic assessment resolution
-
-Read `instructions/55-evaluate-topic.md`.
-
-The standard command requires a topic ID but not an issue number:
-
-`Finalizei o TOPIC-000. Avalie minhas respostas.`
-
-Resolve the assessment using all of these signals:
-
-- labels `assessment` and `assessment:submitted`;
-- title prefix `[Avaliação] TOPIC-000`;
-- hidden body marker `open-study-path:assessment topic_id=TOPIC-000`;
-- absence from prior recorded attempts;
-- absence of `assessment:graded`;
-- creation after the previous attempt when applicable.
-
-Evaluate automatically when exactly one candidate remains. Provide the form link when none remains. Ask for a specific issue only when multiple valid candidates remain. Never select an arbitrary newest issue.
-
-Grade every response independently, calculate 0–100, comment on the resolved issue, persist a versioned attempt and update progress. Mastery requires passing score, usable evidence and no unresolved critical misconception. No external provider may set mastery.
-
-## Automatic next-content materialization
-
-After mastery, execute `instructions/57-materialize-next-content.md` inside the same evaluation operation.
-
-- Restore the configured lookahead window without another learner command.
-- Select eligible planned topics in deterministic topological order.
-- Use the roadmap, topic contract, intake, diagnosis and verified assessment evidence.
-- Use prior modules as consistency references, not as the sole template.
-- Adapt examples, emphasis, prerequisite retrieval, visual models, formative practice and difficulty when evidence supports it.
-- Never silently rewrite approved objectives, prerequisites, deliverables, effort or mastery criteria; structural changes belong to replan.
-- Create a small draft PR limited to selected topics, their modules/flashcards/rubrics/forms, integration-plan adjustments and roadmap status.
-- Review, validate and safely merge before returning the next ready module.
-- Probe selected connectors and update derived resources after repository merge. Missing optional connectors use fallbacks and must not undo repository materialization.
-
-When mastery fails, create focused recovery and targeted reassessment. Formative tools may supplement practice but never replace durable GitHub evidence and rubrics.
-
-## Source of truth
-
-1. `.open-study-path/instance.yml`: repository identity, workflow and generation strategy.
-2. `study.config.yml`: learner, capability and provider preferences.
-3. `instructions/manifest.yml`: phase contracts.
-4. `state/diagnostic-summary.json`: placement evidence.
-5. `study/roadmap.md`: complete approved graph, Mermaid dependency view and materialization overview.
-6. `study/integrations.md`: explained provider recommendation and fallback plan.
-7. `study/topics/`: complete topic contracts.
-8. `study/modules/` and `study/flashcards/`: materialized teaching and formative artifacts.
-9. `study/assessments/` and Issue Forms: materialized assessments.
-10. `state/assessments/`: evaluated attempts.
-11. `state/progress.json`: verified progress.
-12. `state/integrations.json`: safe external-resource and synchronization index only.
+When more work is needed, create focused review and targeted reassessment. Use supportive language such as “Revisão necessária”, not punitive copy.
 
 ## Safety
 
-Never commit credentials, secrets, raw submissions, diagnostic transcripts or unnecessary personal data. Prefer pull requests for structural and material changes. Ask before destructive operations.
+Never commit credentials, secrets, raw submissions, original uploaded files, diagnostic transcripts or unnecessary personal data. Prefer pull requests for structural and material changes. Ask before destructive operations.

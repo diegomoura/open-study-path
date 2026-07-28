@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Validate the bounded, local-first curriculum generation contract."""
+"""Validate bounded generation while keeping technical work out of learner responses."""
 
 from __future__ import annotations
 
@@ -37,52 +37,39 @@ def load_yaml(path: str) -> Any:
 
 
 def main() -> None:
-    require(
+    require(EXECUTION_CONTRACT, [
+        "Assemble the complete allowed phase diff before opening the pull request",
+        "Every intermediate and final commit",
+        "GitHub Actions is the final confirmation",
+        "Do not add instrumentation commits",
+        "`.github/workflows/`",
+        "scripts/validate_curriculum_safe.py",
+        "Terminal condition",
+        "do not perform further research",
+        "Do not attach or list them as primary learner artifacts",
+    ])
+    require("AGENTS.md", [
         EXECUTION_CONTRACT,
-        [
-            "Assemble the complete allowed phase diff before opening the pull request",
-            "Every intermediate and final commit",
-            "GitHub Actions is the final confirmation",
-            "Do not add instrumentation commits",
-            "`.github/workflows/`",
-            "scripts/validate_curriculum_safe.py",
-            "Terminal condition",
-            "do not perform further research",
-            "Do not attach or list them as primary learner artifacts",
-        ],
-    )
-    require(
-        "AGENTS.md",
-        [
-            EXECUTION_CONTRACT,
-            "CI is confirmation, not the primary linter",
-            "even temporarily",
-            "current unchanged head",
-            "## Publication and integrations",
-            "## Deterministic assessment resolution",
-            "## Automatic next-content materialization",
-            "## Source of truth",
-            "## Safety",
-            "Finalizei o TOPIC-000. Avalie minhas respostas.",
-            "instructions/57-materialize-next-content.md",
-        ],
-    )
-    require(
-        "templates/chatgpt-project-instructions.md",
-        [
-            EXECUTION_CONTRACT,
-            "complete allowed diff before opening the PR",
-            "Do not attach internal diagnostic ZIPs",
-        ],
-    )
-    require(
-        "instructions/phase-completion.md",
-        [
-            "Internal logs and diagnostic ZIP files",
-            "current PR head is unchanged",
-            "finish immediately",
-        ],
-    )
+        "Complete them before responding",
+        "Do not lead with PR, CI",
+        "instructions/57-materialize-next-content.md",
+        "Natural commands presented to the learner",
+        "## Safety",
+    ])
+    require("templates/chatgpt-project-instructions.md", [
+        "Internal review, correction, CI, safe merge",
+        "Do not lead successful responses",
+        "Never store credentials",
+    ])
+    require("instructions/phase-completion.md", [
+        "Finish validation, review, correction, safe merge",
+        "Do not foreground PR numbers",
+        "Internal logs and diagnostic ZIP files",
+    ])
+    require("docs/learner-facing-language.md", [
+        "O que não deve aparecer por padrão após sucesso",
+        "hash de commit ou merge",
+    ])
 
     manifest = load_yaml("instructions/manifest.yml")
     phases = {
@@ -90,8 +77,7 @@ def main() -> None:
         for phase in manifest.get("phases", [])
         if isinstance(phase, dict)
     }
-    generate = phases.get("generate", {})
-    if generate.get("execution_contract") != EXECUTION_CONTRACT:
+    if phases.get("generate", {}).get("execution_contract") != EXECUTION_CONTRACT:
         fail("generate phase must reference the efficient execution contract")
 
     workflow = text(".github/workflows/validate-template.yml")
@@ -106,7 +92,7 @@ def main() -> None:
     if "python scripts/validate_curriculum.py" in workflow:
         fail("workflow must use structural placeholder detection through the safe validator")
 
-    print("Efficient curriculum generation, learner experience and complete lifecycle contracts passed.")
+    print("Efficient generation and human-facing completion contracts passed.")
 
 
 if __name__ == "__main__":
