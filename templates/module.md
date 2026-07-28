@@ -10,41 +10,45 @@ flashcards_study: null
 
 # TOPIC-000 — Replace me
 
-## Como usar este módulo
+## Antes de começar
 
-Explique a sequência de estudo, o tempo sugerido e o que o estudante deverá produzir. Este arquivo deve ser uma aula autocontida, não apenas uma lista de tarefas.
+Explique em poucas linhas o que a pessoa vai aprender, por que isso importa para o objetivo dela, quanto tempo reservar e o que produzir ao final. Este arquivo deve ser uma aula autocontida, não apenas uma lista de tarefas.
 
-## Plano de execução
+## Sua sessão de estudo
 
-Divida a experiência em três a sete ações pequenas e verificáveis. Cada ação deve normalmente durar entre 10 e 25 minutos. Evite uma única linha que misture leitura, exercício, entrega e avaliação.
+Divida a experiência em três a sete ações pequenas e verificáveis. Cada ação deve normalmente durar entre 10 e 25 minutos. Os tempos são sugestões, não limites rígidos.
 
-- [ ] Recuperar pré-requisitos (10 min)
-- [ ] Estudar o primeiro bloco conceitual (20 min)
+- [ ] Recuperar o que já sei (10 min)
+- [ ] Estudar e explicar a ideia central (20 min)
 - [ ] Refazer exemplos e prática guiada (15 min)
 - [ ] Produzir a evidência independente (15 min)
 
-## Objetivos de aprendizagem
+## O que você vai aprender
 
-Ao final, o estudante deverá conseguir:
+Ao final, você deverá conseguir:
 
 - explicar o conceito central com palavras próprias;
 - aplicar o conceito a uma situação nova;
 - reconhecer erros ou interpretações comuns;
-- produzir a evidência exigida pelo tópico.
+- produzir a evidência exigida pela etapa.
 
-## Verificação de pré-requisitos
+## Recupere o que já sabe
 
-Inclua duas ou três perguntas curtas ou tarefas de recuperação ativa. Dê orientação para revisar o tópico anterior quando necessário.
+Inclua duas ou três perguntas curtas ou tarefas de recuperação ativa. Dê orientação clara para revisar a etapa anterior quando necessário.
 
 ## Conteúdo essencial
 
 Ensine efetivamente o conteúdo em linguagem adequada ao nível configurado. Inclua definições, relações entre conceitos, limites, nuances e raciocínio. Não use placeholders como “estude o conceito”.
 
+As afirmações centrais devem poder ser rastreadas até as fontes listadas no final. Diferencie claramente:
+
+- o que vem de fonte primária, documentação oficial ou pesquisa;
+- o que é síntese do agente;
+- o que é exemplo ou adaptação pedagógica criada para esta trilha.
+
 ## Mapa visual
 
-Introduza o que o diagrama representa e por que ele ajuda a compreender este tópico. Todo módulo materializado deve conter ao menos um diagrama Mermaid útil e explicado. Temas complexos podem usar vários diagramas separados.
-
-Escolha o tipo adequado: `flowchart`, `mindmap`, `timeline`, `stateDiagram-v2`, `sequenceDiagram`, `classDiagram` ou `erDiagram`. Em arquitetura de software ou nuvem, use `flowchart` com `subgraph` para componentes e limites quando isso renderizar de forma mais confiável no GitHub.
+Introduza o que o diagrama representa e por que ele ajuda. Todo módulo pronto deve conter ao menos um diagrama Mermaid útil e explicado.
 
 ```mermaid
 flowchart TD
@@ -53,63 +57,86 @@ flowchart TD
     B -->|Caminho 2| D[Alternativa ou erro comum]
 ```
 
-Depois do diagrama, explique em palavras o que o estudante deve observar, como as partes se relacionam e quais limitações o desenho não mostra. Não deixe o diagrama solto e não o use como substituto da explicação textual.
+Depois do diagrama, explique o que observar, como as partes se relacionam e quais limitações o desenho não mostra. Não deixe o diagrama solto e não o use como substituto da explicação.
 
 ## Exemplos trabalhados
 
-Apresente ao menos dois exemplos resolvidos passo a passo, incluindo um caso simples e um caso com ambiguidade ou erro comum.
+Apresente ao menos dois exemplos resolvidos passo a passo, incluindo um caso simples e um caso com ambiguidade, limite ou erro comum.
 
-## Erros comuns e como corrigi-los
+## Erros comuns e como corrigir
 
-Liste equívocos prováveis, explique por que estão errados e mostre como reformular o raciocínio.
+Liste equívocos prováveis, explique por que falham e mostre como reformular o raciocínio.
 
 ## Prática guiada
 
-Inclua exercícios com pistas graduais. Não revele imediatamente a resposta completa; mostre critérios para o estudante conferir o próprio raciocínio.
+Inclua exercícios com pistas graduais. Não revele imediatamente a resposta completa; mostre critérios para a pessoa conferir o próprio raciocínio.
 
 ## Prática independente
 
 Inclua tarefas que exijam transferência para um caso novo e produção do entregável definido no tópico.
 
-## Prática formativa e revisão
+## Pratique e revise
 
 Quando o tópico tiver definições, comandos, fórmulas, classificações, comparações ou erros comuns adequados à recuperação ativa:
 
 - defina `flashcards: study/flashcards/TOPIC-000.tsv`;
 - defina `flashcards_study: study/flashcards/TOPIC-000.md`;
-- gere o TSV com colunas `Front`, `Back` e `Tags` para importação;
-- gere o Markdown com cartões expansíveis usando `<details>` e `<summary>` para estudo direto no GitHub.
+- gere o TSV com colunas `Front`, `Back` e `Tags`;
+- gere o Markdown com cartões expansíveis usando `<details>` e `<summary>`.
 
-No módulo, apresente primeiro o link **Estudar os flashcards no GitHub** para o arquivo Markdown e, em seguida, o link **Baixar ou importar o TSV**. Quando Quizlet for realmente publicado, o cartão operacional e o estado de integrações devem incluir o link externo sem remover os dois arquivos locais.
+Apresente primeiro **Estudar os flashcards no GitHub** e depois **Baixar ou importar o TSV**. Quando existir um conjunto real no Quizlet, inclua também **Praticar no Quizlet**, sem remover os arquivos locais.
 
-Explique explicitamente que flashcards e quizzes são prática formativa. Pontuação, sequência ou conclusão nessas ferramentas não determina domínio do tópico.
+Explique uma única vez, em linguagem natural: os flashcards ajudam a praticar; a etapa é concluída pela avaliação.
 
-Quando flashcards não forem pedagogicamente úteis, mantenha `flashcards: null` e `flashcards_study: null` e explique brevemente por que a prática principal exige aplicação, produção ou raciocínio mais longo.
+Quando flashcards não forem úteis, mantenha os campos como `null` e explique qual prática substitui a memorização.
 
-## Síntese por recuperação ativa
+## Outras formas de aprender
 
-Inclua perguntas que possam ser respondidas sem consultar o texto e uma breve orientação de revisão espaçada.
+Selecione somente formatos que realmente acrescentem uma perspectiva ou demonstração útil. Podem incluir:
 
-## Entregável e evidência
+- vídeo curto ou trecho específico de aula;
+- aula universitária aberta;
+- podcast;
+- laboratório ou demonstração interativa;
+- capítulo ou exercício de curso;
+- artigo, TCC, dissertação ou paper relevante.
 
-Descreva exatamente o que deve ser produzido e como vincular ou transcrever a evidência no formulário de avaliação. Quando o entregável estiver em Google Drive ou outro workspace externo, preserve um link seguro e deixe claro que o resultado oficial da avaliação permanece no GitHub.
+Para cada recurso, diga **por que usar**, **qual trecho estudar**, **quanto esforço exige**, **idioma/legendas quando relevante** e **condição de acesso**. Recursos potencialmente pagos precisam de uma alternativa gratuita ou oficial.
 
-## Avaliação do tópico
+## Confira sem consultar
 
-Construa o link direto com a identidade exata da instância e apresente-o como ação clicável:
+Inclua perguntas que possam ser respondidas sem olhar o texto e uma orientação breve de revisão espaçada.
+
+## O que você vai produzir
+
+Descreva exatamente o entregável e como vincular ou transcrever a evidência no formulário. Não peça dados pessoais desnecessários.
+
+## Avaliação
+
+Construa o link direto usando a identidade exata da instância:
 
 `https://github.com/OWNER/REPOSITORY/issues/new?template=assessment-topic-000.yml`
 
-Use uma frase como **Abrir a avaliação do TOPIC-000**. Não apresente somente o nome interno `assessment-topic-000.yml` ao estudante.
+Apresente como **Abrir a avaliação de <título da aula>**. Não apresente somente o nome interno `assessment-topic-000.yml`.
 
-Depois de enviar as respostas, retorne ao chat com:
+Depois do envio, peça uma frase natural:
 
-`Finalizei o TOPIC-000. Avalie minhas respostas.`
+`Terminei <título da aula>. Avalie minhas respostas.`
 
-O número da issue só deve ser solicitado quando a busca determinística encontrar mais de uma submissão candidata.
+Continue aceitando `Finalizei o TOPIC-000. Avalie minhas respostas.` como alias técnico. O número da issue só deve ser solicitado quando houver mais de uma submissão candidata.
 
-Checklist, lembrete, sessão agendada, hábito ou resultado formativo não substitui esta avaliação.
+## Como este conteúdo foi construído
 
-## Referências
+Explique em um parágrafo quais fontes sustentaram as ideias centrais e quais diagramas, exemplos ou exercícios foram criados como adaptação pedagógica. Declare simplificações, divergências ou limites importantes.
 
-Liste fontes primárias ou oficiais com localizador canônico. Para pesquisa acadêmica descoberta com Consensus ou outro provedor, registre a fonte verificável; não cite apenas a resposta do plugin. Para cursos externos, identifique seção ou aula, acesso e alternativa gratuita quando aplicável.
+## Fontes e caminhos para aprofundar
+
+Inclua de três a sete fontes realmente consultadas. Sempre que existirem, combine uma fonte primária ou oficial, uma explicação confiável e um formato complementar útil.
+
+| Tipo | Fonte | Como foi usada nesta aula | Acesso |
+| --- | --- | --- | --- |
+| Primária ou oficial | Autor, obra, seção e link direto | Base do conceito central | público / biblioteca / pago |
+| Acadêmica ou técnica | Título, instituição, seção e link | Conferência de definições, evidência ou limites | público |
+| Vídeo, aula ou curso | Título, autor/canal, trecho ou timestamp e link | Explicação alternativa ou demonstração | público, idioma e legendas |
+
+Links sem explicação não bastam. Inclua capítulo, seção, página, DOI, aula, exercício ou timestamp. Não cite uma resposta de plugin como fonte; cite o documento original. Siga `docs/content-quality-and-sources.md`.
