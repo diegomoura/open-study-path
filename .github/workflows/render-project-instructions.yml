@@ -1,0 +1,44 @@
+name: Prepare ChatGPT Project Instructions
+
+on:
+  push:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: render-project-instructions-${{ github.repository }}
+  cancel-in-progress: false
+
+jobs:
+  render:
+    if: >-
+      github.repository != 'diegomoura/open-study-path' &&
+      (github.event_name == 'workflow_dispatch' ||
+      github.ref == format('refs/heads/{0}', github.event.repository.default_branch))
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout default branch
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.repository.default_branch }}
+
+      - name: Fill repository identity
+        run: >-
+          python scripts/render_project_instructions.py
+          --repository "$GITHUB_REPOSITORY"
+
+      - name: Save prepared instructions
+        shell: bash
+        run: |
+          if git diff --quiet -- templates/chatgpt-project-instructions.md; then
+            echo "Project Instructions already contain $GITHUB_REPOSITORY."
+            exit 0
+          fi
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add templates/chatgpt-project-instructions.md
+          git commit -m "chore: prepare ChatGPT project instructions"
+          git push origin "HEAD:${{ github.event.repository.default_branch }}"
