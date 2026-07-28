@@ -45,6 +45,18 @@ Não use como navegação principal:
 
 Resuma no próprio cartão o objetivo, o tempo, o entregável e os critérios de conclusão que a pessoa realmente precisa conhecer.
 
+## A aula começa pela aprendizagem
+
+Arquivos em `study/modules/` são páginas destinadas à pessoa que estuda. Eles devem começar pelo título e pela orientação da aula, sem uma tabela de frontmatter YAML com `topic_id`, versão, duração, contagem de diagramas ou caminhos de arquivos.
+
+Esses metadados permanecem no contrato interno correspondente em `study/topics/`, onde podem ser usados por geração, validação, avaliação e integrações. Comentários HTML ocultos podem orientar o agente, mas não devem criar ruído visível na página.
+
+A regra é simples:
+
+- **contrato da etapa:** identidade e operação;
+- **aula:** ensino e prática;
+- **cartão:** próximo passo.
+
 ## O que não deve aparecer por padrão após sucesso
 
 Não destaque:
