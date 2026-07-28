@@ -169,6 +169,8 @@ body:
 
         Algumas ferramentas podem deixar o acompanhamento, a prática ou a agenda mais convenientes. Elas só serão sugeridas quando houver um benefício concreto, e a trilha continuará funcionando no GitHub quando você não quiser conectá-las.
 
+        <!-- contrato técnico: GitHub é a fonte de verdade; integrações são opcionais -->
+
   - type: dropdown
     id: integration_experience
     attributes:
