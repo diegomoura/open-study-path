@@ -1,5 +1,5 @@
-name: Avaliação TOPIC-000 — Replace me
-description: Envie as evidências e respostas para avaliação deste tópico.
+name: Avaliação — TOPIC-000 — Replace me
+description: Mostre como você compreendeu e aplicou esta etapa.
 title: "[Avaliação] TOPIC-000 — Replace me"
 labels:
   - assessment
@@ -9,18 +9,19 @@ body:
     attributes:
       value: |
         <!-- open-study-path:assessment topic_id=TOPIC-000 version=1 -->
-        O título já vem preenchido com o tópico completo; não é necessário editá-lo.
+        ## Mostre o que você aprendeu
 
-        Responda com suas próprias palavras. O objetivo é demonstrar compreensão e aplicação, não apenas reproduzir definições.
+        Responda com suas próprias palavras e use exemplos sempre que puder. Não buscamos respostas decoradas: queremos entender como você está pensando e aplicando o conteúdo.
 
-        Depois de enviar, retorne ao chat com: `Finalizei o TOPIC-000. Avalie minhas respostas.`
-        Você não precisa copiar o número da issue, exceto quando houver mais de uma submissão candidata.
+        Depois de enviar, volte ao chat e escreva:
+
+        `Terminei Replace me. Avalie minhas respostas.`
 
   - type: input
     id: evidence
     attributes:
-      label: Link ou referência da evidência
-      description: Inclua o link do arquivo, comentário, documento ou cartão quando houver.
+      label: Sua evidência, quando houver
+      description: Inclua o link ou uma referência curta para o arquivo, documento, comentário ou projeto relacionado.
       placeholder: https://...
     validations:
       required: false
@@ -28,48 +29,48 @@ body:
   - type: textarea
     id: q1
     attributes:
-      label: Questão 1 — compreensão conceitual
-      description: Substitua por uma pergunta específica do tópico.
-      placeholder: Escreva sua resposta e justifique.
+      label: Questão 1 — explique a ideia principal
+      description: Substitua por uma pergunta específica que exija compreensão, não apenas definição decorada.
+      placeholder: Explique com suas palavras e use um exemplo.
     validations:
       required: true
 
   - type: textarea
     id: q2
     attributes:
-      label: Questão 2 — análise
-      description: Substitua por uma tarefa de classificação ou comparação.
+      label: Questão 2 — compare ou analise
+      description: Substitua por uma tarefa específica de comparação, classificação, diagnóstico ou interpretação.
     validations:
       required: true
 
   - type: textarea
     id: q3
     attributes:
-      label: Questão 3 — aplicação
-      description: Substitua por um cenário novo que exija uma decisão ou solução.
+      label: Questão 3 — aplique em uma situação nova
+      description: Substitua por um cenário novo que exija decisão, solução ou transferência.
     validations:
       required: true
 
   - type: textarea
     id: q4
     attributes:
-      label: Questão 4 — erro comum
-      description: Substitua por uma afirmação equivocada que o estudante deve analisar e corrigir.
+      label: Questão 4 — encontre e corrija o erro
+      description: Substitua por um equívoco plausível que a pessoa deve analisar e reformular.
     validations:
       required: true
 
   - type: textarea
     id: q5
     attributes:
-      label: Questão 5 — evidência e reflexão
-      description: Peça uma evidência concreta e uma autoavaliação pelos critérios de domínio.
+      label: Questão 5 — mostre sua evidência e reflita
+      description: Peça uma evidência concreta e uma autoavaliação breve usando os critérios da etapa.
     validations:
       required: true
 
   - type: checkboxes
     id: confirmation
     attributes:
-      label: Confirmação
+      label: Antes de enviar
       options:
-        - label: As respostas representam meu raciocínio e estão prontas para avaliação.
+        - label: Revisei minhas respostas e estou pronto para receber feedback.
           required: true
