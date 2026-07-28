@@ -7,7 +7,11 @@ from pathlib import Path
 
 import yaml
 
-from render_project_instructions import PLACEHOLDER, render_instructions
+from render_project_instructions import (
+    COMPATIBILITY_MARKER,
+    PLACEHOLDER,
+    render_instructions,
+)
 
 ROOT = Path(__file__).resolve().parents[1]
 TEMPLATE = ROOT / "templates/chatgpt-project-instructions.md"
@@ -21,8 +25,11 @@ def main() -> None:
     renamed_repository = "example/genai-study-renamed"
 
     rendered = render_instructions(source, first_repository)
-    if PLACEHOLDER in rendered:
-        raise SystemExit("repository placeholder remained after rendering")
+    visible = rendered.replace(COMPATIBILITY_MARKER, "")
+    if PLACEHOLDER in visible:
+        raise SystemExit("visible repository placeholder remained after rendering")
+    if COMPATIBILITY_MARKER not in rendered:
+        raise SystemExit("hidden compatibility marker was not preserved")
     if f"- Instance: `{first_repository}`" not in rendered:
         raise SystemExit("rendered instructions missed the instance identity")
     if "The repository identifier is already filled in." not in rendered:
