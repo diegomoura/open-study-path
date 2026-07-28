@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Validate learner-facing language, task projections, flashcards, assessment links and source sections."""
+"""Validate learner-facing language, task projections, metadata-free lessons, flashcards and sources."""
 
 from __future__ import annotations
 
@@ -12,6 +12,7 @@ import yaml
 
 ROOT = Path(__file__).resolve().parents[1]
 INSTANCE = ROOT / ".open-study-path/instance.yml"
+TOPICS = ROOT / "study/topics"
 MODULES = ROOT / "study/modules"
 ISSUE_FORMS = ROOT / ".github/ISSUE_TEMPLATE"
 LINK = re.compile(r"https?://[^\s)>]+")
@@ -62,8 +63,12 @@ def forbid_terms(path: str, terms: list[str]) -> None:
 
 
 def validate_contracts() -> None:
+    module_template = text("templates/module.md")
+    if module_template.startswith("---\n"):
+        fail("lesson template must not expose YAML frontmatter")
     require_terms("templates/module.md", [
-        "flashcards_study: null",
+        "Não adicione frontmatter YAML a este arquivo",
+        "flashcards_study: study/flashcards/TOPIC-000.md",
         "<details>",
         "issues/new?template=assessment-topic-000.yml",
         "## Como este conteúdo foi construído",
@@ -72,9 +77,11 @@ def validate_contracts() -> None:
         "Terminei <título da aula>. Avalie minhas respostas.",
     ])
     require_terms("templates/topic.md", [
+        "flashcards_study: null",
         "## O que você vai aprender",
         "## Por que isso importa para você",
         "não é uma página de navegação principal",
+        "aula publicada não recebe frontmatter YAML",
         "Não apresente a rubrica YAML como link normal",
         "Esta aula será preparada automaticamente",
     ])
@@ -147,11 +154,18 @@ def validate_generated_modules() -> None:
         fail("instance repository identity is required")
 
     for module_path in sorted(MODULES.glob("TOPIC-*.md")):
-        metadata, body = parse_frontmatter(module_path)
-        topic_id = metadata.get("topic_id")
+        body = text(module_path)
+        if body.startswith("---\n"):
+            fail(f"module exposes operational YAML frontmatter: {module_path.relative_to(ROOT)}")
+
+        topic_id = module_path.stem
+        topic_path = TOPICS / f"{topic_id}.md"
+        metadata, _ = parse_frontmatter(topic_path)
         title = metadata.get("title")
-        if not isinstance(topic_id, str) or not isinstance(title, str):
-            fail(f"module identity is incomplete: {module_path.relative_to(ROOT)}")
+        if metadata.get("id") != topic_id or not isinstance(title, str):
+            fail(f"topic contract identity is incomplete for {topic_id}")
+        if not re.search(rf"^#\s+(?:\d+\.\s+|{re.escape(topic_id)}\s+[—-]\s+)?{re.escape(title)}\s*$", body, re.MULTILINE):
+            fail(f"module {topic_id} must begin with its learner-facing title")
 
         suffix = topic_id.split("-")[-1].lower()
         form_name = f"assessment-topic-{suffix}.yml"
@@ -185,7 +199,7 @@ def validate_generated_modules() -> None:
         if tsv_value is None and study_value is None:
             continue
         if not isinstance(tsv_value, str) or not isinstance(study_value, str):
-            fail(f"module {topic_id} must declare both flashcard formats")
+            fail(f"topic contract {topic_id} must declare both flashcard formats")
         tsv = text(ROOT / tsv_value)
         study = text(ROOT / study_value)
         if not tsv.startswith("Front\tBack\tTags\n") or len(tsv.splitlines()) < 5:
@@ -204,7 +218,7 @@ def validate_generated_modules() -> None:
 def main() -> None:
     validate_contracts()
     validate_generated_modules()
-    print("Natural learner language, concise task projections, source-rich lessons, assessments and flashcards passed.")
+    print("Natural learner language, metadata-free lessons, concise task projections, sources, assessments and flashcards passed.")
 
 
 if __name__ == "__main__":
