@@ -22,6 +22,22 @@ A successful response should answer, in this order:
 
 Do not foreground PR numbers, CI, commit hashes, branches, changed files, validator names, internal states or synchronization metadata after success. Provide technical details only when requested or when they explain a blocker that requires action.
 
+## Resolve the next action from persisted state
+
+Before composing the final response, read `.open-study-path/instance.yml` and `state/integrations.json` and apply `scripts/lifecycle_next_action.py`. Persisted lifecycle state, not the wording of a previously suggested command, determines the next phase.
+
+An agent-authored phrase such as `sem publicar tarefas ainda` deliberately defers publication for one operation; it is not a learner decision to skip publication permanently. The agent owns that deferral and must surface the deferred publication as the next action after generation.
+
+The normal routing invariant is:
+
+- curriculum not generated → `generate`;
+- curriculum generated and publication not completed → `publish`;
+- publication completed successfully → `evaluate`.
+
+Publication is complete only when `state/integrations.json.sync.status` is `success`, `succeeded` or `completed` and `last_success_at` is present. Missing, `not_started`, pending, partial, blocked or failed publication state cannot enable evaluation.
+
+When publication is pending, do not present an assessment submission or evaluation command as the next action. Lesson and local-practice links may be shown as previews, but the single copyable continuation must remain the publication command. When publication is blocked by a required provider, use the provider-specific return command instead of pretending publication completed.
+
 ## Technical review state
 
 Operational review still occurs internally. Record review and merge status in the PR and repository history. Do not require a fixed PR-status sentence in the learner-facing response.
@@ -54,22 +70,21 @@ Use:
 
 ### After curriculum generation
 
-State whether all lessons or only the first lessons are ready, using human language. Link the roadmap, the first ready lesson and useful local practice. Summarize only tools that help now.
+State whether all lessons or only the first lessons are ready, using human language. Link the roadmap, the first ready lesson and useful local practice as previews. Summarize only tools that help now.
+
+If the agent previously suggested generating `sem publicar tarefas ainda`, state plainly that organization in the selected tools remains pending because it was intentionally deferred. Do not make the learner infer or remember that deferred operation.
 
 When a useful optional app is not connected, use the platform Plugin Management capability to render a nonblocking install/connect suggestion under `instructions/42-integration-preflight.md`. Do not ask a separate text-only confirmation first. A suggestion requires an explicit user click and does not prove authorization.
 
-Use:
+Use this as the only normal copyable continuation:
 
 `Organize minha trilha nas ferramentas que escolhemos.`
 
-For Quizlet after connection, use:
+Do not include `Terminei <título da aula>. Avalie minhas respostas.` in the generation-completion response while publication is pending.
 
-`Conectei o Quizlet. Crie meus flashcards.`
+The technical publication alias remains accepted:
 
-The technical aliases remain accepted:
-
-- `Publique as tarefas da trilha nas integrações configuradas.`
-- `Conectei o Quizlet ao ChatGPT. Verifique novamente e publique os flashcards dos tópicos materializados.`
+`Publique as tarefas da trilha nas integrações configuradas.`
 
 ### When required publication is blocked
 
@@ -87,7 +102,14 @@ Use the topic title in the command:
 
 `Terminei <título da aula>. Avalie minhas respostas.`
 
-Continue accepting `Finalizei o TOPIC-000. Avalie minhas respostas.` as a deterministic technical alias.
+For Quizlet after connection, use:
+
+`Conectei o Quizlet. Crie meus flashcards.`
+
+Continue accepting these technical aliases:
+
+- `Finalizei o TOPIC-000. Avalie minhas respostas.`
+- `Conectei o Quizlet ao ChatGPT. Verifique novamente e publique os flashcards dos tópicos materializados.`
 
 ### After topic evaluation
 
