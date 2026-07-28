@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Validate learner-facing flashcards, assessments and optional app offers."""
+"""Validate learner-facing language, flashcards, assessment links and source sections."""
 
 from __future__ import annotations
 
@@ -14,6 +14,7 @@ ROOT = Path(__file__).resolve().parents[1]
 INSTANCE = ROOT / ".open-study-path/instance.yml"
 MODULES = ROOT / "study/modules"
 ISSUE_FORMS = ROOT / ".github/ISSUE_TEMPLATE"
+LINK = re.compile(r"https?://[^\s)>]+")
 
 
 def fail(message: str) -> None:
@@ -46,108 +47,65 @@ def parse_frontmatter(path: Path) -> tuple[dict[str, Any], str]:
     return metadata, body
 
 
-def require_terms(path: str, terms: list[str], message: str) -> None:
+def require_terms(path: str, terms: list[str]) -> None:
     content = text(path)
     for term in terms:
         if term not in content:
-            fail(f"{path} is missing {message}: {term}")
+            fail(f"{path} is missing learner-experience term: {term}")
 
 
-def require_contracts() -> None:
-    require_terms(
-        "templates/module.md",
-        [
-            "flashcards_study: null",
-            "<details>",
-            "issues/new?template=assessment-topic-000.yml",
-            "Não apresente somente o nome interno",
-        ],
-        "learner-experience term",
-    )
+def validate_contracts() -> None:
+    require_terms("templates/module.md", [
+        "flashcards_study: null",
+        "<details>",
+        "issues/new?template=assessment-topic-000.yml",
+        "## Como este conteúdo foi construído",
+        "## Fontes e caminhos para aprofundar",
+        "Terminei <título da aula>. Avalie minhas respostas.",
+    ])
+    require_terms("templates/topic.md", [
+        "## O que você vai aprender",
+        "## Por que isso importa para você",
+        "Esta aula será preparada automaticamente",
+    ])
+    require_terms("instructions/phase-completion.md", [
+        "Do not foreground PR numbers",
+        "Preenchi o formulário. Pode continuar.",
+        "Organize minha trilha nas ferramentas que escolhemos.",
+    ])
+    require_terms("instructions/40-publish-tasks.md", [
+        "Human card titles",
+        "Você pode começar por aqui",
+        "Sua sessão de estudo",
+    ])
+    require_terms("docs/learner-facing-language.md", [
+        "O que não deve aparecer por padrão após sucesso",
+        "Terminei <título da aula>. Avalie minhas respostas.",
+    ])
+    require_terms("docs/content-quality-and-sources.md", [
+        "no mínimo três fontes",
+        "Antes de citar",
+        "Vídeos",
+        "Cursos e plataformas",
+    ])
 
     if not (ROOT / "templates/flashcards.md").is_file():
         fail("missing templates/flashcards.md")
 
-    issue_template = load_yaml("templates/topic-assessment-issue-form.yml")
-    if issue_template.get("title") != "[Avaliação] TOPIC-000 — Replace me":
-        fail("assessment Issue Form template must prefill the complete topic title")
+    issue = load_yaml("templates/topic-assessment-issue-form.yml")
+    if issue.get("title") != "[Avaliação] TOPIC-000 — Replace me":
+        fail("assessment form must prefill the complete title")
+    issue_text = text("templates/topic-assessment-issue-form.yml")
+    for forbidden in [
+        "O título já vem preenchido",
+        "Você não precisa copiar o número da issue",
+    ]:
+        if forbidden in issue_text:
+            fail(f"assessment form exposes internal mechanics: {forbidden}")
 
-    require_terms(
-        "instructions/30-generate-path.md",
-        [
-            "Durable and usable flashcards",
-            "study/flashcards/TOPIC-000.md",
-            "direct clickable URL",
-            "title is a useful signal, not the sole authority",
-        ],
-        "generation learner-experience term",
-    )
-
-    require_terms(
-        "instructions/55-evaluate-topic.md",
-        [
-            "preferred consistency signal",
-            "normalize its title",
-            "Never reject or penalize",
-        ],
-        "editable-title handling",
-    )
-
-    require_terms(
-        "instructions/phase-completion.md",
-        [
-            "platform Plugin Management capability",
-            "nonblocking install/connect suggestion",
-            "at most three connection suggestions",
-            "Conectei o Quizlet ao ChatGPT. Verifique novamente e publique os flashcards dos tópicos materializados.",
-        ],
-        "post-generation connection-offer contract",
-    )
-
-    require_terms(
-        "instructions/42-integration-preflight.md",
-        [
-            "## Optional app discovery and connection offer",
-            "do not ask a separate text-only confirmation",
-            "Never create a test flashcard set",
-            "connection_offer_status",
-            "displayed offer is not consent for an external write",
-        ],
-        "optional connection preflight term",
-    )
-
-    require_terms(
-        "instructions/40-publish-tasks.md",
-        [
-            "nonblocking Quizlet connection suggestion",
-            "first intended topic-set creation is the access check",
-            "versioned replacement",
-            "mark the prior resource record as superseded",
-        ],
-        "Quizlet publication term",
-    )
-
-    require_terms(
-        "docs/integration-capabilities.md",
-        [
-            "## Optional connection offer",
-            "explicit user click",
-            "no more than three suggestions",
-            "never create a disposable test resource",
-        ],
-        "connection-offer documentation term",
-    )
-
-    require_terms(
-        "templates/integrations-plan.md",
-        [
-            "## Oferta contextual de conexão",
-            "**Oferta de conexão:**",
-            "Conectei o Quizlet ao ChatGPT. Verifique novamente e publique os flashcards dos tópicos materializados.",
-            "substituição versionada",
-        ],
-        "integration-plan connection-offer term",
-    )
+    intake = load_yaml(".github/ISSUE_TEMPLATE/create-study-path.yml")
+    if intake.get("title") != "[Nova trilha] ":
+        fail("intake title must use human new-path language")
 
 
 def validate_generated_modules() -> None:
@@ -157,7 +115,7 @@ def validate_generated_modules() -> None:
     instance = load_yaml(INSTANCE)
     repository = instance.get("repository") if isinstance(instance, dict) else None
     if not isinstance(repository, str) or "/" not in repository:
-        fail("instance repository identity is required for direct assessment links")
+        fail("instance repository identity is required")
 
     for module_path in sorted(MODULES.glob("TOPIC-*.md")):
         metadata, body = parse_frontmatter(module_path)
@@ -170,48 +128,54 @@ def validate_generated_modules() -> None:
         form_name = f"assessment-topic-{suffix}.yml"
         direct_url = f"https://github.com/{repository}/issues/new?template={form_name}"
         if direct_url not in body:
-            fail(f"module {topic_id} must contain its direct assessment Issue Form URL")
+            fail(f"module {topic_id} must contain its direct assessment URL")
         if f"formulário `{form_name}`" in body:
-            fail(f"module {topic_id} must not present only the internal form filename")
+            fail(f"module {topic_id} exposes only an internal form filename")
 
         form_path = ISSUE_FORMS / form_name
         form = load_yaml(form_path)
-        expected_title = f"[Avaliação] {topic_id} — {title}"
-        if form.get("title") != expected_title:
-            fail(f"assessment Issue Form {topic_id} must prefill the complete title")
+        if form.get("title") != f"[Avaliação] {topic_id} — {title}":
+            fail(f"assessment form {topic_id} must prefill the complete title")
+
+        for section in [
+            "## Outras formas de aprender",
+            "## Como este conteúdo foi construído",
+            "## Fontes e caminhos para aprofundar",
+        ]:
+            if section not in body:
+                fail(f"module {topic_id} is missing: {section}")
+
+        source_section = body.split("## Fontes e caminhos para aprofundar", 1)[1]
+        if len(set(LINK.findall(source_section))) < 3:
+            fail(f"module {topic_id} needs at least three source links")
+        if "Como foi usada" not in source_section and "Como foi usado" not in source_section:
+            fail(f"module {topic_id} must explain source use")
 
         tsv_value = metadata.get("flashcards")
         study_value = metadata.get("flashcards_study")
         if tsv_value is None and study_value is None:
             continue
         if not isinstance(tsv_value, str) or not isinstance(study_value, str):
-            fail(f"module {topic_id} must declare both flashcards and flashcards_study")
-
-        tsv_path = ROOT / tsv_value
-        study_path = ROOT / study_value
-        tsv = text(tsv_path)
-        study = text(study_path)
-        if not tsv.startswith("Front\tBack\tTags\n"):
-            fail(f"flashcard TSV for {topic_id} must use Front/Back/Tags headers")
-        if len(tsv.splitlines()) < 5:
-            fail(f"flashcard TSV for {topic_id} needs at least four cards")
+            fail(f"module {topic_id} must declare both flashcard formats")
+        tsv = text(ROOT / tsv_value)
+        study = text(ROOT / study_value)
+        if not tsv.startswith("Front\tBack\tTags\n") or len(tsv.splitlines()) < 5:
+            fail(f"flashcard TSV for {topic_id} is incomplete")
         if study.count("<details>") < 4 or study.count("<summary>") < 4:
-            fail(f"Markdown flashcards for {topic_id} need at least four expandable cards")
+            fail(f"Markdown flashcards for {topic_id} need expandable cards")
         if Path(study_value).name not in body or Path(tsv_value).name not in body:
-            fail(f"module {topic_id} must link both Markdown and TSV flashcards")
+            fail(f"module {topic_id} must link both flashcard formats")
         if re.search(r"Quizlet[^\n]*https?://", body, re.IGNORECASE):
             state_path = ROOT / "state/integrations.json"
             state_text = text(state_path) if state_path.is_file() else ""
             if topic_id not in state_text:
-                fail(f"module {topic_id} claims an external flashcard URL without integration state")
+                fail(f"module {topic_id} claims an external set without integration state")
 
 
 def main() -> None:
-    require_contracts()
+    validate_contracts()
     validate_generated_modules()
-    print(
-        "Learner-facing flashcards, assessment links, editable titles and optional app offers passed."
-    )
+    print("Natural learner language, source-rich lessons, assessments and flashcards passed.")
 
 
 if __name__ == "__main__":
