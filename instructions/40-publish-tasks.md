@@ -1,216 +1,163 @@
 # Publish tasks and selected integrations
 
-Use the approved `study/integrations.md`, configured capability providers and fallbacks only after the roadmap, topic contracts and initial content window have been validated, approved and merged.
+Use the approved roadmap, topic contracts, ready lessons, integration plan and current state. Publication creates execution and practice projections; it must not rewrite pedagogical content.
 
-## Approved curriculum invariant
+Read `docs/learner-facing-language.md` before writing task descriptions or the completion response.
 
-Treat the approved roadmap, integration plan, topic contracts and every existing module, flashcard file, rubric and assessment form as immutable inputs during publication. Publication may create external representations, resolve permitted provider fallbacks and update integration state, but it must not change pedagogical content.
+The natural command is:
 
-The standard command is:
+`Organize minha trilha nas ferramentas que escolhemos.`
 
-`Publique as tarefas da trilha nas integrações configuradas.`
-
-The command authorizes publication through providers already selected in the approved integration plan. It does not authorize installing unknown apps, requiring a paid plan or enabling capabilities marked declined. A learner click on a course-specific connection suggestion plus the normal app permission flow may select a previously recommended optional provider for its documented capability.
+Continue accepting `Publique as tarefas da trilha nas integrações configuradas.` as an alias.
 
 ## Connection preflight
 
-Before external writes, execute `instructions/42-integration-preflight.md`. Classify connections by capability rather than testing every known app.
+Run `instructions/42-integration-preflight.md` before external writes. Required providers must pass harmless verification before the required publication set. Optional missing providers use their documented alternatives and may receive one nonblocking connection suggestion.
 
-- Required selected providers must pass harmless read-only probes before the atomic required publication set begins.
-- Optional providers use harmless probes when available; missing access may trigger one nonblocking Plugin Management connection suggestion, then the documented fallback continues.
-- Disabled, declined, forbidden or irrelevant providers are not probed or suggested.
-
-When every required probe passes, continue without another confirmation. Do not wait for a click on an optional connection suggestion before completing work that can use the fallback.
+Do not wait for an optional connection click before completing work that can use a repository-native alternative.
 
 ## Authority model
 
-GitHub is the only source of truth for curriculum, content, assessment, mastery and verified progress.
+GitHub stores approved curriculum, lessons, assessments and verified progress. Exactly one task backend tracks operational execution. External practice, reminders, calendars, habits, analytics and course platforms never establish learning completion.
 
-Exactly one task backend is authoritative for execution state. Other task-like tools may be auxiliary reminders only.
+This is an internal contract. Do not repeat it verbatim in every learner-facing card.
 
-The following never establish mastery:
+## Standard assessment labels
 
-- checklist completion;
-- Todoist reminder completion;
-- calendar attendance;
-- Habitify streaks;
-- Quizlet or Ace Quiz Maker scores;
-- Whimsical edits;
-- Airtable values;
-- completion markers from external course platforms.
-
-## Standard GitHub assessment labels
-
-Ensure these repository labels exist before the learner submits assessment forms:
+Ensure labels exist:
 
 - `assessment`;
 - `assessment:submitted`;
 - `assessment:graded`;
 - `assessment:recovery-required`.
 
-Assessment Issue Forms are created only for materialized topics. Do not create empty assessment issues during publication.
+Do not create empty assessment issues during publication.
 
-## Authoritative task backend
+## Task backend
 
-Create one task or card per topic so the learner can see the complete roadmap. Use the single provider selected in `integrations.task_manager.provider`.
+Create one task per topic in the single selected backend. The task is a clear index into the lesson, practice and assessment.
 
-### Trello
+### Human card titles
 
-Prefer Trello for rich or long courses. Create or reuse one course board with lists equivalent to `Planejado`, `Pronto para estudar`, `Em andamento`, `Em avaliação`, `Recuperação` and `Concluído`.
+Prefer:
 
-### Todoist
+`1. <título da aula>`
 
-When Todoist is the authoritative backend, create or reuse one project and represent topic states using supported sections, labels or task metadata. Include direct repository links. Do not attempt to reproduce Trello-specific visual structures when the provider does not support them.
+Do not use `[TOPIC-001]` in the visible title unless the learner explicitly prefers technical IDs. Keep the topic ID in state and links.
 
-### GitHub Issues or Markdown
+### Ready lesson card
 
-Use GitHub Issues when explicitly selected as the task backend, while keeping assessment issues distinguishable by their labels and markers. Use repository Markdown when no external task service is desired.
+Use a description equivalent to:
 
-### Materialized topic
+> **Você pode começar por aqui.**
+>
+> **O que você vai aprender:** <capacidade em linguagem clara>  
+> **Tempo sugerido:** <estimativa>
+>
+> **Aula:** <link direto>  
+> **Pratique:** <Markdown>, <Quizlet quando real>, <TSV para importação>  
+> **Avaliação:** <link direto>
+>
+> **O que você vai produzir:** <entregável>  
+> **Para concluir:** <critério de aplicação e pontuação em linguagem simples>
+>
+> Quando terminar, envie a avaliação e escreva:  
+> **“Terminei <título da aula>. Avalie minhas respostas.”**
 
-A materialized topic task must include:
+Do not append “Este cartão registra execução; somente a avaliação no GitHub estabelece domínio.” Use the friendlier completion sentence above.
 
-- objective, prerequisites and estimated effort;
-- direct link to the complete module;
-- direct link to the topic contract;
-- direct link to the assessment Issue Form;
-- deliverable and mastery threshold;
-- the command `Finalizei o TOPIC-000. Avalie minhas respostas.`;
-- granular checklist items derived from the module execution plan;
-- flashcard link when a local or external formative set exists.
+Create a checklist named **Sua sessão de estudo** using the three to seven granular actions from the module. The checklist intro may say:
 
-Create separate checklist items for focused actions. Do not compress several distinct activities into one vague line. The task backend is the execution index, not the content repository.
+> Siga estas etapas no seu ritmo. Os tempos são sugestões, não limites.
 
-### Planned topic
+### Future lesson card
 
-A planned topic task must include:
+Use:
 
-- objective, prerequisites and estimated effort;
-- direct link to the topic contract;
-- expected deliverable and mastery criteria;
-- a clear statement that the complete module and assessment will be materialized automatically when the topic enters the active rolling window.
+> **Esta etapa vem depois de <pré-requisitos em linguagem simples>.**
+>
+> **O que você vai aprender:** <objetivo>  
+> **Tempo sugerido:** <estimativa>  
+> **O que você vai produzir:** <entregável>
+>
+> A aula completa será preparada automaticamente quando você concluir as etapas anteriores. Você não precisa pedir a geração manualmente.
 
-Do not add nonexistent module, rubric, flashcard or assessment-form links. Use a short planning checklist rather than pretending the full lesson is ready.
+Link only the topic overview or contract. Do not attach nonexistent module, rubric, flashcard or assessment links. Do not use `planned`, `materialized`, “janela ativa” or “ordem topológica” in learner copy.
 
-Put only dependency-ready materialized topics in the provider's ready state. Keep planned topics and blocked materialized topics in the planned state.
+Only dependency-ready lessons enter the ready list. Keep future lessons in the planned list.
 
-## Auxiliary Todoist reminders
+### Trello structure
 
-When `integrations.reminders.provider: todoist` and Todoist is not the authoritative task backend, create only reminders or recurring review actions. Every reminder must link to the authoritative task, module or flashcard set.
+For a rich course, create or reuse one course board with lists equivalent to:
 
-Persist `authority: reminder_only`. Completing an auxiliary Todoist item must not move the authoritative task, complete a topic or modify verified progress.
+- Planejado;
+- Pronto para estudar;
+- Em andamento;
+- Em avaliação;
+- Revisão necessária;
+- Concluído.
+
+Use “Revisão necessária” in visible copy instead of “Recuperação” when the latter could sound punitive. Internal state may retain recovery terminology.
+
+### Todoist or GitHub Issues
+
+When another task backend is selected, preserve the same human structure and links. Todoist reminders may be auxiliary only and must point to the primary task or lesson.
 
 ## Scheduling
 
-Use the selected scheduling provider:
-
-- `reclaim`: create or synchronize adaptive focus tasks or blocks within capabilities actually available to the connected account;
-- `google_calendar` or `outlook_calendar`: create fixed focus events with reminders;
-- `none`: publish no schedule.
-
-Respect `integration_preferences.free_tier_only` and `integrations.calendar.free_tier_only`. Do not require paid scheduling capabilities. When Reclaim is unavailable or lacks a needed free capability, use the approved calendar fallback or continue without external scheduling.
-
-Calendar may show the complete schedule projection. For a planned topic, link only its authoritative task and topic contract. When the topic is later materialized, update the existing schedule resource rather than creating a duplicate.
+Use the selected scheduling provider only as an aid to reserve time. Planned content links only to its current task or overview. Update existing matching schedule resources rather than creating duplicates.
 
 ## Formative practice
 
-When Quizlet is selected and connected, create one real topic flashcard set from each approved current-version deck under `study/flashcards/`. Prefer the local TSV as structured source and use the Markdown deck as a human-review reference. Store the returned external set identifier and URL, then add the current external link to the authoritative topic task while preserving both local links.
+When Quizlet is selected and connected, create one real set from each approved current-version local deck. Prefer TSV as the structured source and Markdown as the review reference. Store the external ID and URL, then add **Praticar no Quizlet** to the current task while preserving local links.
 
-When Quizlet is recommended or selected, useful local decks exist and access is missing, use Plugin Management as defined in `instructions/42-integration-preflight.md` to render one nonblocking Quizlet connection suggestion. Do not ask a separate yes/no question first. Continue publication with the local Markdown/TSV fallback whether or not the learner clicks the suggestion.
+When useful decks exist but Quizlet is not connected, render one nonblocking connection suggestion through Plugin Management. Use natural copy:
 
-If the Quizlet connector does not expose a harmless read operation, do not create a disposable test set. The first intended topic-set creation is the access check after required publication can safely proceed. On failure, record a short `not_connected` or `unavailable` reason and keep the fallback.
+> Os flashcards já estão disponíveis no GitHub. Conectar o Quizlet acrescenta um modo interativo de praticar.
 
-Some Quizlet integrations can create new sets but cannot modify an existing set. In that case:
+Do not ask a separate yes/no question before the control and do not block publication.
 
-- reuse an existing current-version set only when its exact identifier is already recorded and usable;
-- when approved flashcard content changes, create a versioned replacement such as `TOPIC-001 — <título> — v2`;
-- mark the prior resource record as superseded instead of deleting history;
-- update the operational task link to the newest successful set;
-- never claim an old set was updated when a new one was created.
+If no harmless read operation exists, never create a disposable test set. The first intended set creation is the optional access check. On failure, retain local decks and record a short non-sensitive reason.
 
-When Quizlet remains unavailable, retain and link the local Markdown/TSV fallback. Ace Quiz Maker may provide an interactive quiz in chat, but it is not required for publication and has no mastery authority.
+When a connector creates but cannot edit:
 
-Do not create flashcard sets for topics without useful atomic recall material merely to satisfy an integration. Do not publish sets for planned topics whose complete flashcard deck does not yet exist.
+- reuse an existing exact current-version set;
+- create a versioned replacement only after approved content changes;
+- mark the prior record as `superseded`;
+- update operational links to the newest successful set;
+- never claim that an old set was updated when a new one was created.
 
-After a learner connects Quizlet following a fallback publication, accept:
+Natural return command:
+
+`Conectei o Quizlet. Crie meus flashcards.`
+
+Technical alias:
 
 `Conectei o Quizlet ao ChatGPT. Verifique novamente e publique os flashcards dos tópicos materializados.`
 
-Re-run access verification, inspect state for existing exact resources, create only missing current-version sets and update derived task links without republishing unrelated resources.
+Do not publish sets for future topics without complete decks.
 
-## Habit tracking
+## Other integrations
 
-When Habitify is selected and connected, create or reuse at most the configured maximum number of course habits, normally:
+- habits support consistency only;
+- external diagrams complement Mermaid;
+- Drive or another workspace may hold deliverables;
+- Airtable is a `github_to_airtable` read model;
+- Gmail or Outlook may send only configured summaries;
+- course platforms link precise approved lessons or exercises.
 
-- study session;
-- active recall;
-- spaced review.
-
-Persist `authority: consistency_only`. A habit event never changes topic, task, assessment or mastery state.
-
-## External visual workspace
-
-Mermaid remains canonical. When Whimsical or another approved external visual provider is selected, create external diagrams only when the integration plan identifies a concrete collaborative, editable or spatial use.
-
-Link the corresponding canonical Mermaid module or roadmap and record `content_version`. An external diagram may not be the only representation necessary to understand the lesson.
-
-## Artifact workspace
-
-When Google Drive or another artifact workspace is selected, create only the folders, documents, sheets or presentations required by explicit course deliverables. Link each artifact from the topic task or assessment instructions.
-
-External artifacts provide evidence; they do not replace the approved module or assessment result. Store safe file identifiers and URLs, never credentials or unnecessary personal data.
-
-## Airtable analytical projection
-
-When Airtable is selected, create or reuse an analytical base with the minimum useful tables among Courses, Topics, Attempts, Study Sessions and Integrations.
-
-Synchronization is unidirectional: `github_to_airtable`. Populate rows from approved repository state and include source repository, source path or issue, content version and last synchronization time.
-
-Airtable must never:
-
-- promote a topic to mastered;
-- overwrite scores or assessment attempts;
-- rewrite the roadmap or module;
-- become a required dependency for study;
-- act as a second task backend.
-
-If Airtable is unavailable, continue using repository state without blocking publication.
-
-## Course-discovery providers
-
-Coursera, edX, Udemy and Khan Academy are resource providers, not state backends. Publication links only the precise approved course sections, lessons or exercises already selected in the curriculum.
-
-Include purpose, active effort, access condition and required evidence. Potentially paid resources require the approved free or official alternative.
-
-## Notifications
-
-When Gmail or Outlook email is selected and connected, send or draft only the configured publication summary. Link the first ready materialized topic, authoritative task, assessment form and roadmap. Chat remains the fallback.
+Use human labels in visible resources. Keep provider authority, preflight and synchronization terminology in `state/integrations.json` and technical plan details.
 
 ## Idempotency and state
 
-Inspect `state/integrations.json` and exact matching provider resources before every write. Reuse or update resources when the provider supports it; otherwise create versioned replacements only for changed approved content.
-
-Every resource record must include:
-
-- `capability`;
-- `provider`;
-- `external_type`;
-- safe `external_id`;
-- `external_url` when available;
-- `topic_id` when applicable;
-- `content_version`;
-- `authority`;
-- `sync_status`;
-- `last_sync_at`.
-
-For optional connection offers, also persist non-sensitive fields equivalent to `connection_offer_status`, `connection_offer_at` and `connection_reason` when publication state is being updated.
-
-Update `selected_capabilities` with the actual provider or fallback used. Never persist tokens, passwords, OAuth details, raw submissions or unnecessary identity data.
+Inspect `state/integrations.json` and matching provider resources before writing. Reuse or update exact resources when supported. Store capability, provider, safe ID, URL, topic, content version, authority, sync status and timestamp. Never persist credentials, tokens, OAuth details, raw submissions or unnecessary identity data.
 
 ## Completion
 
-Link the integration plan, first complete module, authoritative task and assessment form. Summarize which optional providers used fallbacks without framing them as failures of the course. A displayed optional connection suggestion does not change the successful result.
+After publication, link the first ready lesson, primary task and assessment. Mention an optional alternative only when it changes what the learner can use now.
 
-Do not start an improvised lesson in chat by default. Use:
+Do not lead with a publication report, provider inventory, PR status or CI result. Use:
 
-`Ao concluir o TOPIC-000 e enviar o formulário, escreva: "Finalizei o TOPIC-000. Avalie minhas respostas."`
+`Terminei <título da aula>. Avalie minhas respostas.`
+
+Continue accepting `Finalizei o TOPIC-000. Avalie minhas respostas.` as an alias.
