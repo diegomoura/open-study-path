@@ -6,6 +6,8 @@ body:
   - type: markdown
     attributes:
       value: |
+        <!-- open-study-path:intake form_id=create-study-path version=2 -->
+
         # Vamos criar uma trilha que faça sentido para você
 
         Responda apenas o que for útil para o planejamento. Você poderá ajustar a trilha depois. Não inclua senhas, documentos sensíveis ou informações pessoais desnecessárias.
