@@ -73,7 +73,7 @@ def main() -> None:
     ])
     require("templates/chatgpt-project-instructions.md", [
         NATURAL_COMMAND,
-        "Ask for an issue number only when multiple candidates remain",
+        "Ask for an issue number only when multiple valid candidates remain",
         "Internal review, correction, CI, safe merge",
     ])
     require("AGENTS.md", [
