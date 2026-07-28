@@ -8,6 +8,10 @@ The canonical repository is template mode when `.open-study-path/template.yml` e
 
 An instance is valid only when `.open-study-path/instance.yml` exists. Its `repository` field is the persistent identity. Stop writes when it conflicts with the explicit Project repository.
 
+Repository metadata such as reported size, code-search status, search results or an incomplete local checkout is not authoritative evidence that a repository is empty. Before setup writes, read the target repository sentinels directly: `.open-study-path/template.yml`, `.open-study-path/instance.yml`, `AGENTS.md`, `instructions/manifest.yml` and `.github/ISSUE_TEMPLATE/create-study-path.yml`.
+
+A derived instance retains `.open-study-path/template.yml`; the instance marker takes precedence without replacing the inherited template marker. Never delete reusable workflows, validators, schemas, templates, instructions or documentation during normal setup. Apply `instructions/02-setup-execution.md` during the first chat.
+
 ## Guided lifecycle
 
 Read `instructions/manifest.yml`, `instructions/phase-completion.md` and `docs/learner-facing-language.md` before lifecycle work.
@@ -83,6 +87,8 @@ Optional providers never block the GitHub/Markdown path. Before external writes,
 Read `instructions/32-generation-execution.md` for generation and materialization. Keep every commit within phase scope. Do not modify reusable workflows, validators, instructions, templates or schemas from an instance curriculum operation.
 
 Create curriculum PRs as drafts, correct resolvable issues, run checks, self-review and merge under the configured policy when no genuine decision remains. Record technical review state in GitHub.
+
+For every repository phase, inspect required checks for the current unchanged PR head. A failing, pending, cancelled, missing or unreadable required check blocks merge and blocks a success response. Never merge because the diff looks correct while CI is red or unknown.
 
 Do not require a fixed “PR approved and merged” sentence in chat. Link a PR only when a concrete unresolved decision requires owner input or when technical details are requested.
 

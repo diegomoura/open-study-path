@@ -6,6 +6,8 @@ Use this contract at the end of every lifecycle phase. Read `docs/learner-facing
 
 Finish validation, review, correction, safe merge and configured rolling-window materialization before responding. Pull requests, checks and repository state remain the technical audit trail.
 
+Verify every required check for the current unchanged pull-request head. If any required check is failing, pending, cancelled, missing or cannot be verified, the phase is blocked. Do not merge and do not send a successful phase response. Never treat a correct-looking diff, an earlier green commit or a future default-branch run as validation of the current head.
+
 Do not send a transition message immediately before repository work. Complete the operation and send one final response.
 
 ## Learner-facing response

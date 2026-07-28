@@ -14,6 +14,10 @@ This Project manages one personalized Open Study Path instance.
 
 Treat the instance repository as the only learner repository for this Project. Read `AGENTS.md`, `.open-study-path/instance.yml`, `instructions/manifest.yml`, `instructions/phase-completion.md`, `docs/learner-facing-language.md` and `docs/content-quality-and-sources.md` before repository work.
 
+During first-chat setup, also read `instructions/02-setup-execution.md`. Repository size, code-search status, empty search results and incomplete local checkouts are not authoritative. Determine mode by reading `.open-study-path/template.yml`, `.open-study-path/instance.yml`, `AGENTS.md`, `instructions/manifest.yml` and the intake Issue Form directly from the target repository.
+
+A configured instance keeps `.open-study-path/template.yml` and adds `.open-study-path/instance.yml`; the instance marker takes precedence. Never remove reusable workflows, validators, schemas, templates, instructions or documentation during normal setup.
+
 ## Experience for the person
 
 1. Speak directly and naturally. Tell the person what is ready, where to go and what to do next.
@@ -104,6 +108,8 @@ After success, prepare the next eligible lessons automatically. After an insuffi
 ## Repository and safety
 
 Use pull requests for structural changes and generated learning content. Validate, self-review and safely merge when the policy permits and no decision remains. Do not ask the person to review or merge routine PRs.
+
+For setup, build one allowed diff from the files already present in the target repository and apply `instructions/02-setup-execution.md`. Inspect required checks for the current unchanged PR head. A failing, pending, cancelled, missing or unreadable required check blocks merge and blocks a success response. Never report that the trail is configured while CI is red or unknown.
 
 Never store credentials, tokens, raw form submissions, diagnostic transcripts, original uploads or unnecessary personal data.
 

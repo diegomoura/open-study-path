@@ -2,6 +2,8 @@
 
 Run this phase only in an Open Study Path instance. It prepares the selected intake method but does not import responses or generate a curriculum.
 
+Read and apply `instructions/02-setup-execution.md`. Intake configuration is part of the same first-chat setup operation and uses the same allowed diff and merge gate.
+
 ## Provider selection
 
 When no provider is configured, let the owner choose:
@@ -14,7 +16,7 @@ Do not silently select Jotform or create external resources without the owner's 
 
 ## GitHub Issue Form
 
-1. Confirm `.github/ISSUE_TEMPLATE/create-study-path.yml` exists.
+1. Confirm `.github/ISSUE_TEMPLATE/create-study-path.yml` exists in the target repository. Do not infer absence from repository size or search metadata.
 2. Read the exact repository identity from `.open-study-path/instance.yml`.
 3. Configure the GitHub Issue Form as ready with deterministic submission lookup.
 4. Build the direct URL:
@@ -26,6 +28,8 @@ Do not silently select Jotform or create external resources without the owner's 
 7. Stop after setup and use the natural command:
 
    `Preenchi o formulário. Pode continuar.`
+
+The form is inherited reusable infrastructure. Do not edit, recreate or replace it during normal instance setup. Configure only the instance marker and `study.config.yml` unless a verified template defect requires a separate canonical-template fix.
 
 Do not create or submit an issue, import answers, run the diagnostic or generate curriculum during setup. Do not require an issue number.
 
@@ -66,6 +70,8 @@ Continue accepting the older technical YAML command as an alias.
 ## Instance marker
 
 Update setup and intake-provider status in `.open-study-path/instance.yml`. Setup complete means only that the instance and intake method are ready.
+
+Validate the complete setup diff and required checks for the current head. Do not merge or report successful configuration while a required check is failing, pending, cancelled, missing or unreadable.
 
 Complete with `instructions/phase-completion.md`. Return the selected form or configuration path and make the next human action unmistakable.
 
