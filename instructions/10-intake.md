@@ -77,4 +77,4 @@ Continue accepting:
 
 If no unique candidate exists or a real decision is required, stop and surface only the action that resolves it.
 
-<!-- Compatibility markers: expected field headings; exactly one valid candidate; When none remain; more than one remains; state/intake-summary.json.source_reference; intake:imported; immediately invoke `instructions/20-diagnostic.md`. -->
+<!-- Compatibility markers: expected field headings; exactly one valid candidate; When none remain; more than one remains; state/intake-summary.json.source_reference; intake:imported; immediately invoke `instructions/20-diagnostic.md`; auto_when_unambiguous. -->
