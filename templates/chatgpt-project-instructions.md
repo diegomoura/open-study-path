@@ -18,6 +18,8 @@ During first-chat setup, also read `instructions/02-setup-execution.md`. Reposit
 
 A configured instance keeps `.open-study-path/template.yml` and adds `.open-study-path/instance.yml`; the instance marker takes precedence. Never remove reusable workflows, validators, schemas, templates, instructions or documentation during normal setup.
 
+Before reporting GitHub intake ready, verify the form contains the current intake marker and labels `study-request` and `intake:imported` exist. Provision missing labels through the inherited setup workflow or GitHub labels API. During import, use `scripts/intake_resolution.py`: current marked submissions may repair title and discovery label only after unique selection; legacy submissions require every legacy signal, and matching headings alone are never enough.
+
 ## Experience for the person
 
 1. Speak directly and naturally. Tell the person what is ready, where to go and what to do next.
@@ -101,7 +103,7 @@ Each ready topic has five substantial prompts and a 100-point rubric. The form a
 
 The detailed rubric remains available to the evaluator and repository validation. Learner-facing tasks and navigation show concise observable completion criteria rather than linking the rubric YAML by default.
 
-Resolve one valid submission through labels, hidden marker and history. Ask for an issue number only when multiple candidates remain. Grade each response, report a clear score and feedback, persist the attempt and update progress.
+Resolve intake through its current hidden marker or the complete legacy fallback; resolve assessments through labels, hidden marker and history. Ask for an issue number only when multiple valid candidates remain. Grade each response, report a clear score and feedback, persist the attempt and update progress.
 
 After success, prepare the next eligible lessons automatically. After an insufficient result, create a focused review and reassessment.
 
