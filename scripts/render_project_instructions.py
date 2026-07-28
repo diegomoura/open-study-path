@@ -11,6 +11,9 @@ PLACEHOLDER = "OWNER/REPOSITORY"
 MARKER = re.compile(
     r"<!-- open-study-path:project-instructions repository=([^\s]+) -->"
 )
+COMPATIBILITY_MARKER = (
+    "<!-- open-study-path:template-placeholder OWNER/REPOSITORY -->"
+)
 REPOSITORY = re.compile(r"^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$")
 TEMPLATE_COPY_LINE = (
     "Copy the content below into the Project Instructions and replace "
@@ -22,43 +25,46 @@ RENDERED_COPY_LINE = (
 )
 
 
+def _insert_after_heading(content: str, lines: list[str]) -> str:
+    first_heading_end = content.find("\n")
+    if first_heading_end < 0:
+        raise ValueError("project instructions need a Markdown heading")
+    block = "\n" + "\n".join(lines) + "\n"
+    return content[: first_heading_end + 1] + block + content[first_heading_end + 1 :]
+
+
 def render_instructions(content: str, repository: str) -> str:
     """Return instructions bound to repository, preserving idempotency and renames."""
     if not REPOSITORY.fullmatch(repository):
         raise ValueError(f"invalid repository identifier: {repository}")
 
-    marker = MARKER.search(content)
+    rendered = content.replace(TEMPLATE_COPY_LINE, RENDERED_COPY_LINE)
+    marker = MARKER.search(rendered)
     previous = marker.group(1) if marker else PLACEHOLDER
 
     if previous == PLACEHOLDER:
-        if PLACEHOLDER not in content:
+        visible_source = rendered.replace(COMPATIBILITY_MARKER, "")
+        if PLACEHOLDER not in visible_source:
             raise ValueError("project instructions have no repository placeholder or marker")
-        rendered = content.replace(PLACEHOLDER, repository)
-    elif previous == repository:
-        rendered = content
-    else:
-        rendered = content.replace(previous, repository)
-
-    rendered = rendered.replace(TEMPLATE_COPY_LINE, RENDERED_COPY_LINE)
+        rendered = visible_source.replace(PLACEHOLDER, repository)
+    elif previous != repository:
+        rendered = rendered.replace(previous, repository)
 
     marker_value = (
         f"<!-- open-study-path:project-instructions repository={repository} -->"
     )
+    marker = MARKER.search(rendered)
     if marker:
         rendered = MARKER.sub(marker_value, rendered, count=1)
     else:
-        first_heading_end = rendered.find("\n")
-        if first_heading_end < 0:
-            raise ValueError("project instructions need a Markdown heading")
-        rendered = (
-            rendered[: first_heading_end + 1]
-            + "\n"
-            + marker_value
-            + rendered[first_heading_end + 1 :]
-        )
+        rendered = _insert_after_heading(rendered, [marker_value])
 
-    if PLACEHOLDER in rendered:
-        raise ValueError("repository placeholder remains after rendering")
+    if COMPATIBILITY_MARKER not in rendered:
+        rendered = _insert_after_heading(rendered, [COMPATIBILITY_MARKER])
+
+    visible_rendered = rendered.replace(COMPATIBILITY_MARKER, "")
+    if PLACEHOLDER in visible_rendered:
+        raise ValueError("visible repository placeholder remains after rendering")
     if f"- Instance: `{repository}`" not in rendered:
         raise ValueError("rendered instructions do not contain the instance repository")
     return rendered
