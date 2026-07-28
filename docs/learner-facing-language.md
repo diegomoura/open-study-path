@@ -21,6 +21,28 @@ Uma resposta de fase bem-sucedida deve responder somente ao que for útil agora:
 
 Se uma informação não ajuda a responder uma dessas perguntas, ela normalmente não pertence à resposta principal.
 
+## O próximo passo vem do estado
+
+Antes de sugerir uma continuação, leia o estado persistido e use `scripts/lifecycle_next_action.py`. A existência de uma aula ou avaliação não significa que a avaliação já seja o próximo passo.
+
+A ordem normal é:
+
+1. gerar a trilha;
+2. organizar as tarefas e integrações escolhidas;
+3. estudar e enviar a avaliação.
+
+Quando a trilha já foi gerada, mas `state/integrations.json` ainda não registra publicação concluída, o próximo comando é obrigatoriamente:
+
+`Organize minha trilha nas ferramentas que escolhemos.`
+
+Nesse estado, não use `Terminei <título da aula>. Avalie minhas respostas.` como chamada principal. Links de aula e prática local podem ser apresentados como prévia, mas não podem esconder a publicação pendente.
+
+## Responsabilidade por adiamentos sugeridos
+
+Quando o próprio agente propõe uma instrução como `sem publicar tarefas ainda`, ele está dividindo o fluxo em operações seguras. A pessoa não assume a responsabilidade de lembrar a operação adiada.
+
+Depois de concluir a geração, o agente deve dizer claramente que a organização nas ferramentas escolhidas ainda falta e apresentar o comando de publicação. Não interprete uma restrição sugerida pelo agente como recusa permanente da pessoa.
+
 ## Uma interface não é um inventário
 
 Trello, Todoist, GitHub Issues ou outra ferramenta de tarefas devem funcionar como uma porta de entrada curta para o estudo, não como uma listagem de todos os arquivos produzidos pelo sistema.
@@ -92,7 +114,7 @@ Use o título da aula em vez do ID sempre que o ID não for necessário para loc
 
 ## Comandos naturais
 
-O agente deve aceitar comandos técnicos antigos por compatibilidade, mas apresentar comandos naturais por padrão:
+O agente deve aceitar comandos técnicos antigos por compatibilidade, mas apresentar comandos naturais por padrão e somente quando o estado permitir:
 
 - `Preenchi o formulário. Pode continuar.`
 - `Vamos fazer meu diagnóstico.`
@@ -106,15 +128,27 @@ O agente resolve internamente repositório, issue, tópico, fase, validações e
 
 ## Respostas de sucesso
 
-Exemplo:
+### Trilha gerada, publicação pendente
 
 > **Sua trilha está pronta.**
 >
-> As duas primeiras aulas já estão disponíveis. Comece por **Agência sem garantia**.
+> O roadmap e as primeiras aulas já estão disponíveis. A organização no Trello e nas outras ferramentas escolhidas ainda não foi feita porque essa etapa foi adiada durante a geração.
 >
-> [Abrir a primeira aula]
+> [Abrir o roadmap] · [Ver a primeira aula]
 >
-> Quando terminar, envie a avaliação e escreva: **“Terminei Agência sem garantia. Avalie minhas respostas.”**
+> Para criar o quadro e organizar suas etapas, envie: **“Organize minha trilha nas ferramentas que escolhemos.”**
+
+Não acrescente um comando de avaliação nesse estado.
+
+### Tarefas e integrações publicadas
+
+> **Sua trilha está organizada e você pode começar.**
+>
+> Abra a primeira tarefa e siga a aula, a prática e a avaliação indicadas nela.
+>
+> [Abrir a primeira tarefa] · [Abrir a primeira aula]
+>
+> Quando terminar, escreva: **“Terminei Agência sem garantia. Avalie minhas respostas.”**
 
 ## Quando mostrar detalhes técnicos
 
