@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Validate deterministic intake discovery and guided diagnostic chaining."""
+"""Validate deterministic intake discovery with natural learner commands."""
 
 from __future__ import annotations
 
@@ -10,11 +10,9 @@ from typing import Any
 import yaml
 
 ROOT = Path(__file__).resolve().parents[1]
-CONTINUE_COMMAND = (
-    "Enviei o formulário. Localize e importe a única submissão válida. "
-    "Conclua e valide esta etapa; depois, inicie o diagnóstico proporcional "
-    "com perguntas curtas, uma por vez."
-)
+NATURAL_COMMAND = "Preenchi o formulário. Pode continuar."
+LEGACY_PREFIX = "[Study Path]:"
+CURRENT_PREFIX = "[Nova trilha]"
 
 
 def fail(message: str) -> None:
@@ -23,10 +21,10 @@ def fail(message: str) -> None:
 
 
 def text(path: str) -> str:
-    file_path = ROOT / path
-    if not file_path.is_file():
+    target = ROOT / path
+    if not target.is_file():
         fail(f"missing intake-resolution contract: {path}")
-    return file_path.read_text(encoding="utf-8")
+    return target.read_text(encoding="utf-8")
 
 
 def require(path: str, terms: list[str]) -> None:
@@ -41,49 +39,40 @@ def load_yaml(path: str) -> Any:
 
 
 def main() -> None:
-    require(
-        "instructions/05-configure-intake.md",
-        [
-            "https://github.com/OWNER/REPOSITORY/issues/new?template=create-study-path.yml",
-            "direct clickable link",
-            CONTINUE_COMMAND,
-            "Do not require the owner to copy an issue number",
-            "explicit issue number remains accepted",
-        ],
-    )
-    require(
-        "instructions/10-intake.md",
-        [
-            "study-request",
-            "[Study Path]:",
-            "expected field headings",
-            "exactly one valid candidate",
-            "When none remain",
-            "more than one remains",
-            "never select an arbitrary newest repository issue",
-            "state/intake-summary.json.source_reference",
-            "intake:imported",
-            "immediately invoke `instructions/20-diagnostic.md`",
-        ],
-    )
-    require(
-        "instructions/phase-completion.md",
-        [
-            "Always return the direct clickable intake URL",
-            CONTINUE_COMMAND,
-            "Do not ask the owner to copy an issue number",
-            "If zero valid submissions are found",
-            "more than one valid submission remains",
-        ],
-    )
-    require(
-        "templates/chatgpt-project-instructions.md",
-        [
-            "chain intake import into diagnostic only after",
-            "resolve exactly one valid `study-request` issue",
-            "return the direct form link when none exists",
-        ],
-    )
+    require("instructions/05-configure-intake.md", [
+        "https://github.com/OWNER/REPOSITORY/issues/new?template=create-study-path.yml",
+        NATURAL_COMMAND,
+        "Do not require an issue number",
+        "older forms",
+    ])
+    require("instructions/10-intake.md", [
+        "study-request",
+        CURRENT_PREFIX,
+        LEGACY_PREFIX,
+        "expected field headings",
+        "exactly one valid candidate",
+        "When none remain",
+        "more than one remains",
+        "never select an arbitrary newest repository issue",
+        "state/intake-summary.json.source_reference",
+        "intake:imported",
+        "instructions/20-diagnostic.md",
+    ])
+    require("instructions/phase-completion.md", [
+        "Return the direct intake link",
+        NATURAL_COMMAND,
+        "Do not ask for an issue or submission number",
+        "multiple valid candidates",
+    ])
+    require("templates/chatgpt-project-instructions.md", [
+        NATURAL_COMMAND,
+        "Ask for an issue number only when multiple candidates remain",
+        "Internal review, correction, CI, safe merge",
+    ])
+
+    issue_form = load_yaml(".github/ISSUE_TEMPLATE/create-study-path.yml")
+    if issue_form.get("title") != "[Nova trilha] ":
+        fail("new intake form must use the human title prefix")
 
     manifest = load_yaml("instructions/manifest.yml")
     phases = {
@@ -93,11 +82,11 @@ def main() -> None:
     }
     intake = phases.get("intake", {})
     if intake.get("allow_explicit_chain_to") != "diagnostic":
-        fail("intake phase must allow an explicit validated chain to diagnostic")
+        fail("intake phase must allow validated diagnostic chaining")
     if intake.get("stop_after_phase") is not True:
-        fail("intake must still stop by default when chaining was not requested")
+        fail("intake must stop by default when chaining was not requested")
 
-    print("Deterministic intake resolution and validated diagnostic chaining passed.")
+    print("Natural deterministic intake resolution and diagnostic chaining passed.")
 
 
 if __name__ == "__main__":
