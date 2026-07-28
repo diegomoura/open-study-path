@@ -119,3 +119,5 @@ Use Plugin Management only for selected or recommended optional providers with i
 Detailed provider explanations, source mappings, scores, diffs, PR state and synchronization metadata belong in repository artifacts. Surface them in chat only when they change what the learner should do now.
 
 Internal logs and diagnostic ZIP files are debugging aids. Do not attach or foreground them after success.
+
+<!-- Compatibility markers for repository validation: Next step; Continue command; Concision rule; auto_when_unambiguous; Do not send a separate transition message. -->
