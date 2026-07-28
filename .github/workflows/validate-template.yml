@@ -30,6 +30,9 @@ jobs:
       - name: Validate repository mode guard
         run: python scripts/validate_template.py guard
 
+      - name: Validate safe instance setup
+        run: python scripts/validate_setup_safety.py
+
       - name: Validate intake contract
         run: python scripts/validate_template.py intake
 
