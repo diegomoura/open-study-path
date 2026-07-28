@@ -1,99 +1,84 @@
 # Internal curriculum review checklist
 
-Run this checklist automatically inside initial generation and every later content-materialization operation. Do not ask the owner to send a separate review command.
+Run this checklist automatically inside initial generation and later materialization. Do not ask the owner for a separate generic review command.
 
-## Scope
-
-Review against:
-
-- approved intake and diagnostic evidence;
-- `instructions/30-generate-path.md`;
-- `instructions/57-materialize-next-content.md` when materializing later content;
-- `docs/mermaid-visual-learning.md`;
-- `docs/integration-capabilities.md`;
-- topic, module, flashcard, rubric, integration-plan and Issue Form templates;
-- configured availability, granularity, visual-learning, integration preferences and content-generation strategy;
-- verified assessment evidence when future content is being adapted.
-
-Do not publish external tasks or create provider resources during curriculum review.
+Review against approved intake, diagnostic evidence, generation instructions, source-quality guidance, learner-language guidance, visual-learning guidance, integration contracts and verified assessment evidence.
 
 ## Review checklist
 
 Confirm that:
 
-1. the roadmap contains the complete approved topic graph;
-2. the roadmap includes a Mermaid diagram of the actual topic dependencies rather than a generic lifecycle diagram;
-3. every prerequisite exists and the graph is acyclic;
-4. each topic represents one coherent, independently assessable capability;
-5. topics are not oversized and are not fragmented into trivial administrative units;
-6. each topic defines three to seven focused activities, normally 10–25 minutes each;
-7. topic effort is normally 45–90 minutes, and a topic above 120 minutes is split when it contains separable capabilities;
-8. every topic contract has a valid `content_status` of `planned` or `materialized`;
-9. every materialized topic has a complete module, rubric and discoverable Issue Form;
-10. planned topics do not have broken links or claim nonexistent detailed content;
-11. every materialized module teaches the content rather than merely listing actions;
-12. modules contain a granular execution plan, prerequisite retrieval, explanations, worked examples, misconceptions, guided practice, independent practice and active recall;
-13. every materialized module contains at least the configured minimum number of fenced Mermaid diagrams;
-14. each diagram represents a meaningful relationship, decision, sequence, state, timeline, comparison, data flow or architecture rather than decorative boxes;
-15. each diagram is introduced and followed by an explanation of what the learner should notice and what the model omits;
-16. diagram types fit the subject and use Mermaid syntax that renders in GitHub without unsupported features or raw HTML;
-17. complex technical modules use additional diagrams when one view would mix architecture, runtime interaction and state changes excessively;
-18. each assessment has five substantive prompts and a rubric totaling 100 points;
-19. rubrics define a passing score, critical misconceptions and focused recovery rules;
-20. Issue Forms contain the standard labels, deterministic topic marker, complete prefilled title and command `Finalizei o TOPIC-000. Avalie minhas respostas.`;
-21. every materialized module links the exact instance Issue Form URL rather than showing only the YAML filename;
-22. when flashcards are useful, the module declares and links both a learner-facing Markdown deck and an importable TSV deck;
-23. the Markdown deck contains usable expandable question-and-answer cards, and the TSV contains the same useful recall material with `Front`, `Back` and `Tags`;
-24. no module claims a Quizlet or other external set exists unless publication actually recorded its external URL;
-25. the initial materialized set follows the configured full-upfront thresholds or rolling-window size in deterministic topological order;
-26. later materialization preserves approved objectives, prerequisites, deliverables, effort and mastery criteria;
-27. adaptations from assessment evidence affect examples, emphasis, visual models and practice without silently changing the approved curriculum structure;
-28. total effort and schedule projection remain consistent with availability;
-29. scope is explicitly introductory when it does not satisfy the complete long-term goal;
-30. required resources name a specific work and canonical locator;
-31. `study/integrations.md` exists and recommends only capabilities supported by the course, diagnostic or learner preference;
-32. every recommended provider explains what it is, why it fits, how it will be used, cost/access, minimum data, authority, fallback, preflight class and decision;
-33. Consensus is conditional evidence support and does not replace primary sources or official documentation;
-34. Quizlet or Ace Quiz Maker results do not affect mastery, and useful flashcards have durable Markdown and TSV repository fallbacks;
-35. exactly one task backend is authoritative; Todoist may be auxiliary only when it cannot modify the primary task state;
-36. Reclaim or calendar recommendations respect free-tier policy and have a no-cost fallback;
-37. Habitify is limited to consistency signals and never changes mastery;
-38. Mermaid remains canonical when Whimsical or another external visual workspace is recommended;
-39. Airtable is strictly `github_to_airtable`, cannot promote mastery and cannot overwrite canonical progress;
-40. external courses identify precise sections, access conditions, active effort and evidence, with a free alternative for potentially paid resources;
-41. providers in `avoid` or disallowed by `account_connections` are not selected;
-42. optional providers are classified as optional probes and cannot block core generation or study;
-43. no external tasks or integrations are created during curriculum generation or review.
+1. the roadmap contains the complete approved dependency graph and a real Mermaid view;
+2. prerequisites exist, the graph is acyclic and each topic is coherent and independently assessable;
+3. topics use three to seven focused actions, normally 10–25 minutes each;
+4. effort is proportionate and large separable topics are split;
+5. every topic has a valid internal content status;
+6. learner-facing prose says “aula pronta” or “aula futura” rather than exposing `materialized`, `planned`, rolling-window or topological terminology;
+7. every ready topic has a complete module, rubric and direct Issue Form;
+8. future topics do not contain broken links or pretend that detailed content exists;
+9. topic headings and copy use the configured language consistently;
+10. the reason each topic matters is personalized from approved evidence rather than generic motivation text;
+11. every ready module teaches the content instead of merely listing activities or external readings;
+12. modules contain orientation, study session, prerequisite retrieval, explanations, worked examples, misconceptions, guided practice, independent practice and active recall;
+13. every module contains the configured number of useful Mermaid diagrams, introduced and explained;
+14. diagrams match the subject and are not decorative;
+15. each assessment has five substantial prompts and a 100-point rubric with passing score, critical misconceptions and focused recovery;
+16. assessment copy is human and does not explain predictable title or issue-resolution mechanics;
+17. each module links the exact instance Issue Form URL;
+18. when flashcards are useful, the module links Markdown first, TSV second and an external set only when recorded;
+19. local flashcard decks contain useful matching material;
+20. visible completion commands use the topic title while technical topic-ID aliases remain accepted internally;
+21. roadmap, topic, module, form, integration-plan and task copy follow `docs/learner-facing-language.md`;
+22. successful phase responses do not require PR, CI, hash, branch or changed-file details;
+23. the initial ready set follows configured thresholds and dependency order internally without exposing implementation language to the learner;
+24. later materialization preserves approved objectives, prerequisites, deliverables, effort and completion criteria;
+25. assessment-informed adaptation changes examples, emphasis, sources, formats and practice without silently rewriting the curriculum structure;
+26. total effort and schedule remain consistent with availability;
+27. scope is explicitly introductory when it cannot satisfy the full long-term goal.
 
-Reject a module as incomplete when it could be replaced by a short checklist without losing meaningful teaching content. Also reject a required visual section that contains a generic diagram unrelated to the topic or a Mermaid block without explanatory prose.
+## Source and content review
 
-Reject a learner-facing module when the flashcard action opens only a raw import file, when the assessment instruction exposes only an internal filename, or when the Issue Form asks the learner to complete an otherwise predictable title.
+For every ready module, confirm that:
 
-Reject an integration plan when it is a catalog dump, assumes the learner knows the tools, claims current free-plan capabilities without verification, creates multiple sources of truth or recommends a provider without a concrete course signal. Correct problems directly on the proposal branch.
+28. `## Como este conteúdo foi construído` explains provenance and agent-created adaptations;
+29. `## Outras formas de aprender` exists and contains only useful alternatives or a brief explanation that the core practice is more appropriate;
+30. `## Fontes e caminhos para aprofundar` contains normally three to seven reviewed sources;
+31. at least one primary or official source exists when available;
+32. at least one reliable explanatory source supports definitions, evidence or limits;
+33. a video, open lecture, podcast, interactive resource or precise course lesson is included when it adds real value and is accessible;
+34. every online source has a direct verified link and a precise locator such as chapter, section, page, DOI, version, lesson, exercise or timestamp;
+35. the module explains how each source was used;
+36. current or unstable claims were verified against current authoritative sources;
+37. plugin outputs are not cited instead of original sources;
+38. potentially paid resources have a free or official alternative;
+39. videos specify purpose, duration or timestamp, language/legends when relevant and an active learning task;
+40. papers, articles, TCCs and dissertations are represented with an accurate evidence role and limits;
+41. copyright-sensitive sources are paraphrased and not reproduced extensively;
+42. external resources enrich but do not replace the self-contained lesson.
 
-## Allowed diffs
+## Integration and task review
 
-Initial generation may change the instance marker, `study.config.yml` for permitted `auto` resolution, roadmap, integration plan, every topic contract and only the modules, paired Markdown/TSV flashcard files, rubrics and forms selected by the initial content window.
+Confirm that:
 
-Later materialization must remain limited to the selected topic contracts, their modules, paired Markdown/TSV flashcard files, rubrics and forms, roadmap materialization status and integration-plan adjustments justified by verified assessment evidence.
+43. `study/integrations.md` opens with a human summary and keeps operational classifications in a collapsed technical section;
+44. only capabilities supported by course or learner signals are recommended;
+45. one task backend is primary;
+46. Quizlet and other formative tools do not affect completion and always have a durable local alternative;
+47. calendar, habit, analytics and reminder tools do not create competing learning state;
+48. Airtable remains `github_to_airtable`;
+49. external courses and media identify exact useful sections, access, effort and evidence;
+50. providers in `avoid` or prohibited by account preferences are not selected;
+51. optional providers cannot block core generation or study;
+52. no external resource is created during curriculum generation or review;
+53. Trello card text uses human titles, “Você pode começar por aqui”, clear next action and “Esta aula será preparada automaticamente...” for future content;
+54. Trello does not repeat internal authority, materialization or workflow language in every card.
 
-## Automatic review and merge policy
+Reject a lesson when it could be replaced by a short checklist without losing teaching content, when major claims are not traceable to inspected sources, when references are a link dump, or when media was added only to make the lesson look richer.
 
-Read `workflow.curriculum_merge_policy` from `.open-study-path/instance.yml`. If missing, use `manual`.
+Reject learner-facing copy when it leads with PR/CI success, exposes internal classifications, mixes languages unnecessarily, makes the learner command repository mechanics or repeats system disclaimers in every artifact.
 
-- `manual`: finish review, report findings and leave the PR open.
-- `agent_review_then_merge`: correct the branch, run required checks, self-review the final diff, set any required approved or materialized status, rerun checks, mark ready and merge when no unresolved pedagogical or integration-policy decision remains.
+## Allowed diffs and merge
 
-Do not attempt to formally approve a PR authored by the same account. Contract verification, final diff review and successful CI constitute operational review.
+Initial generation and later materialization must stay within the configured curriculum scope. Correct resolvable problems directly on the proposal branch, run required checks, self-review the final diff and merge under `agent_review_then_merge` when no genuine pedagogical, privacy, cost or integration-policy decision remains.
 
-Leave the PR open only when goal, structure, effort, resource precision, assessment meaning, visual representation, provider privacy/cost policy or a structural adaptation genuinely requires owner input, or when CI/scope validation fails.
-
-When owner input is required, annotate the PR and use:
-
-`Revisão do PR: anotações adicionadas ao PR #<número>. Avalie somente os pontos marcados e responda no PR.`
-
-After successful merge, use:
-
-`Revisão do PR: aprovada pelo agente e pelo CI; PR #<número> mesclado.`
-
-Never ask the owner to perform the entire review or merge merely because a pull request exists.
+Record technical review status in GitHub. In chat, report the learner outcome and next step. Link a PR only when a concrete unresolved decision requires the owner.
