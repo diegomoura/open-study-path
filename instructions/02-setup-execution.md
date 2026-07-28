@@ -41,6 +41,20 @@ During setup, never delete, rename, recreate or modify reusable infrastructure m
 
 Use the templates already present in the target repository. Consult the canonical repository only to diagnose a missing or corrupted reusable asset, and do not copy a replacement without surfacing that repository defect.
 
+## Verify intake repository metadata
+
+File sentinels determine repository mode, but a GitHub Issue Form is ready only when its repository metadata also exists.
+
+When `github_issue` is selected:
+
+- verify the form contains `<!-- open-study-path:intake form_id=create-study-path version=2 -->`;
+- verify repository labels `study-request` and `intake:imported` exist;
+- create only missing labels through the GitHub labels API or run the inherited **Prepare ChatGPT Project Instructions** workflow, which executes `scripts/ensure_repository_labels.py`;
+- read the labels again after provisioning;
+- do not set intake or setup status to ready while the marker or either label is absent or unverifiable.
+
+Label creation is repository metadata, not a file diff. It must still complete before the setup merge gate and success response.
+
 ## Allowed setup diff
 
 The complete first-chat setup may change only:
@@ -78,6 +92,8 @@ A setup pull request may be merged only when all of these are true:
 - `.open-study-path/template.yml` is still present;
 - `.open-study-path/instance.yml` identifies the exact target repository;
 - the GitHub Issue Form exists when `github_issue` is selected;
+- the current intake marker is present in that form;
+- labels `study-request` and `intake:imported` exist in the target repository;
 - every required check for the current head completed successfully;
 - no unresolved review item or owner decision remains.
 
