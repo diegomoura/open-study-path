@@ -51,15 +51,18 @@ Veja `docs/learner-facing-language.md`.
 ## Começar uma nova trilha
 
 1. Use este template para criar um repositório próprio.
-2. Crie um Projeto dedicado no ChatGPT.
-3. Conecte o GitHub e autorize o repositório da trilha.
-4. Copie `templates/chatgpt-project-instructions.md` para as Instruções do Projeto.
-5. Substitua `OWNER/REPOSITORY` pelo identificador exato.
-6. Abra o primeiro chat e envie:
+2. Aguarde a ação **Prepare ChatGPT Project Instructions** concluir. Ela preenche automaticamente o nome exato do novo repositório.
+3. Abra `templates/chatgpt-project-instructions.md` no repositório novo e confirme que a linha **Instance** já contém `owner/repositório`.
+4. Crie um Projeto dedicado no ChatGPT.
+5. Conecte o GitHub e autorize o repositório da trilha.
+6. Copie o conteúdo já preparado de `templates/chatgpt-project-instructions.md` para as Instruções do Projeto, sem editar o identificador.
+7. Abra o primeiro chat e envie:
 
 ```text
 Configure este repositório como uma nova trilha de estudos usando o formulário do GitHub.
 ```
+
+Se o arquivo ainda mostrar `OWNER/REPOSITORY`, execute manualmente a ação **Prepare ChatGPT Project Instructions** na aba Actions. A substituição manual continua disponível apenas como alternativa.
 
 O agente cuida internamente dos arquivos, validações e limites da primeira operação. Ao terminar, ele devolve o link do formulário.
 

@@ -6,6 +6,8 @@ generation_allowed: false
 
 instance_setup:
   chatgpt_project_instructions_template: templates/chatgpt-project-instructions.md
+  chatgpt_project_instructions_renderer: scripts/render_project_instructions.py
+  chatgpt_project_instructions_workflow: .github/workflows/render-project-instructions.yml
   chatgpt_project_setup_guide: docs/chatgpt-project-setup.md
   instance_marker: .open-study-path/instance.yml
   configuration_template: study.config.example.yml
@@ -17,6 +19,7 @@ instance_setup:
 rules:
   - Never generate learner-specific content in the canonical template repository.
   - A fork or derived repository becomes an instance only after the instance marker is created.
-  - Resolve the exact OWNER/REPOSITORY from ChatGPT Project Instructions or an explicit user message before bootstrap.
+  - Prepare the ChatGPT Project Instructions automatically with the exact repository identity after template creation.
+  - Resolve the exact OWNER/REPOSITORY from prepared ChatGPT Project Instructions or an explicit user message before bootstrap.
   - Persist the exact repository identity in the instance marker during bootstrap.
   - Instance setup and curriculum generation are separate explicit operations.
