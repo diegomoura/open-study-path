@@ -19,8 +19,9 @@ def assert_legitimate(text: str) -> None:
 def main() -> None:
     assert_placeholder("# TOPIC-000 — Replace me")
     assert_placeholder(
-        "Descreva exatamente o que deve ser produzido e como vincular ou transcrever a evidência no formulário de avaliação. "
-        "Quando o entregável estiver em Google Drive ou outro workspace externo, preserve um link seguro e deixe claro que o resultado oficial da avaliação permanece no GitHub."
+        "Explique em poucas linhas o que a pessoa vai aprender, por que isso importa para o objetivo dela, "
+        "quanto tempo reservar e o que produzir ao final. Este arquivo deve ser uma aula autocontida, "
+        "não apenas uma lista de tarefas."
     )
 
     assert_legitimate("Descreva o impacto de um julgamento precipitado sobre a decisão seguinte.")

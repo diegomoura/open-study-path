@@ -1,14 +1,6 @@
----
-topic_id: TOPIC-000
-title: Replace me
-version: 1
-estimated_minutes: 60
-visual_diagrams: 1
-flashcards: null
-flashcards_study: null
----
-
 # TOPIC-000 — Replace me
+
+<!-- Metadados operacionais desta aula ficam no frontmatter de study/topics/TOPIC-000.md. Não adicione frontmatter YAML a este arquivo. -->
 
 ## Antes de começar
 
@@ -79,8 +71,8 @@ Inclua tarefas que exijam transferência para um caso novo e produção do entre
 
 Quando o tópico tiver definições, comandos, fórmulas, classificações, comparações ou erros comuns adequados à recuperação ativa:
 
-- defina `flashcards: study/flashcards/TOPIC-000.tsv`;
-- defina `flashcards_study: study/flashcards/TOPIC-000.md`;
+- defina `flashcards: study/flashcards/TOPIC-000.tsv` no contrato da etapa;
+- defina `flashcards_study: study/flashcards/TOPIC-000.md` no contrato da etapa;
 - gere o TSV com colunas `Front`, `Back` e `Tags`;
 - gere o Markdown com cartões expansíveis usando `<details>` e `<summary>`.
 
@@ -90,7 +82,7 @@ A ferramenta de tarefas não deve repetir todos esses links. Conforme `instructi
 
 Explique uma única vez, em linguagem natural: os flashcards ajudam a praticar; a etapa é concluída pela avaliação.
 
-Quando flashcards não forem úteis, mantenha os campos como `null` e explique qual prática substitui a memorização.
+Quando flashcards não forem úteis, mantenha os campos do contrato como `null` e explique qual prática substitui a memorização.
 
 ## Outras formas de aprender
 

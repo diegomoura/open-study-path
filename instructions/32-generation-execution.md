@@ -23,7 +23,9 @@ python scripts/test_curriculum_placeholder_detection.py
 python scripts/validate_curriculum_safe.py
 ```
 
-Fix locally detectable YAML types, frontmatter dates, durations, paths, placeholders, graph errors and scope violations before the first remote CI run.
+Fix locally detectable YAML types, topic-contract frontmatter dates, durations, paths, placeholders, graph errors and scope violations before the first remote CI run.
+
+Keep operational metadata in `study/topics/TOPIC-000.md`. Generated learner modules under `study/modules/` must begin directly with their title and must not contain YAML frontmatter rendered as a table by GitHub.
 
 GitHub Actions is the final confirmation, not the primary trial-and-error linter.
 
