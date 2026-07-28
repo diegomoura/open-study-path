@@ -12,6 +12,14 @@ MARKER = re.compile(
     r"<!-- open-study-path:project-instructions repository=([^\s]+) -->"
 )
 REPOSITORY = re.compile(r"^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$")
+TEMPLATE_COPY_LINE = (
+    "Copy the content below into the Project Instructions and replace "
+    "`OWNER/REPOSITORY`."
+)
+RENDERED_COPY_LINE = (
+    "Copy the content below into the Project Instructions. "
+    "The repository identifier is already filled in."
+)
 
 
 def render_instructions(content: str, repository: str) -> str:
@@ -20,22 +28,34 @@ def render_instructions(content: str, repository: str) -> str:
         raise ValueError(f"invalid repository identifier: {repository}")
 
     marker = MARKER.search(content)
-    if marker is None:
-        raise ValueError("missing project-instructions repository marker")
+    previous = marker.group(1) if marker else PLACEHOLDER
 
-    previous = marker.group(1)
     if previous == PLACEHOLDER:
+        if PLACEHOLDER not in content:
+            raise ValueError("project instructions have no repository placeholder or marker")
         rendered = content.replace(PLACEHOLDER, repository)
     elif previous == repository:
         rendered = content
     else:
         rendered = content.replace(previous, repository)
 
-    rendered = MARKER.sub(
-        f"<!-- open-study-path:project-instructions repository={repository} -->",
-        rendered,
-        count=1,
+    rendered = rendered.replace(TEMPLATE_COPY_LINE, RENDERED_COPY_LINE)
+
+    marker_value = (
+        f"<!-- open-study-path:project-instructions repository={repository} -->"
     )
+    if marker:
+        rendered = MARKER.sub(marker_value, rendered, count=1)
+    else:
+        first_heading_end = rendered.find("\n")
+        if first_heading_end < 0:
+            raise ValueError("project instructions need a Markdown heading")
+        rendered = (
+            rendered[: first_heading_end + 1]
+            + "\n"
+            + marker_value
+            + rendered[first_heading_end + 1 :]
+        )
 
     if PLACEHOLDER in rendered:
         raise ValueError("repository placeholder remains after rendering")
