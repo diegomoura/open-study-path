@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Validate first-chat setup discovery, scope and template-marker preservation."""
+"""Validate first-chat setup discovery, metadata readiness and marker preservation."""
 
 from __future__ import annotations
 
@@ -13,6 +13,7 @@ import yaml
 
 ROOT = Path(__file__).resolve().parents[1]
 SETUP_EXECUTION = "instructions/02-setup-execution.md"
+CURRENT_INTAKE_MARKER = "<!-- open-study-path:intake form_id=create-study-path version=2 -->"
 
 
 def fail(message: str) -> None:
@@ -70,6 +71,11 @@ def validate_contracts() -> None:
         "Repository metadata",
         ".open-study-path/template.yml",
         "Do not reconstruct the repository",
+        "Verify intake repository metadata",
+        CURRENT_INTAKE_MARKER,
+        "study-request",
+        "intake:imported",
+        "scripts/ensure_repository_labels.py",
         "Allowed setup diff",
         "failing, pending, cancelled, missing or unreadable required check",
         "Do not claim that the instance is configured",
@@ -78,12 +84,18 @@ def validate_contracts() -> None:
         SETUP_EXECUTION,
         "Repository metadata",
         "retains `.open-study-path/template.yml`",
+        "current intake marker",
+        "study-request",
+        "intake:imported",
         "CI is red or unknown",
     ])
     require("templates/chatgpt-project-instructions.md", [
         SETUP_EXECUTION,
         "Repository size",
         "keeps `.open-study-path/template.yml`",
+        "current intake marker",
+        "study-request",
+        "intake:imported",
         "CI is red or unknown",
     ])
     require("instructions/00-bootstrap.md", [
@@ -95,6 +107,8 @@ def validate_contracts() -> None:
     require("instructions/05-configure-intake.md", [
         SETUP_EXECUTION,
         "Do not infer absence from repository size",
+        CURRENT_INTAKE_MARKER,
+        "scripts/ensure_repository_labels.py",
         "Do not edit, recreate or replace it",
         "failing, pending, cancelled, missing or unreadable",
     ])
@@ -119,9 +133,25 @@ def validate_contracts() -> None:
         if phases.get(phase_id, {}).get("execution_contract") != SETUP_EXECUTION:
             fail(f"{phase_id} must reference {SETUP_EXECUTION}")
 
-    workflow = text(".github/workflows/validate-template.yml")
-    if "python scripts/validate_setup_safety.py" not in workflow:
+    validation_workflow = text(".github/workflows/validate-template.yml")
+    if "python scripts/validate_setup_safety.py" not in validation_workflow:
         fail("validation workflow must run setup-safety regression")
+    for command in [
+        "python scripts/test_intake_resolution.py",
+        "python scripts/test_repository_labels.py",
+    ]:
+        if command not in validation_workflow:
+            fail(f"validation workflow must run: {command}")
+
+    setup_workflow = text(".github/workflows/render-project-instructions.yml")
+    for term in [
+        "issues: write",
+        "Ensure intake labels",
+        "scripts/ensure_repository_labels.py",
+        '--repository "$GITHUB_REPOSITORY"',
+    ]:
+        if term not in setup_workflow:
+            fail(f"setup workflow is missing intake metadata provisioning: {term}")
 
 
 def validate_instance_regression() -> None:
@@ -156,7 +186,7 @@ def validate_instance_regression() -> None:
 def main() -> None:
     validate_contracts()
     validate_instance_regression()
-    print("Safe repository discovery, setup scope and marker preservation passed.")
+    print("Safe repository discovery, intake metadata readiness and marker preservation passed.")
 
 
 if __name__ == "__main__":
