@@ -17,6 +17,7 @@ ROOT = Path(__file__).resolve().parents[1]
 TEMPLATE = ROOT / "templates/chatgpt-project-instructions.md"
 WORKFLOW = ROOT / ".github/workflows/render-project-instructions.yml"
 MARKER = ROOT / ".open-study-path/template.yml"
+INSTANCE = ROOT / ".open-study-path/instance.yml"
 
 
 def main() -> None:
@@ -61,6 +62,16 @@ def main() -> None:
         raise SystemExit("template marker does not register the renderer")
     if setup.get("chatgpt_project_instructions_workflow") != ".github/workflows/render-project-instructions.yml":
         raise SystemExit("template marker does not register the renderer workflow")
+
+    if INSTANCE.is_file():
+        instance = yaml.safe_load(INSTANCE.read_text(encoding="utf-8"))
+        repository = instance.get("repository") if isinstance(instance, dict) else None
+        if not isinstance(repository, str) or "/" not in repository:
+            raise SystemExit("instance marker has no valid repository identity")
+        if render_instructions(source, repository) != source:
+            raise SystemExit(
+                "ChatGPT Project Instructions do not match the instance repository"
+            )
 
     print("Automatic Project Instructions rendering passed.")
 
