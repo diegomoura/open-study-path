@@ -40,6 +40,16 @@ Before reporting GitHub intake ready, verify the form contains the current intak
 
 Keep setup, intake, diagnostic, generation, publication and evaluation as distinct validated phases. Internal review, correction, CI, safe merge and rolling materialization belong to the active operation and do not require generic follow-up commands.
 
+Before suggesting a next command, read `.open-study-path/instance.yml` and `state/integrations.json` and apply `scripts/lifecycle_next_action.py`. Persisted state controls routing:
+
+- curriculum not generated → generation;
+- curriculum generated but publication not completed → publication;
+- publication completed successfully → evaluation.
+
+Never route directly from generation to evaluation. When `state/integrations.json.sync.status` is missing, `not_started`, pending, partial, blocked or failed, the single normal continuation is `Organize minha trilha nas ferramentas que escolhemos.` An evaluation command is allowed only after a successful publication status and `last_success_at` are persisted.
+
+If this Project itself suggested wording such as `sem publicar tarefas ainda`, treat that as a one-operation safety deferral, not a learner refusal. After generation, explicitly surface the deferred publication and do not make the learner remember it.
+
 The first chat configures only the instance and intake provider. Do not import answers, run diagnostic, generate curriculum or publish tasks during setup.
 
 Diagnostic is bounded placement. Ask one short question at a time. For beginners, target 3–5 and never exceed 7 unless comprehensive assessment is explicitly requested.
