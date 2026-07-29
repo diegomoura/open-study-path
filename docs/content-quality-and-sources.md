@@ -2,16 +2,20 @@
 
 Uma aula completa deve ensinar, permitir prática e deixar visível de onde vieram as ideias centrais. A presença de referências não é decoração: ela permite verificar o conteúdo, aprofundar o estudo e distinguir síntese responsável de texto inventado.
 
+Leia também `docs/beginner-first-pedagogy.md` quando o nível configurado for iniciante ou o diagnóstico registrar lacunas de vocabulário e fundamentos.
+
 ## Padrão mínimo para cada aula pronta
 
 Cada módulo materializado deve conter:
 
 1. conteúdo explicativo suficiente para o tempo e nível configurados;
-2. exemplos trabalhados, erros comuns e prática;
-3. uma seção **Como este conteúdo foi construído**;
-4. uma seção **Outras formas de aprender**;
-5. uma seção **Fontes e caminhos para aprofundar**;
-6. no mínimo três fontes realmente consultadas e relevantes.
+2. definições progressivas antes de mecanismos que dependem delas;
+3. uma analogia útil com limite explícito ou um exemplo concreto rotulado;
+4. exemplos trabalhados, erros comuns e prática;
+5. uma seção **Como este conteúdo foi construído**;
+6. uma seção **Outras formas de aprender**;
+7. uma seção **Fontes e caminhos para aprofundar**;
+8. no mínimo três fontes realmente consultadas e relevantes.
 
 Entre as fontes, inclua quando existirem:
 
@@ -20,6 +24,52 @@ Entre as fontes, inclua quando existirem:
 - pelo menos um formato complementar útil, como vídeo, aula aberta, podcast, demonstração interativa ou capítulo de curso.
 
 Não force variedade quando ela não ajuda. Uma documentação oficial e um laboratório prático podem ser melhores que um vídeo genérico. A decisão deve partir da necessidade pedagógica.
+
+## Progressão e legibilidade
+
+A aula deve respeitar o nível no assunto, não apenas a senioridade geral da pessoa. Conhecimento em uma área adjacente pode enriquecer a aplicação, mas não autoriza pular conceitos que o intake ou o diagnóstico registraram como desconhecidos.
+
+Para temas iniciantes:
+
+- explique o objeto antes de explicar seu mecanismo;
+- expanda siglas na primeira ocorrência visível;
+- introduza termos em uma ordem na qual cada definição possa ser entendida com o vocabulário já apresentado;
+- use uma ideia principal por parágrafo;
+- apresente primeiro a frase simples e depois o termo técnico;
+- coloque um exemplo logo após uma abstração difícil;
+- evite frases que empilhem vários conceitos novos.
+
+Uma lista de assuntos desejados define o escopo da trilha; ela não comprova conhecimento prévio.
+
+## Analogias e modelos mentais
+
+Analogia não é evidência. Ela serve para tornar uma relação abstrata reconhecível e deve ser acompanhada de:
+
+- **Analogia:** a comparação;
+- **Onde a analogia ajuda:** a relação útil;
+- **Onde a analogia deixa de funcionar:** a diferença que impede uma conclusão errada.
+
+Não force analogias quando o conceito já é simples ou quando a comparação introduz mais confusão. Nesses casos, use **Exemplo concreto:** e mostre situação, mecanismo, consequência e forma de verificar.
+
+Depois da analogia, volte ao modelo técnico. Não deixe que palavras como “memória”, “atenção”, “agente”, “aprendizado” ou “entendimento” sejam interpretadas literalmente por causa da comparação humana.
+
+## Exemplos práticos e casos reais
+
+Sempre que for pedagogicamente útil, combine:
+
+- um exemplo cotidiano ou reconhecível;
+- um exemplo ligado ao objetivo ou à experiência da pessoa;
+- um exemplo com erro, ambiguidade ou limite.
+
+Um **cenário realista** é criado para ensino e deve ser identificado como tal. Um **caso real documentado** descreve algo que ocorreu e precisa de fonte verificável. Não invente empresas, incidentes, estatísticas ou resultados para dar aparência de realidade.
+
+Exemplos trabalhados devem mostrar:
+
+1. situação inicial;
+2. mecanismo ou decisão;
+3. consequência;
+4. verificação;
+5. limite, risco ou alternativa.
 
 ## Antes de citar
 
@@ -40,11 +90,12 @@ A seção **Como este conteúdo foi construído** explica em linguagem curta:
 - quais fontes sustentaram os conceitos principais;
 - o que foi síntese ou adaptação pedagógica do agente;
 - onde houve divergência, simplificação ou limite de escopo;
-- quais exemplos foram criados especificamente para a pessoa ou para o curso.
+- quais analogias, diagramas e exemplos foram criados para a pessoa ou para o curso;
+- quais situações são cenários realistas e quais são casos reais documentados.
 
 Exemplo:
 
-> A distinção central foi construída a partir do capítulo indicado de uma fonte primária e conferida em duas referências acadêmicas. O mapa visual e os casos cotidianos são adaptações pedagógicas criadas para esta trilha; não são diagramas presentes nas obras originais.
+> A distinção central foi construída a partir do capítulo indicado de uma fonte primária e conferida em duas referências acadêmicas. O mapa visual, a analogia e os casos cotidianos são adaptações pedagógicas criadas para esta trilha; não são diagramas ou eventos relatados nas obras originais.
 
 ## Tabela de fontes
 
@@ -113,6 +164,12 @@ Parafraseie e sintetize. Use citações diretas curtas somente quando a formula�
 
 Rejeite uma aula quando:
 
+- o nível declarado e as lacunas do diagnóstico não são respeitados;
+- siglas e conceitos essenciais aparecem antes de serem explicados;
+- a escrita começa pelo mecanismo e não deixa claro o que está sendo estudado;
+- uma analogia não explica onde deixa de funcionar;
+- um cenário pedagógico é apresentado como caso real;
+- conceitos abstratos não recebem analogia útil nem exemplo concreto, embora isso ajudasse;
 - as ideias principais não podem ser rastreadas até fontes verificáveis;
 - a seção de referências contém apenas nomes de obras sem links ou localizadores disponíveis;
 - os links foram adicionados sem explicar como ajudam;
