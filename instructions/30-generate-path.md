@@ -139,7 +139,7 @@ Link the Markdown deck first, the TSV second and the external set only after it 
 
 Each assessment contains five substantial prompts covering understanding, analysis, transfer, misconception correction and evidence. Issue Forms include labels, hidden topic marker and complete prefilled title.
 
-Use a natural learner command in visible copy:
+The lesson may teach the later return command:
 
 `Terminei <título da aula>. Avalie minhas respostas.`
 
@@ -148,6 +148,8 @@ Continue accepting:
 `Finalizei o TOPIC-000. Avalie minhas respostas.`
 
 The module contains the direct clickable Issue Form URL. Never expose only the YAML filename. Deterministic resolution relies on labels, hidden marker and history; the editable title is a useful signal, not the sole authority.
+
+Assessment links and commands belong inside the prepared lesson. Their existence does not authorize the generation-completion response to skip the publication phase.
 
 ## Roadmap and contracts language
 
@@ -170,8 +172,12 @@ Operational review and CI are recorded in GitHub. The learner-facing response do
 
 ## Completion
 
-Create no external tasks, sets, events, notifications or workspaces during generation. Complete using `instructions/phase-completion.md` and guide naturally to:
+Create no external tasks, sets, events, notifications or workspaces during generation. Complete using `instructions/phase-completion.md` and resolve the next action through `scripts/lifecycle_next_action.py`.
+
+When generation succeeds and publication is still pending, guide naturally to this as the only normal copyable continuation:
 
 `Organize minha trilha nas ferramentas que escolhemos.`
+
+This remains mandatory when the agent itself suggested `sem publicar tarefas ainda`. State that organization in the selected tools was deliberately deferred and is now the next step. Do not present `Terminei <título da aula>. Avalie minhas respostas.` as the next command before publication succeeds.
 
 Continue accepting `Publique as tarefas da trilha nas integrações configuradas.` as an alias.

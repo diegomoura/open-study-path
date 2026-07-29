@@ -10,6 +10,8 @@ from typing import Any
 
 import yaml
 
+from lifecycle_next_action import PUBLISH_COMMAND, resolve_next_action
+
 ROOT = Path(__file__).resolve().parents[1]
 INSTANCE = ROOT / ".open-study-path/instance.yml"
 MERMAID = re.compile(r"```mermaid\s*\n(.*?)```", re.DOTALL | re.IGNORECASE)
@@ -90,8 +92,10 @@ def validate_instance_config() -> dict[str, Any]:
 def validate_contract_terms() -> None:
     require("docs/learner-facing-language.md", [
         "Quatro perguntas da resposta principal",
-        "Preenchi o formulário. Pode continuar.",
-        "Terminei <título da aula>. Avalie minhas respostas.",
+        "O próximo passo vem do estado",
+        "Responsabilidade por adiamentos sugeridos",
+        "Organize minha trilha nas ferramentas que escolhemos.",
+        "Não acrescente um comando de avaliação nesse estado.",
     ])
     require("docs/content-quality-and-sources.md", [
         "Como este conteúdo foi construído",
@@ -101,14 +105,17 @@ def validate_contract_terms() -> None:
     ])
     require("instructions/phase-completion.md", [
         "Do not foreground PR numbers",
-        "Organize minha trilha nas ferramentas que escolhemos.",
-        "Conectei o Quizlet. Crie meus flashcards.",
+        "scripts/lifecycle_next_action.py",
+        "The agent owns that deferral",
+        "single copyable continuation",
+        "Do not include `Terminei <título da aula>. Avalie minhas respostas.`",
     ])
     require("instructions/30-generate-path.md", [
         "Source and provenance contract",
         "Other ways to learn",
         "three to seven curated sources",
-        "Terminei <título da aula>. Avalie minhas respostas.",
+        "scripts/lifecycle_next_action.py",
+        "Do not present `Terminei <título da aula>. Avalie minhas respostas.` as the next command before publication succeeds.",
     ])
     require("instructions/35-review-curriculum.md", [
         "Source and content review",
@@ -118,7 +125,11 @@ def validate_contract_terms() -> None:
     require("instructions/40-publish-tasks.md", [
         "Human card titles",
         "Sua sessão de estudo",
-        "Esta aula será preparada automaticamente",
+        "A aula completa será preparada automaticamente",
+        "Persist publication completion",
+        "sync.status",
+        "sync.last_success_at",
+        "scripts/lifecycle_next_action.py",
     ])
     require("templates/module.md", [
         "## Como este conteúdo foi construído",
@@ -139,6 +150,8 @@ def validate_contract_terms() -> None:
     require("templates/chatgpt-project-instructions.md", [
         "Experience for the person",
         "Do not lead successful responses",
+        "scripts/lifecycle_next_action.py",
+        "Never route directly from generation to evaluation.",
         "Fontes e caminhos para aprofundar",
     ])
     require("README.md", [
@@ -148,9 +161,47 @@ def validate_contract_terms() -> None:
     ])
     require("AGENTS.md", [
         "Do not lead with PR, CI",
-        "docs/content-quality-and-sources.md",
+        "scripts/lifecycle_next_action.py",
+        "The agent must restore publication",
         "Human task titles",
     ])
+
+    for path in [
+        "scripts/lifecycle_next_action.py",
+        "scripts/test_lifecycle_next_action.py",
+    ]:
+        if not (ROOT / path).is_file():
+            fail(f"missing lifecycle routing regression asset: {path}")
+
+    workflow = read(".github/workflows/validate-template.yml")
+    if "python scripts/test_lifecycle_next_action.py" not in workflow:
+        fail("validation workflow must run lifecycle next-action regressions")
+
+
+def validate_next_action_regression() -> None:
+    generated = {"status": {"curriculum_generated": True}}
+
+    for integration_state in [
+        None,
+        {"sync": {"status": "not_started", "last_success_at": None}},
+        {"sync": {"status": "partial", "last_success_at": None}},
+        {"sync": {"status": "failed", "last_success_at": None}},
+    ]:
+        action = resolve_next_action(generated, integration_state)
+        if action.phase != "publish" or action.command != PUBLISH_COMMAND:
+            fail("generated curriculum without completed publication must route to publish")
+        if "Avalie minhas respostas" in action.command:
+            fail("evaluation command leaked before publication completion")
+
+    completed = {
+        "sync": {
+            "status": "success",
+            "last_success_at": "2026-07-28T22:00:00Z",
+        }
+    }
+    action = resolve_next_action(generated, completed, lesson_title="Aula inicial")
+    if action.phase != "evaluate" or action.command != "Terminei Aula inicial. Avalie minhas respostas.":
+        fail("completed publication must enable the evaluation continuation")
 
 
 def validate_generated(document: dict[str, Any]) -> None:
@@ -202,8 +253,9 @@ def main() -> None:
     validate_manifest()
     document = validate_instance_config()
     validate_contract_terms()
+    validate_next_action_regression()
     validate_generated(document)
-    print("Guided lifecycle, human-facing language, visuals and source-rich lessons passed.")
+    print("Guided lifecycle, state-derived continuation and source-rich lessons passed.")
 
 
 if __name__ == "__main__":

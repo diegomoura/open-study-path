@@ -173,11 +173,33 @@ Use human labels in visible resources. Keep provider authority, preflight, fallb
 
 Inspect `state/integrations.json` and matching provider resources before writing. Reuse or update exact resources when supported. Store capability, provider, safe ID, URL, topic, content version, authority, sync status and timestamp. Never persist credentials, tokens, OAuth details, raw submissions or unnecessary identity data.
 
+## Persist publication completion
+
+The lifecycle may advance to evaluation only after publication state is durably recorded.
+
+After the complete required publication set succeeds and all created or reused resources are represented in `state/integrations.json`:
+
+- set `sync.status` to `success`;
+- set `sync.last_success_at` to the current ISO 8601 timestamp;
+- clear resolved entries from `sync.errors`;
+- retain safe resource IDs and URLs needed for idempotent updates.
+
+A Markdown or GitHub-native task backend still completes the publication phase; record the same successful sync state after its repository-native projection is ready.
+
+When required publication is blocked, failed, partial or still in progress:
+
+- do not set a success status or `last_success_at`;
+- persist the accurate non-success status and a short non-sensitive reason;
+- do not present an evaluation command;
+- return the provider-specific connection or retry command from `instructions/phase-completion.md`.
+
+Run `scripts/lifecycle_next_action.py` against the final persisted state before composing the completion response.
+
 ## Completion
 
 After publication, link the first ready lesson, primary task and assessment. Mention an alternative only when the primary resource is unavailable or the learner explicitly asks for it.
 
-Do not lead with a publication report, provider inventory, PR status or CI result. Use:
+Do not lead with a publication report, provider inventory, PR status or CI result. Only after successful publication state is persisted, use:
 
 `Terminei <título da aula>. Avalie minhas respostas.`
 

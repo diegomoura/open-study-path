@@ -22,6 +22,10 @@ Internal validation, review, correction, safe merge and rolling materialization 
 
 The learner-facing response describes what is ready, where to go and what to do next. Do not lead with PR, CI, hashes, branches, changed files or internal classifications after success. Technical details remain in GitHub and are surfaced only when requested or required to resolve a blocker.
 
+Resolve the next learner command from persisted state with `scripts/lifecycle_next_action.py`. Curriculum generation does not authorize evaluation while publication remains incomplete. When `state/integrations.json.sync.status` is absent, `not_started`, pending, partial, blocked or failed, present `Organize minha trilha nas ferramentas que escolhemos.` and do not present an evaluation command.
+
+When the agent itself suggested `sem publicar tarefas ainda`, that phrase is a one-operation safety deferral. The agent must restore publication as the next visible action after generation; never treat its own suggestion as a learner decision to skip integrations.
+
 ## Setup, intake and diagnostic
 
 - Never convert the canonical template into an instance.
@@ -106,7 +110,7 @@ A task backend is not a repository inventory. Show one primary learner-facing re
 
 Do not repeat “source of truth”, “authority”, `planned`, `materialized`, preflight or synchronization language in every card.
 
-Natural commands presented to the learner:
+Natural commands presented to the learner, in lifecycle order:
 
 - `Preenchi o formulário. Pode continuar.`
 - `Vamos fazer meu diagnóstico.`
@@ -116,7 +120,7 @@ Natural commands presented to the learner:
 - `Terminei <título da aula>. Avalie minhas respostas.`
 - `Terminei a revisão de <título da aula>.`
 
-Continue accepting existing topic-ID and technical commands as aliases.
+Continue accepting existing topic-ID and technical commands as aliases. Do not present a later command while an earlier required phase remains incomplete.
 
 ## Assessment resolution
 
