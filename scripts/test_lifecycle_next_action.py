@@ -7,6 +7,7 @@ from lifecycle_next_action import (
     EVALUATE_COMMAND_TEMPLATE,
     GENERATE_COMMAND,
     PUBLISH_COMMAND,
+    RESUME_PUBLISH_COMMAND,
     publication_complete,
     resolve_next_action,
 )
@@ -16,12 +17,18 @@ def instance(*, generated: bool) -> dict:
     return {"status": {"curriculum_generated": generated}}
 
 
-def integrations(status: str = "not_started", success_at: str | None = None) -> dict:
+def integrations(
+    status: str = "not_started",
+    success_at: str | None = None,
+    *,
+    resources: list | None = None,
+) -> dict:
     return {
+        "resources": resources or [],
         "sync": {
             "status": status,
             "last_success_at": success_at,
-        }
+        },
     }
 
 
@@ -32,8 +39,6 @@ def test_generation_precedes_publication() -> None:
 
 
 def test_agent_authored_deferral_cannot_skip_publication() -> None:
-    # The agent may suggest "sem publicar tarefas ainda", but that wording is
-    # not persisted lifecycle state and cannot authorize generate -> evaluate.
     action = resolve_next_action(instance(generated=True), integrations("not_started"))
     assert action.phase == "publish"
     assert action.command == PUBLISH_COMMAND
@@ -46,11 +51,29 @@ def test_missing_integration_state_keeps_publication_pending() -> None:
     assert action.command == PUBLISH_COMMAND
 
 
-def test_failed_or_partial_publication_cannot_enable_evaluation() -> None:
+def test_failed_or_unrecorded_partial_publication_restarts_safely() -> None:
     for status in ["failed", "blocked", "partial", "in_progress"]:
         action = resolve_next_action(instance(generated=True), integrations(status))
         assert action.phase == "publish", status
         assert action.command == PUBLISH_COMMAND, status
+
+
+def test_recorded_partial_publication_uses_resume_command() -> None:
+    state = integrations(
+        "partial",
+        resources=[
+            {
+                "provider": "trello",
+                "external_type": "board",
+                "external_id": "1WDlmBlM",
+            }
+        ],
+    )
+    action = resolve_next_action(instance(generated=True), state)
+    assert action.phase == "publish"
+    assert action.reason == "publication_partial"
+    assert action.command == RESUME_PUBLISH_COMMAND
+    assert "1WDlmBlM" not in action.command
 
 
 def test_success_requires_timestamp() -> None:
@@ -76,7 +99,8 @@ def main() -> None:
     test_generation_precedes_publication()
     test_agent_authored_deferral_cannot_skip_publication()
     test_missing_integration_state_keeps_publication_pending()
-    test_failed_or_partial_publication_cannot_enable_evaluation()
+    test_failed_or_unrecorded_partial_publication_restarts_safely()
+    test_recorded_partial_publication_uses_resume_command()
     test_success_requires_timestamp()
     test_evaluation_is_available_only_after_publication()
     print("Lifecycle next-action behavioral regressions passed.")
