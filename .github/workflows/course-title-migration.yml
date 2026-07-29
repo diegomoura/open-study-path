@@ -1,0 +1,19 @@
+name: Inspect course-title intake references
+
+on:
+  push:
+    branches:
+      - agent/use-course-title
+
+permissions:
+  contents: read
+
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Find affected references
+        run: |
+          grep -RInE 'path_name|\[Nova trilha\]|version=2|form_spec_version: 2|Como gostaria de chamar esta trilha|Criar minha trilha' \
+            --exclude-dir=.git . || true
