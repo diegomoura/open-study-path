@@ -1,24 +1,23 @@
-name: Criar minha trilha de estudos
-description: Conte o que você quer aprender e como gostaria de estudar.
-title: "[Nova trilha] "
+name: Criar meu curso
+description: Conte o que você quer aprender e como prefere estudar.
 labels: ["study-request"]
 body:
   - type: markdown
     attributes:
       value: |
-        <!-- open-study-path:intake form_id=create-study-path version=2 -->
+        <!-- open-study-path:intake form_id=create-study-path version=3 -->
 
-        # Vamos criar uma trilha que faça sentido para você
+        # Vamos criar um curso que faça sentido para você
 
-        Responda apenas o que for útil para o planejamento. Você poderá ajustar a trilha depois. Não inclua senhas, documentos sensíveis ou informações pessoais desnecessárias.
+        ## Dê um nome ao seu curso
+
+        No campo **Add a title** acima, escreva o nome do curso. Esse campo é obrigatório e o nome será usado no roadmap, nas aulas e nas ferramentas conectadas.
+
+        Exemplos: **Fundamentos de IA**, **Engenharia com IA Generativa** ou **Preparação para AWS Solutions Architect**.
+
+        Responda apenas o que for útil para o planejamento. Você poderá ajustar o curso depois. Não inclua senhas, documentos sensíveis ou informações pessoais desnecessárias.
 
         Depois deste formulário, faremos um diagnóstico curto para escolher o melhor ponto de partida.
-
-  - type: input
-    id: path_name
-    attributes:
-      label: Como gostaria de chamar esta trilha?
-      description: Opcional. Pode ser algo simples, como “Fundamentos de IA”.
 
   - type: input
     id: subject
@@ -65,7 +64,7 @@ body:
     id: prior_knowledge
     attributes:
       label: O que você já conhece ou já tentou?
-      description: Opcional. Liste somente experiências relacionadas a esta trilha.
+      description: Opcional. Liste somente experiências relacionadas a este curso.
 
   - type: textarea
     id: references
@@ -125,7 +124,7 @@ body:
     id: learning_formats
     attributes:
       label: Quais formas de aprender ajudam mais você?
-      description: Opcional. A trilha pode combinar vários formatos quando isso realmente ajudar.
+      description: Opcional. O curso pode combinar vários formatos quando isso realmente ajudar.
       options:
         - label: Explicações escritas e documentação
         - label: Livros e textos longos
@@ -169,7 +168,7 @@ body:
       value: |
         ## Ferramentas opcionais
 
-        Algumas ferramentas podem deixar o acompanhamento, a prática ou a agenda mais convenientes. Elas só serão sugeridas quando houver um benefício concreto, e a trilha continuará funcionando no GitHub quando você não quiser conectá-las.
+        Algumas ferramentas podem deixar o acompanhamento, a prática ou a agenda mais convenientes. Elas só serão sugeridas quando houver um benefício concreto, e o curso continuará funcionando no GitHub quando você não quiser conectá-las.
 
         <!-- contrato técnico: GitHub é a fonte de verdade; integrações são opcionais -->
 
@@ -188,7 +187,7 @@ body:
   - type: dropdown
     id: free_tier_only
     attributes:
-      label: A trilha deve funcionar somente com opções gratuitas?
+      label: O curso deve funcionar somente com opções gratuitas?
       description: Mesmo escolhendo “Não”, nenhum recurso pago será o único caminho para estudar.
       options:
         - Sim
