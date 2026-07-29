@@ -60,6 +60,9 @@ jobs:
       - name: Test topic-first planning and publication safety
         run: python scripts/test_planning_publication_safety.py
 
+      - name: Test beginner-first pedagogy
+        run: python scripts/test_beginner_pedagogy.py
+
       - name: Validate efficient generation contract
         run: python scripts/validate_generation_efficiency.py
 
