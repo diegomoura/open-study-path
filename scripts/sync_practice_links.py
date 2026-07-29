@@ -18,6 +18,7 @@ TOPICS = Path("study/topics")
 START_MARKER = "<!-- open-study-path:practice-links:start -->"
 END_MARKER = "<!-- open-study-path:practice-links:end -->"
 PRACTICE_HEADING = "## Pratique e revise"
+LINK_BULLET = re.compile(r"^- \[[^\n]+\]\([^\n]+\)\s*$")
 
 
 def parse_frontmatter(path: Path) -> tuple[dict[str, Any], str]:
@@ -124,15 +125,15 @@ def replace_practice_block(body: str, block: str) -> str:
     next_heading = re.search(r"^##\s+", body[heading.end() :], re.MULTILINE)
     section_end = heading.end() + (next_heading.start() if next_heading else len(body[heading.end() :]))
     section = body[heading.end() : section_end]
-    links = re.search(r"\n\n(?:- \[[^\n]+\]\([^\n]+\)\n)+", section)
 
-    if links is not None:
-        replacement = "\n\n" + block + "\n"
-        new_section = section[: links.start()] + replacement + section[links.end() :]
-    else:
-        new_section = "\n\n" + block + section
+    preserved_lines = [line for line in section.splitlines() if not LINK_BULLET.match(line)]
+    preserved = "\n".join(preserved_lines).strip("\n")
+    new_section = "\n\n" + block
+    if preserved.strip():
+        new_section += "\n\n" + preserved.strip()
+    new_section += "\n\n"
 
-    return body[: heading.end()] + new_section + body[section_end:]
+    return body[: heading.end()] + new_section + body[section_end:].lstrip("\n")
 
 
 def synchronized_module_text(
