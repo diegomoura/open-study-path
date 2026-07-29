@@ -35,7 +35,7 @@ Use intake and diagnostic evidence to personalize:
 - source and media selection;
 - next-step language.
 
-Treat subject knowledge and transferable professional experience as separate dimensions. Experience in an adjacent domain may accelerate applied examples and exercises, but it must not remove foundations that the learner declared or demonstrated they do not know.
+Treat subject knowledge and transferable professional experience as separate dimensions. Experience in an adjacent domain may accelerate applied examples and exercises, but it must not remove foundations that the learner declared or demonstrated they do not know. Do not treat experience in an adjacent domain as subject mastery.
 
 Do not manufacture intimacy or expose unnecessary personal data. A personalized sentence must be traceable to an approved learner goal, preference or diagnostic observation.
 
