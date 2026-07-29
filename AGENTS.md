@@ -47,22 +47,31 @@ Keep internal `planned` and `materialized` values in metadata. In visible copy u
 
 Read `instructions/31-topic-first-safe-publication.md` before generating or revising a roadmap. `planning.unit: topic` is authoritative. Weekly availability is capacity, not a course structure. Without an explicit request for a calendar projection, do not create fixed durations in weeks, week-numbered groups or weekly roadmap tables. Show total effort, effort per topic, prerequisites and flexible pace instead.
 
+For beginner paths, explain a technical term in plain language at its first meaningful roadmap occurrence. A requested topic is desired scope, not proof that the learner knows its vocabulary.
+
 ## Granularity and teaching quality
 
 A topic is one coherent independently assessable capability. Use three to seven focused actions, normally 10–25 minutes each, and prefer 45–90 minutes per topic.
 
+Read `docs/beginner-first-pedagogy.md`. Subject level and transferable experience are separate dimensions. Seniority in an adjacent field may make examples and exercises more sophisticated, but it must never remove first principles that the learner declared or demonstrated they do not know.
+
 A topic overview is not a lesson. Every ready module must teach with:
 
 - personal orientation and clear outcome;
+- first-principles onboarding when required by level or diagnostic;
+- progressive vocabulary and acronym expansion;
 - prerequisite retrieval;
 - explanatory content and nuance;
-- at least two worked examples;
+- a bounded analogy or labeled concrete example;
+- at least two worked examples, normally including a recognizable situation and a domain-relevant case;
 - useful Mermaid visual models;
 - misconceptions and corrections;
 - guided and independent practice;
 - active recall;
 - deliverable and assessment instructions;
 - provenance, inspected sources and useful alternative formats.
+
+A beginner module must explain the object before its mechanism and include `## Começando do zero`, `### Vocabulário desta aula` and `## Intuição antes dos detalhes`. If it uses an analogy, it must say where the analogy helps and where it stops working. A realistic teaching scenario must not be presented as a real event; documented real cases require sources.
 
 Read `docs/content-quality-and-sources.md`. Every ready lesson normally uses three to seven curated sources, including a primary or official source when available and a reliable explanatory source. Add videos, open lectures, podcasts, interactive resources or precise course lessons only when they improve learning. Record purpose, access and a precise locator or timestamp.
 
