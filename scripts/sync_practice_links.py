@@ -107,6 +107,37 @@ def render_practice_block(
     return "\n".join(lines)
 
 
+def practice_section_bounds(body: str) -> tuple[int, int, int]:
+    heading = re.search(r"^## Pratique e revise\s*$", body, re.MULTILINE)
+    if heading is None:
+        raise ValueError(f"missing section: {PRACTICE_HEADING}")
+    next_heading = re.search(r"^##\s+", body[heading.end() :], re.MULTILINE)
+    section_end = heading.end() + (next_heading.start() if next_heading else len(body[heading.end() :]))
+    return heading.start(), heading.end(), section_end
+
+
+def strip_unmarked_practice_links(body: str) -> str:
+    _, section_start, section_end = practice_section_bounds(body)
+    section = body[section_start:section_end]
+    lines = section.splitlines()
+    inside_markers = False
+    kept: list[str] = []
+    for line in lines:
+        if line.strip() == START_MARKER:
+            inside_markers = True
+            kept.append(line)
+            continue
+        if line.strip() == END_MARKER:
+            inside_markers = False
+            kept.append(line)
+            continue
+        if not inside_markers and LINK_BULLET.match(line.strip()):
+            continue
+        kept.append(line)
+    normalized = "\n".join(kept).strip("\n")
+    return body[:section_start] + "\n\n" + normalized + "\n\n" + body[section_end:].lstrip("\n")
+
+
 def replace_practice_block(body: str, block: str) -> str:
     start_count = body.count(START_MARKER)
     end_count = body.count(END_MARKER)
@@ -116,24 +147,18 @@ def replace_practice_block(body: str, block: str) -> str:
     if start_count == 1:
         start = body.index(START_MARKER)
         end = body.index(END_MARKER, start) + len(END_MARKER)
-        return body[:start] + block + body[end:]
+        updated = body[:start] + block + body[end:]
+        return strip_unmarked_practice_links(updated)
 
-    heading = re.search(r"^## Pratique e revise\s*$", body, re.MULTILINE)
-    if heading is None:
-        raise ValueError(f"missing section: {PRACTICE_HEADING}")
-
-    next_heading = re.search(r"^##\s+", body[heading.end() :], re.MULTILINE)
-    section_end = heading.end() + (next_heading.start() if next_heading else len(body[heading.end() :]))
-    section = body[heading.end() : section_end]
-
-    preserved_lines = [line for line in section.splitlines() if not LINK_BULLET.match(line)]
+    _, section_start, section_end = practice_section_bounds(body)
+    section = body[section_start:section_end]
+    preserved_lines = [line for line in section.splitlines() if not LINK_BULLET.match(line.strip())]
     preserved = "\n".join(preserved_lines).strip("\n")
     new_section = "\n\n" + block
     if preserved.strip():
         new_section += "\n\n" + preserved.strip()
     new_section += "\n\n"
-
-    return body[: heading.end()] + new_section + body[section_end:].lstrip("\n")
+    return body[:section_start] + new_section + body[section_end:].lstrip("\n")
 
 
 def synchronized_module_text(
