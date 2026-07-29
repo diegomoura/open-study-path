@@ -51,6 +51,9 @@ jobs:
       - name: Validate guided lifecycle
         run: python scripts/validate_guided_lifecycle.py 2>&1 | tee guided-validation.log
 
+      - name: Test lifecycle next-action routing
+        run: python scripts/test_lifecycle_next_action.py
+
       - name: Validate efficient generation contract
         run: python scripts/validate_generation_efficiency.py
 
