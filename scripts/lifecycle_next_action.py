@@ -8,8 +8,10 @@ from typing import Any, Mapping
 
 GENERATE_COMMAND = "Crie minha trilha de estudos."
 PUBLISH_COMMAND = "Organize minha trilha nas ferramentas que escolhemos."
+RESUME_PUBLISH_COMMAND = "Continue a organização da minha trilha nas ferramentas que escolhemos."
 EVALUATE_COMMAND_TEMPLATE = "Terminei {lesson_title}. Avalie minhas respostas."
 PUBLISHED_SYNC_STATUSES = {"success", "succeeded", "completed"}
+PARTIAL_SYNC_STATUSES = {"partial", "in_progress"}
 
 
 @dataclass(frozen=True)
@@ -26,14 +28,25 @@ def _status(document: Mapping[str, Any] | None) -> Mapping[str, Any]:
     return value if isinstance(value, Mapping) else {}
 
 
-def publication_complete(integrations: Mapping[str, Any] | None) -> bool:
+def _sync(integrations: Mapping[str, Any] | None) -> Mapping[str, Any]:
     if not isinstance(integrations, Mapping):
-        return False
-    sync = integrations.get("sync", {})
-    if not isinstance(sync, Mapping):
-        return False
+        return {}
+    value = integrations.get("sync", {})
+    return value if isinstance(value, Mapping) else {}
+
+
+def publication_complete(integrations: Mapping[str, Any] | None) -> bool:
+    sync = _sync(integrations)
     status = str(sync.get("status", "")).strip().lower()
     return status in PUBLISHED_SYNC_STATUSES and bool(sync.get("last_success_at"))
+
+
+def publication_has_progress(integrations: Mapping[str, Any] | None) -> bool:
+    if not isinstance(integrations, Mapping):
+        return False
+    sync_status = str(_sync(integrations).get("status", "")).strip().lower()
+    resources = integrations.get("resources", [])
+    return sync_status in PARTIAL_SYNC_STATUSES and isinstance(resources, list) and bool(resources)
 
 
 def resolve_next_action(
@@ -51,6 +64,13 @@ def resolve_next_action(
             phase="generate",
             command=GENERATE_COMMAND,
             reason="curriculum_not_generated",
+        )
+
+    if publication_has_progress(integrations):
+        return NextAction(
+            phase="publish",
+            command=RESUME_PUBLISH_COMMAND,
+            reason="publication_partial",
         )
 
     if not publication_complete(integrations):
