@@ -1,6 +1,6 @@
 # Publish tasks and selected integrations
 
-Use the approved roadmap, topic contracts, ready lessons, integration plan and current state. Publication creates execution and practice projections; it must not rewrite pedagogical content.
+Use the approved roadmap, topic contracts, ready lessons, integration plan and current state. Publication creates execution and practice projections. It must not regenerate or rewrite pedagogical content, but it may synchronize bounded integration-reference blocks whose content is derived deterministically from approved artifacts and durable state.
 
 Read `docs/learner-facing-language.md` before writing task descriptions or the completion response.
 
@@ -127,6 +127,25 @@ Use the selected scheduling provider only as an aid to reserve time. Future cont
 
 When Quizlet is selected and connected, create one real set from each approved current-version local deck. Prefer TSV as the structured source and Markdown as the review reference. Store the external ID and URL, then show only **Praticar no Quizlet** as the flashcard-practice link in the current task. Keep local Markdown and TSV files available inside the lesson and repository as durable alternatives.
 
+After every successful create or reuse operation, persist the resource with topic, `content_version`, URL and `status: success` before projecting the link elsewhere. Do not re-evaluate or regenerate the flashcards: the approved TSV and Markdown deck remain the reviewed content.
+
+### Synchronize lesson practice links
+
+After current-version formative resources are durably recorded, run:
+
+`python scripts/sync_practice_links.py`
+
+The script may change only the block delimited by:
+
+- `<!-- open-study-path:practice-links:start -->`
+- `<!-- open-study-path:practice-links:end -->`
+
+That block lists the current Quizlet set when one exists and always retains the local Markdown and TSV alternatives. The rest of the lesson must remain byte-for-byte unchanged. Older Quizlet sets whose `content_version` does not match the topic must not be linked.
+
+For legacy lessons without markers, the script may migrate only the link list inside `## Pratique e revise` and add the markers. It must preserve the surrounding explanation and every other section.
+
+Run `python scripts/sync_practice_links.py --check` after synchronization. A current successful Quizlet set missing from its lesson, a stale external link, malformed markers or any further pending change blocks publication success.
+
 When useful decks exist but Quizlet is not connected, render one nonblocking connection suggestion through Plugin Management. Use natural copy:
 
 > Os flashcards já estão disponíveis na aula. Conectar o Quizlet acrescenta um modo interativo de praticar.
@@ -173,11 +192,13 @@ Use human labels in visible resources. Keep provider authority, preflight, fallb
 
 Inspect `state/integrations.json` and matching provider resources before writing. Reuse or update exact resources when supported. Store capability, provider, safe ID, URL, topic, content version, authority, sync status and timestamp. Never persist credentials, tokens, OAuth details, raw submissions or unnecessary identity data.
 
+Practice-link synchronization is idempotent. Re-running it with unchanged topic versions and integration state must produce no diff. When a topic version changes, the old external link is removed until a successful resource for the new version is recorded.
+
 ## Persist publication completion
 
-The lifecycle may advance to evaluation only after publication state is durably recorded.
+The lifecycle may advance to evaluation only after publication state is durably recorded and learner-facing practice links are synchronized.
 
-After the complete required publication set succeeds and all created or reused resources are represented in `state/integrations.json`:
+After the complete required publication set succeeds, all created or reused resources are represented in `state/integrations.json`, and `python scripts/sync_practice_links.py --check` passes:
 
 - set `sync.status` to `success`;
 - set `sync.last_success_at` to the current ISO 8601 timestamp;
@@ -186,7 +207,7 @@ After the complete required publication set succeeds and all created or reused r
 
 A Markdown or GitHub-native task backend still completes the publication phase; record the same successful sync state after its repository-native projection is ready.
 
-When required publication is blocked, failed, partial or still in progress:
+When required publication is blocked, failed, partial, still in progress or practice links are out of sync:
 
 - do not set a success status or `last_success_at`;
 - persist the accurate non-success status and a short non-sensitive reason;
