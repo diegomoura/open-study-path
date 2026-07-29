@@ -108,7 +108,7 @@ def render_practice_block(
 
 
 def practice_section_bounds(body: str) -> tuple[int, int, int]:
-    heading = re.search(r"^## Pratique e revise\s*$", body, re.MULTILINE)
+    heading = re.search(r"^## Pratique e revise[ \t]*$", body, re.MULTILINE)
     if heading is None:
         raise ValueError(f"missing section: {PRACTICE_HEADING}")
     next_heading = re.search(r"^##\s+", body[heading.end() :], re.MULTILINE)
