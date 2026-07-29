@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Validate learner-facing language, task projections, metadata-free lessons, flashcards and sources."""
+"""Validate learner-facing language, progressive lessons, flashcards and sources."""
 
 from __future__ import annotations
 
@@ -9,6 +9,8 @@ from pathlib import Path
 from typing import Any
 
 import yaml
+
+from beginner_pedagogy import validate_module_pedagogy
 
 ROOT = Path(__file__).resolve().parents[1]
 INSTANCE = ROOT / ".open-study-path/instance.yml"
@@ -68,6 +70,12 @@ def validate_contracts() -> None:
         fail("lesson template must not expose YAML frontmatter")
     require_terms("templates/module.md", [
         "Não adicione frontmatter YAML a este arquivo",
+        "## Começando do zero",
+        "### Vocabulário desta aula",
+        "## Intuição antes dos detalhes",
+        "**Analogia:**",
+        "**Onde a analogia deixa de funcionar:**",
+        "**Exemplo concreto:**",
         "flashcards_study: study/flashcards/TOPIC-000.md",
         "<details>",
         "issues/new?template=assessment-topic-000.yml",
@@ -90,6 +98,17 @@ def validate_contracts() -> None:
         "Preenchi o formulário. Pode continuar.",
         "Organize minha trilha nas ferramentas que escolhemos.",
     ])
+    require_terms("instructions/30-generate-path.md", [
+        "docs/beginner-first-pedagogy.md",
+        "experience in an adjacent domain",
+        "first learner-visible occurrence",
+        "analogy with an explicit limit",
+    ])
+    require_terms("instructions/35-review-curriculum.md", [
+        "declared subject level",
+        "title acronym",
+        "realistic teaching scenario",
+    ])
     require_terms("instructions/40-publish-tasks.md", [
         "One primary resource per capability",
         "one current practice link",
@@ -109,6 +128,13 @@ def validate_contracts() -> None:
         "contratos internos em `study/topics/`",
         "Terminei <título da aula>. Avalie minhas respostas.",
     ])
+    require_terms("docs/beginner-first-pedagogy.md", [
+        "Nível é multidimensional",
+        "Progressão conceitual",
+        "Analogias com limites explícitos",
+        "cenário realista criado para ensino",
+        "Nunca interprete uma lista de assuntos desejados como conhecimento prévio",
+    ])
     require_terms("templates/chatgpt-project-instructions.md", [
         "not an inventory of repository artifacts",
         "one primary practice link available now",
@@ -117,12 +143,15 @@ def validate_contracts() -> None:
     require_terms("AGENTS.md", [
         "A task backend is not a repository inventory",
         "Do not link topic contracts, rubric YAML, state files or synchronization records",
+        "Read `docs/beginner-first-pedagogy.md`",
     ])
     require_terms("docs/content-quality-and-sources.md", [
         "no mínimo três fontes",
         "Antes de citar",
         "Vídeos",
         "Cursos e plataformas",
+        "Analogia não é evidência",
+        "cenário realista",
     ])
 
     if not (ROOT / "templates/flashcards.md").is_file():
@@ -166,6 +195,10 @@ def validate_generated_modules() -> None:
             fail(f"topic contract identity is incomplete for {topic_id}")
         if not re.search(rf"^#\s+(?:\d+\.\s+|{re.escape(topic_id)}\s+[—-]\s+)?{re.escape(title)}\s*$", body, re.MULTILINE):
             fail(f"module {topic_id} must begin with its learner-facing title")
+
+        difficulty = str(metadata.get("difficulty", ""))
+        for error in validate_module_pedagogy(title, body, difficulty):
+            fail(f"module {topic_id} {error}")
 
         suffix = topic_id.split("-")[-1].lower()
         form_name = f"assessment-topic-{suffix}.yml"
@@ -218,7 +251,7 @@ def validate_generated_modules() -> None:
 def main() -> None:
     validate_contracts()
     validate_generated_modules()
-    print("Natural learner language, metadata-free lessons, concise task projections, sources, assessments and flashcards passed.")
+    print("Progressive learner language, metadata-free lessons, sources, assessments and flashcards passed.")
 
 
 if __name__ == "__main__":
