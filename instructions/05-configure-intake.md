@@ -20,26 +20,31 @@ Do not silently select Jotform or create external resources without the owner's 
 2. Read the exact repository identity from `.open-study-path/instance.yml`.
 3. Confirm the form contains the current hidden identity marker:
 
-   `<!-- open-study-path:intake form_id=create-study-path version=2 -->`
+   `<!-- open-study-path:intake form_id=create-study-path version=3 -->`
 
-4. Verify repository labels `study-request` and `intake:imported` exist. Create only missing labels through the GitHub labels API or run **Prepare ChatGPT Project Instructions**, which invokes `scripts/ensure_repository_labels.py`. Read the labels again after provisioning.
-5. Configure the GitHub Issue Form as ready with deterministic submission lookup only after the marker and both labels are verified.
-6. Build the direct URL:
+4. Confirm the form does not prefill the native issue title and that its first visible instructions explain: use **Add a title** for the course name. GitHub requires that title before submission; the form must not ask for the name a second time.
+5. Verify repository labels `study-request` and `intake:imported` exist. Create only missing labels through the GitHub labels API or run **Prepare ChatGPT Project Instructions**, which invokes `scripts/ensure_repository_labels.py`. Read the labels again after provisioning.
+6. Configure the GitHub Issue Form as ready with deterministic submission lookup only after the marker, title guidance and both labels are verified.
+7. Build the direct URL:
 
    `https://github.com/OWNER/REPOSITORY/issues/new?template=create-study-path.yml`
 
-7. Return it as a direct clickable link with a human label such as **Preencher meu formulário**.
-8. Stop after setup and use the natural command:
+8. Return it as a direct clickable link with a human label such as **Preencher meu formulário**.
+9. Stop after setup and use the natural command:
 
    `Preenchi o formulário. Pode continuar.`
 
 The form is inherited reusable infrastructure. Do not edit, recreate or replace it during normal instance setup. Configure only the instance marker and `study.config.yml` unless a verified template defect requires a separate canonical-template fix.
 
-Do not mark setup or intake ready when label existence or the current marker cannot be verified. Do not create or submit an issue, import answers, run the diagnostic or generate curriculum during setup. Do not require an issue number.
+Do not mark setup or intake ready when label existence, title guidance or the current marker cannot be verified. Do not create or submit an issue, import answers, run the diagnostic or generate curriculum during setup. Do not require an issue number.
 
 ### Compatibility
 
-Continue accepting these older forms:
+Continue accepting older forms, including the supported marker:
+
+`<!-- open-study-path:intake form_id=create-study-path version=2 -->`
+
+Also continue accepting:
 
 - `Enviei o formulário. Localize e importe a única submissão válida.`
 - `Enviei o formulário. Localize e importe a única submissão válida. Conclua e valide esta etapa; depois, inicie o diagnóstico proporcional com perguntas curtas, uma por vez.`
@@ -79,4 +84,4 @@ Validate the complete setup diff and required checks for the current head. Do no
 
 Complete with `instructions/phase-completion.md`. Return the selected form or configuration path and make the next human action unmistakable.
 
-<!-- Compatibility markers: direct clickable link; explicit_issue; explicit issue number remains accepted; Do not require the owner to copy an issue number. -->
+<!-- Compatibility markers: direct clickable link; explicit_issue; explicit issue number remains accepted; Do not require the owner to copy an issue number; older forms. -->
