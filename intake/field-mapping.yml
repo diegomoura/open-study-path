@@ -1,6 +1,17 @@
 version: 2
 spec_id: open-study-path-intake
 
+github_issue:
+  current_form_version: 3
+  current_mappings:
+    issue_title: path.name
+  compatible_versions:
+    2:
+      path_name: path.name
+      title_prefixes:
+        - "[Nova trilha]"
+        - "[Study Path]:"
+
 mappings:
   path_name: path.name
   subject: path.subject

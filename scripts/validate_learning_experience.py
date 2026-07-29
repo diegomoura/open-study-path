@@ -169,8 +169,10 @@ def validate_contracts() -> None:
             fail(f"assessment form exposes internal mechanics: {forbidden}")
 
     intake = load_yaml(".github/ISSUE_TEMPLATE/create-study-path.yml")
-    if intake.get("title") != "[Nova trilha] ":
-        fail("intake title must use human new-path language")
+    if intake.get("name") != "Criar meu curso":
+        fail("intake form must use learner-facing course language")
+    if intake.get("title") not in (None, ""):
+        fail("intake issue title must be entered by the learner as the course name")
 
 
 def validate_generated_modules() -> None:

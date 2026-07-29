@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Validate marker-first intake discovery and natural learner commands."""
+"""Validate marker-first intake discovery and course-title semantics."""
 
 from __future__ import annotations
 
@@ -9,12 +9,10 @@ from typing import Any
 
 import yaml
 
-from intake_resolution import CURRENT_MARKER
+from intake_resolution import CURRENT_MARKER, VERSION_2_MARKER
 
 ROOT = Path(__file__).resolve().parents[1]
 NATURAL_COMMAND = "Preenchi o formulário. Pode continuar."
-LEGACY_PREFIX = "[Study Path]:"
-CURRENT_PREFIX = "[Nova trilha]"
 
 
 def fail(message: str) -> None:
@@ -44,6 +42,9 @@ def main() -> None:
     require("instructions/05-configure-intake.md", [
         "https://github.com/OWNER/REPOSITORY/issues/new?template=create-study-path.yml",
         CURRENT_MARKER,
+        VERSION_2_MARKER,
+        "Add a title",
+        "course name",
         "study-request",
         "intake:imported",
         "Do not require an issue number",
@@ -52,10 +53,12 @@ def main() -> None:
     require("instructions/10-intake.md", [
         "scripts/intake_resolution.py",
         CURRENT_MARKER,
-        CURRENT_PREFIX,
-        LEGACY_PREFIX,
+        VERSION_2_MARKER,
+        "issue title",
+        "`issue_title`",
+        "`path.name`",
+        "Do not rewrite the issue title",
         "Matching headings alone",
-        "repairable consistency signals",
         "unsupported",
         "exactly one valid candidate",
         "When none remain",
@@ -73,25 +76,45 @@ def main() -> None:
     ])
     require("templates/chatgpt-project-instructions.md", [
         NATURAL_COMMAND,
+        "course name comes from the issue title",
         "Ask for an issue number only when multiple valid candidates remain",
         "Internal review, correction, CI, safe merge",
     ])
     require("AGENTS.md", [
-        "current intake marker",
+        "course name comes from the issue title",
         "legacy submissions",
         "Matching headings alone",
     ])
 
     issue_form = load_yaml(".github/ISSUE_TEMPLATE/create-study-path.yml")
-    if issue_form.get("title") != "[Nova trilha] ":
-        fail("new intake form must use the human title prefix")
+    if issue_form.get("name") != "Criar meu curso":
+        fail("new intake form must use learner-facing course language")
+    if issue_form.get("title") not in (None, ""):
+        fail("the native issue title must not be prefilled")
+    issue_blocks = [block for block in issue_form.get("body", []) if isinstance(block, dict)]
+    if any(block.get("id") == "path_name" for block in issue_blocks):
+        fail("GitHub Issue Form must not duplicate the course name in path_name")
     markdown = "\n".join(
         str(block.get("attributes", {}).get("value", ""))
-        for block in issue_form.get("body", [])
-        if isinstance(block, dict) and block.get("type") == "markdown"
+        for block in issue_blocks
+        if block.get("type") == "markdown"
     )
     if markdown.count(CURRENT_MARKER) != 1:
         fail("intake Issue Form must contain exactly one current hidden marker")
+    for term in ["Add a title", "nome do curso", "Esse campo é obrigatório"]:
+        if term not in markdown:
+            fail(f"intake title guidance is missing: {term}")
+
+    mapping = load_yaml("intake/field-mapping.yml")
+    github_issue = mapping.get("github_issue", {})
+    if github_issue.get("current_form_version") != 3:
+        fail("GitHub intake mapping must identify form version 3")
+    if github_issue.get("current_mappings", {}).get("issue_title") != "path.name":
+        fail("GitHub issue title must map to path.name")
+    compatibility = github_issue.get("compatible_versions", {})
+    version_2 = compatibility.get(2) or compatibility.get("2") or {}
+    if version_2.get("path_name") != "path.name":
+        fail("version 2 path_name compatibility mapping is missing")
 
     for path in [
         "scripts/intake_resolution.py",
@@ -122,7 +145,7 @@ def main() -> None:
     if intake.get("stop_after_phase") is not True:
         fail("intake must stop by default when chaining was not requested")
 
-    print("Marker-first deterministic intake resolution and diagnostic chaining passed.")
+    print("Marker-first intake resolution and course-title semantics passed.")
 
 
 if __name__ == "__main__":

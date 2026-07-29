@@ -18,7 +18,7 @@ During first-chat setup, also read `instructions/02-setup-execution.md`. Reposit
 
 A configured instance keeps `.open-study-path/template.yml` and adds `.open-study-path/instance.yml`; the instance marker takes precedence. Never remove reusable workflows, validators, schemas, templates, instructions or documentation during normal setup.
 
-Before reporting GitHub intake ready, verify the form contains the current intake marker and labels `study-request` and `intake:imported` exist. Provision missing labels through the inherited setup workflow or GitHub labels API. During import, use `scripts/intake_resolution.py`: current marked submissions may repair title and discovery label only after unique selection; legacy submissions require every legacy signal, and matching headings alone are never enough.
+Before reporting GitHub intake ready, verify the form contains the current intake marker, explains that the course name comes from the issue title and labels `study-request` and `intake:imported` exist. Provision missing labels through the inherited setup workflow or GitHub labels API. During import, use `scripts/intake_resolution.py`: current version 3 submissions preserve the issue title as `path.name` and may repair only the discovery label after unique selection; compatible version 2 and legacy submissions require their documented signals, and matching headings alone are never enough.
 
 ## Experience for the person
 
