@@ -116,7 +116,14 @@ Quando o tópico tiver definições, comandos, fórmulas, classificações, comp
 - gere o TSV com colunas `Front`, `Back` e `Tags`;
 - gere o Markdown com cartões expansíveis usando `<details>` e `<summary>`.
 
-Dentro da aula, mantenha as alternativas duráveis: **Estudar os flashcards no GitHub**, **Baixar ou importar o TSV** e, quando existir um conjunto real, **Praticar no Quizlet**. A pessoa pode escolher o formato que melhor ajuda.
+Mantenha os links de prática dentro do bloco delimitado abaixo. A geração inicial inclui as alternativas locais. Depois da publicação, `scripts/sync_practice_links.py` acrescenta ou remove somente o link externo correspondente à versão atual.
+
+<!-- open-study-path:practice-links:start -->
+- [Estudar os flashcards no GitHub](../flashcards/TOPIC-000.md)
+- [Baixar ou importar o TSV](../flashcards/TOPIC-000.tsv)
+<!-- open-study-path:practice-links:end -->
+
+Dentro da aula, mantenha as alternativas duráveis e, quando existir um conjunto real da versão atual, **Praticar no Quizlet**. A pessoa pode escolher o formato que melhor ajuda.
 
 A ferramenta de tarefas não deve repetir todos esses links. Conforme `instructions/40-publish-tasks.md`, o cartão mostra somente um recurso principal de prática: Quizlet quando o conjunto atual existe; Markdown quando o recurso externo não está disponível; TSV apenas quando importação é a ação pretendida.
 
