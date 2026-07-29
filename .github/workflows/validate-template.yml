@@ -63,11 +63,17 @@ jobs:
       - name: Test beginner-first pedagogy
         run: python scripts/test_beginner_pedagogy.py
 
+      - name: Test practice-link synchronization
+        run: python scripts/test_practice_link_sync.py
+
       - name: Validate efficient generation contract
         run: python scripts/validate_generation_efficiency.py
 
       - name: Validate learner-facing study experience
         run: python scripts/validate_learning_experience.py
+
+      - name: Validate practice-link synchronization
+        run: python scripts/validate_practice_link_sync.py
 
       - name: Test automatic Project Instructions rendering
         run: python scripts/test_render_project_instructions.py
