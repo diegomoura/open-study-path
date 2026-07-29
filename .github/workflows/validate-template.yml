@@ -54,6 +54,12 @@ jobs:
       - name: Test lifecycle next-action routing
         run: python scripts/test_lifecycle_next_action.py
 
+      - name: Validate topic-first planning and publication safety
+        run: python scripts/validate_planning_publication_safety.py
+
+      - name: Test topic-first planning and publication safety
+        run: python scripts/test_planning_publication_safety.py
+
       - name: Validate efficient generation contract
         run: python scripts/validate_generation_efficiency.py
 

@@ -16,13 +16,13 @@ A GitHub intake is ready only when the form contains the current intake marker a
 
 ## Guided lifecycle
 
-Read `instructions/manifest.yml`, `instructions/phase-completion.md` and `docs/learner-facing-language.md` before lifecycle work.
+Read `instructions/manifest.yml`, `instructions/phase-completion.md`, `instructions/31-topic-first-safe-publication.md` and `docs/learner-facing-language.md` before lifecycle work.
 
 Internal validation, review, correction, safe merge and rolling materialization belong to the active operation. Complete them before responding.
 
 The learner-facing response describes what is ready, where to go and what to do next. Do not lead with PR, CI, hashes, branches, changed files or internal classifications after success. Technical details remain in GitHub and are surfaced only when requested or required to resolve a blocker.
 
-Resolve the next learner command from persisted state with `scripts/lifecycle_next_action.py`. Curriculum generation does not authorize evaluation while publication remains incomplete. When `state/integrations.json.sync.status` is absent, `not_started`, pending, partial, blocked or failed, present `Organize minha trilha nas ferramentas que escolhemos.` and do not present an evaluation command.
+Resolve the next learner command from persisted state with `scripts/lifecycle_next_action.py`. Curriculum generation does not authorize evaluation while publication remains incomplete. A recorded partial publication must return the resume command produced by that resolver and reuse every recorded external resource.
 
 When the agent itself suggested `sem publicar tarefas ainda`, that phrase is a one-operation safety deferral. The agent must restore publication as the next visible action after generation; never treat its own suggestion as a learner decision to skip integrations.
 
@@ -44,6 +44,8 @@ Initial generation creates the complete roadmap, every topic overview and an int
 A small course may prepare every lesson. A larger course prepares the configured lookahead and automatically creates future lessons as verified progress advances.
 
 Keep internal `planned` and `materialized` values in metadata. In visible copy use “aula futura” and “aula pronta”. Do not expose rolling-window, topological-order or generation-threshold terminology unless technical details are requested.
+
+Read `instructions/31-topic-first-safe-publication.md` before generating or revising a roadmap. `planning.unit: topic` is authoritative. Weekly availability is capacity, not a course structure. Without an explicit request for a calendar projection, do not create fixed durations in weeks, week-numbered groups or weekly roadmap tables. Show total effort, effort per topic, prerequisites and flexible pace instead.
 
 ## Granularity and teaching quality
 
@@ -86,7 +88,7 @@ GitHub stores curriculum, lessons, assessments and verified progress. Exactly on
 - Airtable remains a `github_to_airtable` projection.
 - Coursera, edX, Udemy, Khan Academy, YouTube and other media sources must point to precise useful lessons, sections, exercises or timestamps.
 
-Optional providers never block the GitHub/Markdown path. Before external writes, run `instructions/42-integration-preflight.md`. Store only safe external identifiers and synchronization metadata.
+Optional providers never block the GitHub/Markdown path. Before external writes, run `instructions/42-integration-preflight.md` and `instructions/31-topic-first-safe-publication.md`. Store only safe external identifiers and synchronization metadata.
 
 ## Repository execution and review
 
@@ -100,9 +102,9 @@ Do not require a fixed “PR approved and merged” sentence in chat. Link a PR 
 
 ## Publication and task language
 
-Read `instructions/40-publish-tasks.md` and `instructions/42-integration-preflight.md`.
+Read `instructions/40-publish-tasks.md`, `instructions/42-integration-preflight.md` and `instructions/31-topic-first-safe-publication.md`.
 
-Create one task per topic. Use human titles such as `1. Agência sem garantia`, not `[TOPIC-001]`, unless technical IDs were requested.
+Create one task per topic. Use human titles such as `1. Agência sem garantia`, not `[TOPIC-001]`, unless technical IDs were requested. Do not organize Trello by week unless the learner explicitly requested an optional calendar projection.
 
 A ready card says what the learner will do, how long it may take, where the lesson, primary practice and assessment are, what to produce and how to finish. A future card summarizes the stage and says that the lesson will be prepared automatically after prerequisites.
 
@@ -110,12 +112,15 @@ A task backend is not a repository inventory. Show one primary learner-facing re
 
 Do not repeat “source of truth”, “authority”, `planned`, `materialized`, preflight or synchronization language in every card.
 
+Never create disposable external probe resources. Before the first write, verify that all required operations for the intended board, lists, cards and checklists are exposed. Persist every successful external write before starting the next one. If a write creates an unexpected resource, stop exploratory writes, record it and clean it up when the connector supports safe cleanup.
+
 Natural commands presented to the learner, in lifecycle order:
 
 - `Preenchi o formulário. Pode continuar.`
 - `Vamos fazer meu diagnóstico.`
 - `Crie minha trilha de estudos.`
 - `Organize minha trilha nas ferramentas que escolhemos.`
+- `Continue a organização da minha trilha nas ferramentas que escolhemos.`
 - `Conectei o Quizlet. Crie meus flashcards.`
 - `Terminei <título da aula>. Avalie minhas respostas.`
 - `Terminei a revisão de <título da aula>.`
