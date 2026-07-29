@@ -122,7 +122,7 @@ A ferramenta de tarefas não deve repetir todos esses links. Conforme `instructi
 
 Explique uma única vez, em linguagem natural: os flashcards ajudam a praticar; a etapa é concluída pela avaliação.
 
-Quando flashcards não forem úteis, mantenha os campos do contrato como `null` e explique qual prática substitui a memorização.
+Quando flashcards não forem úteis, mantenha `flashcards: null` e `flashcards_study: null` no contrato e explique qual prática substitui a memorização.
 
 ## Outras formas de aprender
 
