@@ -163,6 +163,18 @@ def file_sha256(path: Path) -> str:
     return sha256(path.read_bytes()).hexdigest()
 
 
+def base_file_sha256(root: Path, base_sha: str, relative_path: str) -> str | None:
+    completed = subprocess.run(
+        ["git", "show", f"{base_sha}:{relative_path}"],
+        cwd=root,
+        check=False,
+        capture_output=True,
+    )
+    if completed.returncode != 0:
+        return None
+    return sha256(completed.stdout).hexdigest()
+
+
 def is_review_path(path: str) -> bool:
     normalized = normalize_path(path)
     return normalized.startswith(REVIEW_PATH_PREFIX) and normalized.endswith((".yml", ".yaml"))
@@ -211,7 +223,12 @@ def changed_files(root: Path, base_sha: str | None, head_sha: str = "HEAD") -> t
     )
 
 
-def validate_review_document(root: Path, relative_path: str) -> ReviewValidation:
+def validate_review_document(
+    root: Path,
+    relative_path: str,
+    *,
+    base_sha: str | None = None,
+) -> ReviewValidation:
     path = root / relative_path
     errors: list[str] = []
     if not path.is_file():
@@ -274,8 +291,12 @@ def validate_review_document(root: Path, relative_path: str) -> ReviewValidation
         if not isinstance(entry, dict):
             errors.append(f"{relative_path} artifact #{index + 1} must be an object")
             continue
+
         artifact_path = normalize_path(str(entry.get("path") or ""))
+        change = str(entry.get("change") or "current").strip().lower()
         digest = str(entry.get("sha256") or "").strip().lower()
+        previous_digest = str(entry.get("previous_sha256") or "").strip().lower()
+
         if not artifact_path:
             errors.append(f"{relative_path} artifact #{index + 1} is missing path")
             continue
@@ -286,7 +307,35 @@ def validate_review_document(root: Path, relative_path: str) -> ReviewValidation
         if is_review_path(artifact_path):
             errors.append(f"{relative_path} cannot review itself or another generic review artifact: {artifact_path}")
             continue
+
         target = root / artifact_path
+
+        if change == "deleted":
+            if target.exists():
+                errors.append(f"{relative_path} marks an existing artifact as deleted: {artifact_path}")
+                continue
+            if not _SHA256.fullmatch(previous_digest):
+                errors.append(f"{relative_path} has invalid previous_sha256 for deleted artifact {artifact_path}")
+                continue
+            if not base_sha:
+                errors.append(f"{relative_path} cannot verify deleted artifact without REVIEW_BASE_SHA: {artifact_path}")
+                continue
+            actual_previous = base_file_sha256(root, base_sha, artifact_path)
+            if actual_previous is None:
+                errors.append(f"{relative_path} cannot find deleted artifact in review base: {artifact_path}")
+                continue
+            if actual_previous != previous_digest:
+                errors.append(
+                    f"{relative_path} has stale deletion evidence for {artifact_path}: "
+                    f"expected {actual_previous}, recorded {previous_digest}"
+                )
+                continue
+            covered.append(artifact_path)
+            continue
+
+        if change != "current":
+            errors.append(f"{relative_path} has invalid change type for {artifact_path}: {change}")
+            continue
         if not target.is_file():
             errors.append(f"{relative_path} references missing artifact: {artifact_path}")
             continue
@@ -302,7 +351,13 @@ def validate_review_document(root: Path, relative_path: str) -> ReviewValidation
     return ReviewValidation(relative_path, phase, tuple(sorted(covered)), tuple(errors))
 
 
-def validate_changed_coverage(root: Path, paths: Iterable[str], *, instance_mode: bool) -> CoverageValidation:
+def validate_changed_coverage(
+    root: Path,
+    paths: Iterable[str],
+    *,
+    instance_mode: bool,
+    base_sha: str | None = None,
+) -> CoverageValidation:
     normalized_paths = tuple(sorted({normalize_path(path) for path in paths}))
     changed_reviews = tuple(path for path in normalized_paths if is_review_path(path))
     generated = tuple(path for path in normalized_paths if is_generated_artifact(path)) if instance_mode else ()
@@ -310,7 +365,7 @@ def validate_changed_coverage(root: Path, paths: Iterable[str], *, instance_mode
     errors: list[str] = []
     covered: set[str] = set()
     for review_path in changed_reviews:
-        result = validate_review_document(root, review_path)
+        result = validate_review_document(root, review_path, base_sha=base_sha)
         errors.extend(result.errors)
         covered.update(result.covered_artifacts)
 
@@ -333,4 +388,9 @@ def validate_current_pr(root: Path, base_sha: str | None = None) -> CoverageVali
     resolved_base = base_sha or os.getenv("REVIEW_BASE_SHA") or None
     paths = changed_files(root, resolved_base)
     instance_mode = (root / INSTANCE_MARKER).is_file()
-    return validate_changed_coverage(root, paths, instance_mode=instance_mode)
+    return validate_changed_coverage(
+        root,
+        paths,
+        instance_mode=instance_mode,
+        base_sha=resolved_base,
+    )
