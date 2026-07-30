@@ -24,8 +24,8 @@
       "required": ["subject", "learning_request"],
       "properties": {
         "name": {"type": ["string", "null"]},
-        "subject": {"type": "string", "minLength": 1, "maxLength": 120},
-        "learning_request": {"type": "string", "minLength": 1},
+        "subject": {"type": "string", "maxLength": 120},
+        "learning_request": {"type": "string"},
         "objective": {"type": ["string", "null"]},
         "desired_outcome": {"type": ["string", "null"]},
         "motivation": {"type": ["string", "null"]},
