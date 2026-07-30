@@ -13,7 +13,7 @@ import yaml
 
 ROOT = Path(__file__).resolve().parents[1]
 SETUP_EXECUTION = "instructions/02-setup-execution.md"
-CURRENT_INTAKE_MARKER = "<!-- open-study-path:intake form_id=create-study-path version=2 -->"
+CURRENT_INTAKE_MARKER = "<!-- open-study-path:intake form_id=create-study-path version=4 -->"
 
 
 def fail(message: str) -> None:
