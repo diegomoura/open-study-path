@@ -53,11 +53,13 @@ Do not link internal topic contracts under `study/topics/`, rubric YAML files un
 
 ### Human card titles
 
-Prefer:
+Prefer the learner-facing lesson title without a numeric prefix:
 
-`1. <título da aula>`
+`<título da aula>`
 
-Do not use `[TOPIC-001]` in the visible title unless the learner explicitly prefers technical IDs. Keep the topic ID in state and links.
+A dependency graph may branch, so `9. <título>` can falsely suggest that card 8 is the required previous lesson. Keep the stable topic ID and roadmap position in state. Use `Etapa <n> · <título>` only when the course is genuinely linear or the learner explicitly prefers numbering.
+
+Do not use `[TOPIC-001]` in the visible title unless the learner explicitly prefers technical IDs.
 
 ### Ready lesson card
 
@@ -88,15 +90,21 @@ Create a checklist named **Sua sessão de estudo** using the three to seven gran
 
 ### Future lesson card
 
+Build this copy from the topic contract's **direct prerequisites**, never from numeric adjacency or from every lower-numbered topic.
+
 Use:
 
-> **Esta etapa vem depois de <pré-requisitos em linguagem simples>.**
+> **Pré-requisitos desta etapa:** <títulos dos pré-requisitos diretos em linguagem simples>.
+>
+> Siga esta lista de pré-requisitos, não apenas a numeração dos cartões.
 >
 > **O que você vai aprender:** <objetivo>  
 > **Tempo sugerido:** <estimativa>  
 > **O que você vai produzir:** <entregável>
 >
-> A aula completa será preparada automaticamente quando você concluir as etapas anteriores. Você não precisa pedir a geração manualmente.
+> A aula completa será preparada automaticamente quando todos os pré-requisitos acima estiverem concluídos. Você não precisa pedir a geração manualmente.
+
+When there are no prerequisites, say that the stage is an entry point. When there is one prerequisite, name it directly. When there are multiple prerequisites from different branches, list all of them and do not imply that the numerically previous card contains their combined content.
 
 The future card must stand on its own. Do not link the internal topic contract merely to provide a destination. Link a roadmap only when it genuinely helps the learner understand the wider sequence. Do not attach nonexistent module, rubric, flashcard or assessment links. Do not use `planned`, `materialized`, “janela ativa” or “ordem topológica” in learner copy.
 
@@ -118,6 +126,19 @@ Use “Revisão necessária” in visible copy instead of “Recuperação” wh
 ### Todoist or GitHub Issues
 
 When another task backend is selected, preserve the same human structure and projection rules. Todoist reminders may be auxiliary only and must point to the primary task or lesson.
+
+### Task projection review
+
+Before publication success, review every created or updated task against the approved topic contract:
+
+- visible title matches the topic title;
+- objective, effort and deliverable match;
+- prerequisite copy contains exactly the direct prerequisite titles;
+- no wording assumes a linear previous card when the graph branches;
+- ready status comes from satisfied dependencies;
+- links point to the current reviewed content version.
+
+Read the external task back when the connector exposes a harmless read. Correct mismatches before continuing. Persist the direct prerequisite IDs with the task resource so later synchronization can detect drift. This projection review does not replace `instructions/36-review-course-content.md`; it verifies that the reviewed course was represented correctly outside GitHub.
 
 ## Scheduling
 
@@ -190,13 +211,13 @@ Use human labels in visible resources. Keep provider authority, preflight, fallb
 
 ## Idempotency and state
 
-Inspect `state/integrations.json` and matching provider resources before writing. Reuse or update exact resources when supported. Store capability, provider, safe ID, URL, topic, content version, authority, sync status and timestamp. Never persist credentials, tokens, OAuth details, raw submissions or unnecessary identity data.
+Inspect `state/integrations.json` and matching provider resources before writing. Reuse or update exact resources when supported. Store capability, provider, safe ID, URL, topic, content version, direct prerequisite IDs, authority, sync status and timestamp. Never persist credentials, tokens, OAuth details, raw submissions or unnecessary identity data.
 
 Practice-link synchronization is idempotent. Re-running it with unchanged topic versions and integration state must produce no diff. When a topic version changes, the old external link is removed until a successful resource for the new version is recorded.
 
 ## Persist publication completion
 
-The lifecycle may advance to evaluation only after publication state is durably recorded and learner-facing practice links are synchronized.
+The lifecycle may advance to evaluation only after publication state is durably recorded, learner-facing practice links are synchronized and task projection review has no blocking mismatch.
 
 After the complete required publication set succeeds, all created or reused resources are represented in `state/integrations.json`, and `python scripts/sync_practice_links.py --check` passes:
 
@@ -207,7 +228,7 @@ After the complete required publication set succeeds, all created or reused reso
 
 A Markdown or GitHub-native task backend still completes the publication phase; record the same successful sync state after its repository-native projection is ready.
 
-When required publication is blocked, failed, partial, still in progress or practice links are out of sync:
+When required publication is blocked, failed, partial, still in progress, task projection is inconsistent or practice links are out of sync:
 
 - do not set a success status or `last_success_at`;
 - persist the accurate non-success status and a short non-sensitive reason;
