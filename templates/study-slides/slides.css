@@ -146,6 +146,7 @@ p, li { font-size: clamp(20px, 2vw, 32px); line-height: 1.35; }
   .osp-slide, .osp-slide.is-active {
     display: flex !important;
     flex-direction: column;
+    flex-shrink: 0;
     justify-content: center;
     width: 1279px;
     min-width: 1279px;
@@ -156,8 +157,10 @@ p, li { font-size: clamp(20px, 2vw, 32px); line-height: 1.35; }
     margin: 0;
     break-before: auto;
     break-after: auto;
+    break-inside: avoid-page;
     page-break-before: auto;
     page-break-after: auto;
+    page-break-inside: avoid;
     box-shadow: none;
   }
   .osp-slide + .osp-slide {
