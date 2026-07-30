@@ -54,6 +54,12 @@ jobs:
       - name: Test lifecycle next-action routing
         run: python scripts/test_lifecycle_next_action.py
 
+      - name: Test selected integration resolution
+        run: python scripts/test_integration_resolution.py
+
+      - name: Validate selected integration resolution
+        run: python scripts/validate_integration_resolution.py
+
       - name: Validate topic-first planning and publication safety
         run: python scripts/validate_planning_publication_safety.py
 
