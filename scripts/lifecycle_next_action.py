@@ -11,7 +11,7 @@ PUBLISH_COMMAND = "Organize minha trilha nas ferramentas que escolhemos."
 RESUME_PUBLISH_COMMAND = "Continue a organização da minha trilha nas ferramentas que escolhemos."
 EVALUATE_COMMAND_TEMPLATE = "Terminei {lesson_title}. Avalie minhas respostas."
 PUBLISHED_SYNC_STATUSES = {"success", "succeeded", "completed"}
-PARTIAL_SYNC_STATUSES = {"partial", "in_progress"}
+PARTIAL_SYNC_STATUSES = {"partial", "in_progress", "action_required"}
 
 
 @dataclass(frozen=True)
@@ -35,18 +35,46 @@ def _sync(integrations: Mapping[str, Any] | None) -> Mapping[str, Any]:
     return value if isinstance(value, Mapping) else {}
 
 
+def integration_resolution_complete(integrations: Mapping[str, Any] | None) -> bool:
+    if not isinstance(integrations, Mapping):
+        return False
+    selected = integrations.get("selected_capabilities", {})
+    resolution = integrations.get("resolution")
+    if isinstance(resolution, Mapping):
+        status = str(resolution.get("status", "")).strip().lower()
+        unresolved = resolution.get("unresolved_capabilities", [])
+        return status == "resolved" and isinstance(unresolved, list) and not unresolved
+    # Backward compatibility for old states that never selected external capabilities.
+    return not isinstance(selected, Mapping) or not selected
+
+
 def publication_complete(integrations: Mapping[str, Any] | None) -> bool:
     sync = _sync(integrations)
     status = str(sync.get("status", "")).strip().lower()
-    return status in PUBLISHED_SYNC_STATUSES and bool(sync.get("last_success_at"))
+    return (
+        status in PUBLISHED_SYNC_STATUSES
+        and bool(sync.get("last_success_at"))
+        and integration_resolution_complete(integrations)
+    )
 
 
 def publication_has_progress(integrations: Mapping[str, Any] | None) -> bool:
     if not isinstance(integrations, Mapping):
         return False
     sync_status = str(_sync(integrations).get("status", "")).strip().lower()
+    resolution = integrations.get("resolution", {})
+    resolution_status = (
+        str(resolution.get("status", "")).strip().lower()
+        if isinstance(resolution, Mapping)
+        else ""
+    )
     resources = integrations.get("resources", [])
-    return sync_status in PARTIAL_SYNC_STATUSES and isinstance(resources, list) and bool(resources)
+    has_resources = isinstance(resources, list) and bool(resources)
+    return has_resources and (
+        sync_status in PARTIAL_SYNC_STATUSES
+        or resolution_status == "action_required"
+        or not integration_resolution_complete(integrations)
+    )
 
 
 def resolve_next_action(
@@ -70,7 +98,7 @@ def resolve_next_action(
         return NextAction(
             phase="publish",
             command=RESUME_PUBLISH_COMMAND,
-            reason="publication_partial",
+            reason="publication_partial_or_integration_action_required",
         )
 
     if not publication_complete(integrations):
