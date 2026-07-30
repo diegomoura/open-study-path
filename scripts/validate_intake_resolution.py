@@ -9,7 +9,7 @@ from typing import Any
 
 import yaml
 
-from intake_resolution import CURRENT_MARKER, VERSION_2_MARKER
+from intake_resolution import CURRENT_MARKER, VERSION_2_MARKER, VERSION_3_MARKER
 
 ROOT = Path(__file__).resolve().parents[1]
 NATURAL_COMMAND = "Preenchi o formulário. Pode continuar."
@@ -42,6 +42,7 @@ def main() -> None:
     require("instructions/05-configure-intake.md", [
         "https://github.com/OWNER/REPOSITORY/issues/new?template=create-study-path.yml",
         CURRENT_MARKER,
+        VERSION_3_MARKER,
         VERSION_2_MARKER,
         "Add a title",
         "course name",
@@ -53,6 +54,7 @@ def main() -> None:
     require("instructions/10-intake.md", [
         "scripts/intake_resolution.py",
         CURRENT_MARKER,
+        VERSION_3_MARKER,
         VERSION_2_MARKER,
         "issue title",
         "`issue_title`",
@@ -107,11 +109,14 @@ def main() -> None:
 
     mapping = load_yaml("intake/field-mapping.yml")
     github_issue = mapping.get("github_issue", {})
-    if github_issue.get("current_form_version") != 3:
-        fail("GitHub intake mapping must identify form version 3")
+    if github_issue.get("current_form_version") != 4:
+        fail("GitHub intake mapping must identify form version 4")
     if github_issue.get("current_mappings", {}).get("issue_title") != "path.name":
         fail("GitHub issue title must map to path.name")
     compatibility = github_issue.get("compatible_versions", {})
+    version_3 = compatibility.get(3) or compatibility.get("3") or {}
+    if version_3.get("issue_title") != "path.name":
+        fail("version 3 issue-title compatibility mapping is missing")
     version_2 = compatibility.get(2) or compatibility.get("2") or {}
     if version_2.get("path_name") != "path.name":
         fail("version 2 path_name compatibility mapping is missing")
