@@ -3,7 +3,13 @@
 
 from __future__ import annotations
 
-from intake_resolution import CURRENT_MARKER, VERSION_2_MARKER, IntakeIssue, resolve_candidates
+from intake_resolution import (
+    CURRENT_MARKER,
+    VERSION_2_MARKER,
+    VERSION_3_MARKER,
+    IntakeIssue,
+    resolve_candidates,
+)
 
 HEADINGS = (
     "### O que você quer aprender?",
@@ -43,7 +49,7 @@ def main() -> None:
     current = issue(1, body=f"{CURRENT_MARKER}\n\n{BODY}", labels=())
     resolved = assert_state("unique", current)
     if resolved.accepted[0].mode != "current_marker":
-        raise SystemExit("version 3 issue was not classified as current")
+        raise SystemExit("version 4 issue was not classified as current")
     if set(resolved.accepted[0].repairs) != {"add_study_request_label"}:
         raise SystemExit(f"current candidate repairs changed: {resolved.accepted[0].repairs}")
 
@@ -53,46 +59,51 @@ def main() -> None:
     placeholder_title = issue(3, title="[Nova trilha]", body=f"{CURRENT_MARKER}\n\n{BODY}")
     assert_state("none", placeholder_title)
 
-    compatible = issue(
-        4,
+    compatible_v3 = issue(4, body=f"{VERSION_3_MARKER}\n\n{BODY}")
+    compatible_v3_result = assert_state("unique", compatible_v3)
+    if compatible_v3_result.accepted[0].mode != "compatible_marker_v3":
+        raise SystemExit("version 3 issue was not classified through compatibility mode")
+
+    compatible_v2 = issue(
+        5,
         title="[Nova trilha] Curso antigo",
         body=f"{VERSION_2_MARKER}\n\n### Como gostaria de chamar esta trilha?\n\n{BODY}",
     )
-    compatible_result = assert_state("unique", compatible)
-    if compatible_result.accepted[0].mode != "compatible_marker_v2":
+    compatible_v2_result = assert_state("unique", compatible_v2)
+    if compatible_v2_result.accepted[0].mode != "compatible_marker_v2":
         raise SystemExit("version 2 issue was not classified through compatibility mode")
 
-    headings_only = issue(5, title="Curso sem marcador", labels=())
+    headings_only = issue(6, title="Curso sem marcador", labels=())
     assert_state("none", headings_only)
 
-    legacy = issue(6, title="[Study Path]: IA")
+    legacy = issue(7, title="[Study Path]: IA")
     legacy_result = assert_state("unique", legacy)
     if legacy_result.accepted[0].mode != "legacy_signals":
         raise SystemExit("legacy issue was not classified through legacy signals")
 
     unsupported = issue(
-        7,
+        8,
         body="<!-- open-study-path:intake form_id=create-study-path version=99 -->\n\n" + BODY,
     )
     assert_state("none", unsupported)
 
-    imported_label = issue(8, body=f"{CURRENT_MARKER}\n\n{BODY}", labels=("intake:imported",))
+    imported_label = issue(9, body=f"{CURRENT_MARKER}\n\n{BODY}", labels=("intake:imported",))
     assert_state("none", imported_label)
 
-    pull_request = issue(9, body=f"{CURRENT_MARKER}\n\n{BODY}", is_pull_request=True)
+    pull_request = issue(10, body=f"{CURRENT_MARKER}\n\n{BODY}", is_pull_request=True)
     assert_state("none", pull_request)
 
-    missing_heading = issue(10, body=f"{CURRENT_MARKER}\n\n{HEADINGS[0]}")
+    missing_heading = issue(11, body=f"{CURRENT_MARKER}\n\n{HEADINGS[0]}")
     assert_state("none", missing_heading)
 
-    first = issue(11, body=f"{CURRENT_MARKER}\n\n{BODY}")
-    second = issue(12, body=f"{CURRENT_MARKER}\n\n{BODY}")
+    first = issue(12, body=f"{CURRENT_MARKER}\n\n{BODY}")
+    second = issue(13, body=f"{CURRENT_MARKER}\n\n{BODY}")
     assert_state("ambiguous", first, second)
 
-    recorded = issue(13, body=f"{CURRENT_MARKER}\n\n{BODY}", source_reference="github_issue:13")
-    assert_state("none", recorded, imported=("github_issue:13",))
+    recorded = issue(14, body=f"{CURRENT_MARKER}\n\n{BODY}", source_reference="github_issue:14")
+    assert_state("none", recorded, imported=("github_issue:14",))
 
-    explicit_invalid = issue(14, title="manual", labels=())
+    explicit_invalid = issue(15, title="manual", labels=())
     assert_state("none", explicit_invalid)
 
     print("Deterministic intake resolution regressions passed.")
