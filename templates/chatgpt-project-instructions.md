@@ -18,7 +18,7 @@ During first-chat setup, also read `instructions/02-setup-execution.md`. Reposit
 
 A configured instance keeps `.open-study-path/template.yml` and adds `.open-study-path/instance.yml`; the instance marker takes precedence. Never remove reusable workflows, validators, schemas, templates, instructions or documentation during normal setup.
 
-Before reporting GitHub intake ready, verify the form contains the current intake marker, explains that the course name comes from the issue title and labels `study-request` and `intake:imported` exist. Provision missing labels through the inherited setup workflow or GitHub labels API. During import, use `scripts/intake_resolution.py`: current version 4 submissions preserve the issue title as `path.name` and may repair only the discovery label after unique selection; compatible versions 3 and 2 and legacy submissions require their documented signals, and matching headings alone are never enough.
+Before reporting GitHub intake ready, verify the form contains the current intake marker, explains that the course name comes from the issue title and labels `study-request` and `intake:imported` exist. Provision missing labels through the inherited setup workflow or GitHub labels API. During import, use `scripts/intake_resolution.py`: accept only the current version 4 marker, preserve the issue title as `path.name`, preserve the complete main answer as `path.learning_request`, derive a concise `path.subject` and repair only the discovery label after unique selection. Matching headings alone are never enough.
 
 ## Experience for the person
 
@@ -33,8 +33,7 @@ Before reporting GitHub intake ready, verify the form contains the current intak
    - `Organize minha trilha nas ferramentas que escolhemos.`
    - `Conectei o Quizlet. Crie meus flashcards.`
    - `Terminei <título da aula>. Avalie minhas respostas.`
-6. Continue accepting older technical commands and topic-ID commands as aliases.
-7. Translate internal language: `materialized` becomes “aula pronta”, `planned` becomes “aula futura”, fallback becomes “alternativa” and recovery becomes “revisão necessária” in visible copy.
+6. Translate internal language: `materialized` becomes “aula pronta”, `planned` becomes “aula futura”, fallback becomes “alternativa” and recovery becomes “revisão necessária” in visible copy.
 
 ## Lifecycle
 
@@ -67,6 +66,8 @@ This shared review is additive. Materialized lessons require the specialized cou
 ## Curriculum and lessons
 
 Initial generation creates the complete roadmap, every topic overview and the integration plan. Prepare every detailed lesson only for small curricula; otherwise prepare the configured first lessons and create future lessons automatically after verified progress.
+
+Preserve the complete learning request separately from the concise subject label. An optional time constraint may guide priority and feasibility explanations, but it must not silently remove mastery-required content, lower evidence requirements or redefine partial coverage as course completion.
 
 A topic is one coherent independently assessable capability with three to seven focused activities. A checklist is not a lesson.
 
@@ -127,7 +128,9 @@ PDF rendering is deterministic validation after semantic review. A missing PDF, 
 
 Recommend only tools justified by the course and preferences. Explain them in simple language first; keep preflight, authority and synchronization details in collapsed technical sections and state files.
 
-GitHub stores curriculum, lessons, slide PDFs, assessments and verified progress. Use one primary task backend. Prefer Trello for a visual course experience and use GitHub Issues as the first fallback when Trello is not connected; Todoist remains available for simpler task flows or recurring reminders. Quizlet and other formative tools support practice only and always have local alternatives. Mermaid remains canonical. Airtable is only a `github_to_airtable` projection.
+GitHub stores curriculum, lessons, slide PDFs, assessments and verified progress. Use one primary task backend. Prefer Trello for a visual course experience, use GitHub Issues as the first fallback and keep repository-native Markdown as the final internal fallback; Todoist remains available for simpler task flows or recurring reminders. Quizlet and other formative tools support practice only and always have local alternatives. Mermaid remains canonical. Airtable is only a `github_to_airtable` projection.
+
+When `integration_preferences.account_connections` is `no_external_accounts`, do not suggest, probe or write to apps requiring another account, even when the learner says they already use them. Use GitHub Issues or repository Markdown, local flashcards, Mermaid, repository artifacts, primary sources, web research and chat.
 
 Run `instructions/42-integration-preflight.md` before external writes. Optional missing tools use alternatives and do not block the course. A connection suggestion requires an explicit click and does not itself prove access.
 
@@ -158,7 +161,7 @@ Each ready topic has five substantial prompts and a 100-point rubric. The form a
 
 The detailed rubric remains available to the evaluator and repository validation. Learner-facing tasks and navigation show concise observable completion criteria rather than linking the rubric YAML by default.
 
-Resolve intake through its current hidden marker or the complete legacy fallback; resolve assessments through labels, hidden marker and history. Ask for an issue number only when multiple valid candidates remain. Grade each response, report a clear score and feedback, persist the attempt and update progress.
+Resolve intake only through its current hidden marker; resolve assessments through labels, hidden marker and history. Ask for an issue number only when multiple valid candidates remain. Grade each response, report a clear score and feedback, persist the attempt and update progress.
 
 After success, prepare the next eligible lessons and their reviewed slide PDFs automatically. After an insufficient result, create a focused review and reassessment.
 
@@ -170,7 +173,7 @@ For setup, build one allowed diff from the files already present in the target r
 
 Never store credentials, tokens, raw form submissions, diagnostic transcripts, original uploads or unnecessary personal data.
 
-<!-- Compatibility markers for repository validation: Keep the process guided; provide one exact command to continue; read instructions/32-generation-execution.md; build the complete allowed diff before opening the PR; Do not attach internal diagnostic ZIPs after success. -->
+<!-- Contract markers for repository validation: Keep the process guided; provide one exact command to continue; read instructions/32-generation-execution.md; build the complete allowed diff before opening the PR; Do not attach internal diagnostic ZIPs after success. -->
 
 ---
 
