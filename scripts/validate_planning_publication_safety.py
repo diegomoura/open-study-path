@@ -41,7 +41,8 @@ def validate_contract() -> None:
         "instructions/31-topic-first-safe-publication.md",
         [
             "`planning.unit: topic` is authoritative",
-            "`learner.weekly_hours` is capacity information only",
+            "The intake does not define weekly availability",
+            "collect the minimum missing scheduling details at activation",
             "Never create `tmp`, `test`, `probe`",
             "After each successful external creation or update",
             "Continue a organização da minha trilha nas ferramentas que escolhemos.",
@@ -51,7 +52,7 @@ def validate_contract() -> None:
         "AGENTS.md",
         [
             "instructions/31-topic-first-safe-publication.md",
-            "Weekly availability is capacity, not a course structure.",
+            "Do not create fixed durations in weeks",
             "Never create disposable external probe resources.",
         ],
     )
@@ -59,7 +60,7 @@ def validate_contract() -> None:
         "templates/roadmap.md",
         [
             "Topics are the structural planning unit.",
-            "Weekly availability is capacity information only.",
+            "The intake does not define a weekly schedule.",
         ],
     )
     workflow = read(".github/workflows/validate-template.yml")
