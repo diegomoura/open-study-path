@@ -23,7 +23,7 @@ The plan is generated only after the agent understands the subject, learner, sco
 | Source of truth | GitHub | every path | none | curriculum, assessment, mastery |
 | Research | Consensus | empirical or scientific claims | primary sources, official docs, web | supporting evidence only |
 | Formative practice | Quizlet | terms, commands, formulas and recall | Markdown/TSV flashcards, Ace Quiz Maker | practice only |
-| Task management | Trello | rich courses and visual execution | GitHub Issues, then Todoist | execution state only |
+| Task management | Trello | rich courses and visual execution | GitHub Issues, then repository Markdown | execution state only |
 | Recurring reminders | Todoist | simple repeated actions | calendar or chat | no task or mastery authority |
 | Scheduling | Reclaim | variable agenda and protected focus | Google/Outlook Calendar or none | schedule only |
 | Habit tracking | Habitify | consistency and routines | manual tracking | habits only |
@@ -53,9 +53,9 @@ Recommend scheduling only when it has a concrete benefit and the learner already
 
 Recommend only when consistency is a material risk. Keep the default to at most three habits. The normal set is study session, active recall and spaced review. Habit completion is never mastery evidence.
 
-### Trello, GitHub Issues and Todoist
+### Trello, GitHub Issues, Todoist and Markdown
 
-Trello is preferred for most rich courses because it can show the whole roadmap, links, checklists, recovery and states. When Trello is not connected, GitHub Issues is the first operational fallback. Todoist may replace them for a short or simple path and may also be auxiliary for recurring reminders, but auxiliary reminders cannot modify the authoritative task state.
+Trello is preferred for most rich courses because it can show the whole roadmap, links, checklists, recovery and states. When Trello is not connected, GitHub Issues is the first operational fallback. Todoist may replace them for a short or simple path and may also be auxiliary for recurring reminders, but auxiliary reminders cannot modify the authoritative task state. Repository-native Markdown remains the last internal fallback when no external or issue-based task backend should be used; it is not exposed as a normal intake choice.
 
 ### Whimsical
 
@@ -79,16 +79,25 @@ flowchart LR
 
 Suggested Airtable tables are Courses, Topics, Attempts, Study Sessions and Integrations. Every row derived from GitHub should include its source repository, source path or issue, content version and last synchronization timestamp.
 
+## Account-connection preference
+
+`integration_preferences.account_connections` has two supported values:
+
+- `ask_per_provider` — contextual connection controls may be shown when a provider has immediate value;
+- `no_external_accounts` — do not suggest, probe or write to apps that require another account. Use GitHub Issues, repository Markdown, local flashcards, Mermaid, repository artifacts, web or primary sources and chat.
+
+This preference is stronger than `already_uses` or `willing_to_connect`. A tool the learner already uses is not permission to connect it in the current ChatGPT Project.
+
 ## Optional connection offer
 
 A contextual recommendation and an app connection are separate decisions.
 
-When a selected or recommended optional provider has immediate value in the materialized content window and access is not verified, the agent may use ChatGPT's Plugin Management capability to search for the exact provider and render an install/connect suggestion.
+When a selected or recommended optional provider has immediate value in the materialized content window, account connections are allowed and access is not verified, the agent may use ChatGPT's Plugin Management capability to search for the exact provider and render an install/connect suggestion.
 
 The connection offer must follow these rules:
 
 1. it is based on a concrete course need, not the global app catalog;
-2. it respects the learner's `already_uses`, `willing_to_connect` and experience choices;
+2. it respects `account_connections`, `already_uses`, `willing_to_connect`, integration notes and experience choices;
 3. it requires an explicit user click and normal app authorization;
 4. it is nonblocking, so the repository-native fallback and lifecycle response continue;
 5. it does not authorize external writes by itself;
