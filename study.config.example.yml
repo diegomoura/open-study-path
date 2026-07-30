@@ -4,27 +4,20 @@ configured: false
 path:
   name: null
   subject: ""
-  objective: ""
+  objective: null
   desired_outcome: null
   motivation: null
-  deadline: null
 
 learner:
   preferred_language: pt-BR
   current_level: beginner
   prior_knowledge: []
-  weekly_hours: 5
-  preferred_days: []
-  preferred_periods: []
   accessibility_needs: []
 
 preferences:
-  formats:
-    - documentation
-    - exercises
-    - projects
+  formats: []
   theory_practice_balance: balanced
-  assessment_style: mixed
+  assessment_style: []
   notes: null
 
 references:
@@ -37,7 +30,7 @@ intake:
   form_id: null
   form_url: null
   form_spec_id: open-study-path-intake
-  form_spec_version: 2
+  form_spec_version: 3
   created_by: null
   issue_template: .github/ISSUE_TEMPLATE/create-study-path.yml
   submission_strategy: not_applicable
@@ -46,12 +39,8 @@ intake:
 
 integration_preferences:
   experience: guided_recommendations
-  free_tier_only: true
-  account_connections: ask_per_provider
   already_uses: []
   willing_to_connect: []
-  avoid: []
-  notes: null
 
 integrations:
   source_of_truth:
@@ -89,9 +78,8 @@ integrations:
     provider: auto
     preferred: trello
     alternatives:
-      - todoist
       - github_issues
-      - markdown
+      - todoist
     board_or_project: null
     single_authoritative_backend: true
 
@@ -111,7 +99,6 @@ integrations:
       - none
     enabled: auto
     required: false
-    free_tier_only: true
 
   habit_tracking:
     provider: auto
