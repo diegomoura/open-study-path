@@ -175,7 +175,7 @@ Show resources in exactly this order: **Slides**, **Aula**, **Prática**, **Aval
 
 A future card begins with **Pré-requisitos desta etapa**, lists exactly the direct prerequisite titles and tells the learner to follow that list rather than card numbering. Never say “todas as etapas anteriores” when the graph branches. Do not attach nonexistent lesson, slide PDF, practice or assessment links.
 
-A task backend is not a repository inventory. Do not link topic contracts, slide HTML/CSS/JavaScript, render metadata, review evidence, rubric YAML, state files or synchronization records from normal learner tasks.
+A task backend is not a repository inventory. Do not link topic contracts, rubric YAML, state files or synchronization records from normal learner tasks. Also do not link slide HTML/CSS/JavaScript, render metadata or review evidence.
 
 Do not repeat “source of truth”, “authority”, `planned`, `materialized`, preflight or synchronization language in every card.
 
