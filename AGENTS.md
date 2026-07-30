@@ -34,7 +34,7 @@ Every generated artifact changed by an instance operation must be covered by an 
 
 Authoring and review are separate passes even when the same runtime performs both. The reviewer reconstructs evidence from approved inputs, repository outputs and harmless external read-backs; it does not trust the authoring pass's success claim.
 
-The shared framework uses specialized reviewers for setup, intake, diagnostic, curriculum, publication, assessment, progress, replan and migration. Specialized review remains additive: materialized teaching content still requires `instructions/36-review-course-content.md`, and selected integrations still require their own resolution and projection checks.
+The shared framework uses specialized reviewers for setup, intake, diagnostic, curriculum, publication, assessment, progress, replan and migration. Specialized review remains additive: materialized teaching content requires `instructions/36-review-course-content.md`, study slides require `instructions/37-review-study-slides.md`, and selected integrations require their own resolution and projection checks.
 
 Before merge, the review must record exact SHA-256 fingerprints for every generated artifact in the operation diff, pass every required profile check and contain no blocking findings. Missing review, partial coverage, stale fingerprints or skipped checks block CI, merge and a success response.
 
@@ -83,7 +83,8 @@ A topic overview is not a lesson. Every ready module must teach with:
 - guided and independent practice;
 - active recall;
 - deliverable and assessment instructions;
-- provenance, inspected sources and useful alternative formats.
+- provenance, inspected sources and useful alternative formats;
+- a direct link to the current slide PDF.
 
 A beginner module must explain the object before its mechanism and include `## Começando do zero`, `### Vocabulário desta aula` and `## Intuição antes dos detalhes`. If it uses an analogy, it must say where the analogy helps and where it stops working. A realistic teaching scenario must not be presented as a real event; documented real cases require sources.
 
@@ -111,6 +112,26 @@ Authoring and review are separate passes even when the same runtime performs bot
 ## Mermaid visual learning
 
 Every roadmap contains the actual topic dependency graph. Every ready module contains the configured minimum number of explained Mermaid diagrams. A diagram supplements prose and practice; it does not replace them.
+
+## Study slides and PDF
+
+Read `docs/study-slides.md` and `instructions/37-review-study-slides.md` whenever a topic is materialized.
+
+After the lesson, practice and assessment pass course-content review:
+
+1. create semantic HTML, CSS and JavaScript under `study/slides/TOPIC-000/` using `templates/study-slides/`;
+2. summarize the reviewed lesson without new research or unsupported claims;
+3. represent every approved outcome with honest `data-outcome-ids` values;
+4. include at least one focused Mermaid diagram rendered as SVG;
+5. use no generated raster illustrations or full-slide images under the current contract;
+6. run the independent study-slides review and persist it under `state/slide-reviews/`;
+7. render and validate `slides.pdf` and `slides.meta.json` before merge.
+
+HTML is build input only. Never link it, its CSS/JavaScript, render metadata or review evidence to the learner. The module and task link only:
+
+`https://github.com/OWNER/REPOSITORY/raw/HEAD/study/slides/TOPIC-000/slides.pdf`
+
+The lesson, slide sources, PDF, metadata and specialized reviews must share the same `content_version` and the same curriculum or materialization PR. A failed render, stale source hash, overflow, Mermaid error, page mismatch or missing PDF blocks merge and publication.
 
 ## Capability-based integrations
 
@@ -148,11 +169,13 @@ Create one task per topic. By default, use the human lesson title without a nume
 
 ### Human task titles
 
-A ready card says what the learner will do, how long it may take, where the lesson, primary practice and assessment are, what to produce and how to finish.
+A ready card says what the learner will do, how long it may take, where the slides, complete lesson, primary practice and assessment are, what to produce and how to finish.
 
-A future card begins with **Pré-requisitos desta etapa**, lists exactly the direct prerequisite titles and tells the learner to follow that list rather than card numbering. Never say “todas as etapas anteriores” when the graph branches.
+Show resources in exactly this order: **Slides**, **Aula**, **Prática**, **Avaliação**. Use the PDF raw route for Slides. When Quizlet or another external practice resource exists, show it as the single practice link and keep Markdown/TSV alternatives inside the lesson.
 
-A task backend is not a repository inventory. Show one primary learner-facing resource per capability. When Quizlet or another external practice resource exists, show it instead of repeating the local fallback in the task. Keep local alternatives in the lesson. Do not link topic contracts, rubric YAML, state files or synchronization records from normal learner tasks.
+A future card begins with **Pré-requisitos desta etapa**, lists exactly the direct prerequisite titles and tells the learner to follow that list rather than card numbering. Never say “todas as etapas anteriores” when the graph branches. Do not attach nonexistent lesson, slide PDF, practice or assessment links.
+
+A task backend is not a repository inventory. Do not link topic contracts, slide HTML/CSS/JavaScript, render metadata, review evidence, rubric YAML, state files or synchronization records from normal learner tasks.
 
 Do not repeat “source of truth”, “authority”, `planned`, `materialized`, preflight or synchronization language in every card.
 
@@ -177,7 +200,7 @@ Read `instructions/55-evaluate-topic.md`. Resolve submissions using labels, hidd
 
 Grade every response independently, calculate 0–100, comment on the issue, persist a versioned attempt and update progress. No external provider sets completion.
 
-When mastered, run `instructions/57-materialize-next-content.md` automatically and return the next ready lesson. Do not foreground the content PR unless it failed or was requested.
+When mastered, run `instructions/57-materialize-next-content.md` automatically and return the next ready slide PDF and lesson. Do not foreground the content PR unless it failed or was requested.
 
 When more work is needed, create focused review and targeted reassessment. Use supportive language such as “Revisão necessária”, not punitive copy.
 
