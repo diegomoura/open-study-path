@@ -147,12 +147,12 @@ p, li { font-size: clamp(20px, 2vw, 32px); line-height: 1.35; }
     display: flex !important;
     flex-direction: column;
     justify-content: center;
-    width: 1280px;
-    min-width: 1280px;
-    max-width: 1280px;
-    height: 720px;
-    min-height: 720px;
-    max-height: 720px;
+    width: 1279px;
+    min-width: 1279px;
+    max-width: 1279px;
+    height: 719px;
+    min-height: 719px;
+    max-height: 719px;
     margin: 0;
     break-before: auto;
     break-after: auto;
