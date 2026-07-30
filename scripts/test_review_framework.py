@@ -156,6 +156,20 @@ def test_reviewed_deletion_uses_base_fingerprint() -> None:
         assert not result.errors, result.errors
 
 
+def test_wrong_profile_cannot_cover_generated_artifact() -> None:
+    with tempfile.TemporaryDirectory() as directory:
+        root = Path(directory)
+        write(root / ".open-study-path/instance.yml", "kind: open-study-path-instance\n")
+        write(root / "study/modules/TOPIC-001.md", "# Lesson\n")
+        review = approved_review(root, phase="setup", artifacts=["study/modules/TOPIC-001.md"])
+        result = validate_changed_coverage(
+            root,
+            ["study/modules/TOPIC-001.md", review],
+            instance_mode=True,
+        )
+        assert any("out-of-scope artifact" in error for error in result.errors)
+
+
 def test_template_changes_do_not_require_instance_review() -> None:
     with tempfile.TemporaryDirectory() as directory:
         root = Path(directory)
@@ -169,6 +183,7 @@ def test_generated_path_classifier() -> None:
     assert is_generated_artifact("state/progress.json")
     assert is_generated_artifact(".open-study-path/instance.yml")
     assert is_generated_artifact(".github/ISSUE_TEMPLATE/assessment-topic-001.yml")
+    assert is_generated_artifact("README.md")
     assert not is_generated_artifact("state/reviews/intake.yml")
     assert not is_generated_artifact("state/content-reviews/TOPIC-001.yml")
     assert not is_generated_artifact("scripts/validate_template.py")
@@ -183,6 +198,7 @@ def main() -> None:
         test_required_check_cannot_be_skipped,
         test_review_must_cover_every_generated_change,
         test_reviewed_deletion_uses_base_fingerprint,
+        test_wrong_profile_cannot_cover_generated_artifact,
         test_template_changes_do_not_require_instance_review,
         test_generated_path_classifier,
     ]
