@@ -24,6 +24,9 @@ Ao final, você deverá conseguir:
 - reconhecer erros ou interpretações comuns;
 - produzir a evidência exigida pela etapa.
 
+<!-- open-study-path:outcome LO-1 -->
+<!-- Posicione exatamente um marcador oculto para cada learning_outcome do contrato ao lado do conteúdo que realmente o ensina. O marcador não substitui a explicação e será conferido pelo revisor de curso. -->
+
 ## Começando do zero
 
 Para tópicos iniciantes ou lacunas registradas no diagnóstico, explique primeiro o objeto estudado em linguagem comum. Não comece pelo mecanismo interno. Diferencie experiência em uma área adjacente de conhecimento no assunto: use a experiência prévia para escolher exemplos, não para pular fundamentos.
@@ -57,7 +60,7 @@ Toda aula deve trazer ao menos uma analogia com limite explícito ou um exemplo 
 
 ## Recupere o que já sabe
 
-Inclua duas ou três perguntas curtas ou tarefas de recuperação ativa. Dê orientação clara para revisar a etapa anterior quando necessário. Não faça perguntas que pressuponham termos que ainda não foram explicados na própria aula ou em um pré-requisito confirmado.
+Inclua duas ou três perguntas curtas ou tarefas de recuperação ativa. Dê orientação clara para revisar somente os pré-requisitos diretos quando necessário. Não faça perguntas que pressuponham termos que ainda não foram explicados na própria aula ou em um pré-requisito confirmado. A etapa numericamente anterior não é um pré-requisito automático em um roadmap com ramificações.
 
 ## Conteúdo essencial
 
