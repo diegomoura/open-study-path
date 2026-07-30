@@ -112,6 +112,6 @@ Create ongoing monitoring only after explicit opt-in. A monitor must handle ever
 - any required check failed, was cancelled, became missing or unreadable → report the blocker immediately and identify the failing check;
 - checks still queued or running → remain silent and check again later.
 
-Never create a monitor that reports only success and silently ignores a terminal failure.
+Never create a monitor that reports only success and silently ignores a terminal failure. Do not expose repeated polling steps as if they were meaningful progress for the learner.
 
 Do not claim that the instance is configured until the merge gate is satisfied.
