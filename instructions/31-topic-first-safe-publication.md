@@ -6,7 +6,7 @@ Use this contract during curriculum generation, integration preflight, task publ
 
 `planning.unit: topic` is authoritative. Organize the learning path as areas, dependency-aware topics, lessons, activities, evidence and assessments.
 
-`learner.weekly_hours` is capacity information only. It may help explain approximate workload or configure a calendar after the learner chooses scheduling, but it does not authorize:
+The intake does not collect a structured weekly schedule, preferred days or study periods. It may contain an optional free-text `path.time_constraints` value such as a relevant date or approximate weekly availability. Do not invent missing values and do not use the constraint to impose:
 
 - a fixed course duration in weeks;
 - week-numbered structural groups;
@@ -14,13 +14,15 @@ Use this contract during curriculum generation, integration preflight, task publ
 - deadlines, due dates or an implied late state;
 - Trello lists, labels or cards organized by week.
 
+A time constraint does not authorize silently removing mastery-required topics, reducing evidence requirements or claiming that an unrealistic scope fits. Generate the complete dependency-aware course. When the constraint is useful, identify a priority order, distinguish essential progression from optional enrichment and explain feasibility honestly. The learner may choose how far to progress within the available time; the course must not redefine partial coverage as completion.
+
 Without an explicit learner request for a calendar projection, show total estimated effort and effort per topic. Say that the pace is flexible and follows prerequisites and verified progress.
 
-When the learner explicitly requests a dated or weekly projection, keep topics as the canonical structure and add this hidden marker to the optional projection:
+When the learner explicitly requests a dated or weekly projection, collect the minimum missing scheduling details at activation, keep topics as the canonical structure and add this hidden marker to the optional projection:
 
 `<!-- open-study-path:calendar-projection explicitly_requested=true -->`
 
-A deadline alone is a constraint to discuss, not permission to silently invent a week-by-week plan.
+A date or availability statement is a constraint to discuss, not permission to silently invent a week-by-week plan.
 
 ## Required-operation preflight
 

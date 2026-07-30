@@ -9,7 +9,7 @@ from typing import Any
 
 import yaml
 
-from intake_resolution import CURRENT_MARKER, VERSION_2_MARKER
+from intake_resolution import CURRENT_MARKER
 
 ROOT = Path(__file__).resolve().parents[1]
 NATURAL_COMMAND = "Preenchi o formulário. Pode continuar."
@@ -42,18 +42,16 @@ def main() -> None:
     require("instructions/05-configure-intake.md", [
         "https://github.com/OWNER/REPOSITORY/issues/new?template=create-study-path.yml",
         CURRENT_MARKER,
-        VERSION_2_MARKER,
         "Add a title",
         "course name",
         "study-request",
         "intake:imported",
         "Do not require an issue number",
-        "older forms",
+        "Only the current marked form is supported",
     ])
     require("instructions/10-intake.md", [
         "scripts/intake_resolution.py",
         CURRENT_MARKER,
-        VERSION_2_MARKER,
         "issue title",
         "`issue_title`",
         "`path.name`",
@@ -66,6 +64,8 @@ def main() -> None:
         "never select an arbitrary newest repository issue",
         "state/intake-summary.json.source_reference",
         "intake:imported",
+        "path.learning_request",
+        "path.subject",
         "instructions/20-diagnostic.md",
     ])
     require("instructions/phase-completion.md", [
@@ -82,7 +82,7 @@ def main() -> None:
     ])
     require("AGENTS.md", [
         "course name comes from the issue title",
-        "legacy submissions",
+        "Only the current marked intake form is accepted",
         "Matching headings alone",
     ])
 
@@ -107,14 +107,18 @@ def main() -> None:
 
     mapping = load_yaml("intake/field-mapping.yml")
     github_issue = mapping.get("github_issue", {})
-    if github_issue.get("current_form_version") != 3:
-        fail("GitHub intake mapping must identify form version 3")
+    if github_issue.get("current_form_version") != 4:
+        fail("GitHub intake mapping must identify form version 4")
     if github_issue.get("current_mappings", {}).get("issue_title") != "path.name":
         fail("GitHub issue title must map to path.name")
-    compatibility = github_issue.get("compatible_versions", {})
-    version_2 = compatibility.get(2) or compatibility.get("2") or {}
-    if version_2.get("path_name") != "path.name":
-        fail("version 2 path_name compatibility mapping is missing")
+    if github_issue.get("compatible_versions"):
+        fail("unused intake compatibility versions must not remain configured")
+    mappings = mapping.get("mappings", {})
+    if mappings.get("subject") != "path.learning_request":
+        fail("the main learning request must be preserved in path.learning_request")
+    derived_subject = mapping.get("derived_fields", {}).get("path.subject", {})
+    if derived_subject.get("from") != "path.learning_request":
+        fail("path.subject must be derived from the preserved learning request")
 
     for path in [
         "scripts/intake_resolution.py",

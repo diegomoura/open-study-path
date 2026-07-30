@@ -20,7 +20,7 @@ Do not silently select Jotform or create external resources without the owner's 
 2. Read the exact repository identity from `.open-study-path/instance.yml`.
 3. Confirm the form contains the current hidden identity marker:
 
-   `<!-- open-study-path:intake form_id=create-study-path version=3 -->`
+   `<!-- open-study-path:intake form_id=create-study-path version=4 -->`
 
 4. Confirm the form does not prefill the native issue title and that its first visible instructions explain: use **Add a title** for the course name. GitHub requires that title before submission; the form must not ask for the name a second time.
 5. Verify repository labels `study-request` and `intake:imported` exist. Create only missing labels through the GitHub labels API or run **Prepare ChatGPT Project Instructions**, which invokes `scripts/ensure_repository_labels.py`. Read the labels again after provisioning.
@@ -38,19 +38,7 @@ The form is inherited reusable infrastructure. Do not edit, recreate or replace 
 
 Do not mark setup or intake ready when label existence, title guidance or the current marker cannot be verified. Do not create or submit an issue, import answers, run the diagnostic or generate curriculum during setup. Do not require an issue number.
 
-### Compatibility
-
-Continue accepting older forms, including the supported marker:
-
-`<!-- open-study-path:intake form_id=create-study-path version=2 -->`
-
-Also continue accepting:
-
-- `Enviei o formulário. Localize e importe a única submissão válida.`
-- `Enviei o formulário. Localize e importe a única submissão válida. Conclua e valide esta etapa; depois, inicie o diagnóstico proporcional com perguntas curtas, uma por vez.`
-- an explicit issue number when supplied or when multiple valid candidates require disambiguation.
-
-Older `intake.submission_strategy: explicit_issue` means deterministic lookup with an optional number, not a burden to copy it every time.
+Only the current marked form is supported. An explicit issue number may narrow deterministic lookup when the owner supplies it or when multiple valid current candidates require disambiguation, but it never bypasses marker, heading, title or import-state checks.
 
 ## Jotform
 
@@ -68,13 +56,11 @@ Stop before reading submissions.
 
 ## Manual YAML
 
-Set the manual provider and return the configuration path. Required facts are subject, objective, current level, preferred language and weekly hours. Do not invent them.
+Set the manual provider and return the configuration path. Required facts are course name, the complete learning request, a concise subject, current level and preferred language. Do not invent them. Objective details, time constraints, learning preferences and integration choices remain optional.
 
 Use:
 
 `Preenchi minha configuração. Pode continuar.`
-
-Continue accepting the older technical YAML command as an alias.
 
 ## Instance marker
 
@@ -84,4 +70,4 @@ Validate the complete setup diff and required checks for the current head. Do no
 
 Complete with `instructions/phase-completion.md`. Return the selected form or configuration path and make the next human action unmistakable.
 
-<!-- Compatibility markers: direct clickable link; explicit_issue; explicit issue number remains accepted; Do not require the owner to copy an issue number; older forms. -->
+<!-- Contract markers: direct clickable link; explicit_issue; explicit issue number remains accepted; Do not require the owner to copy an issue number; Only the current marked form is supported. -->

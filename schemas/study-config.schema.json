@@ -21,27 +21,25 @@
     "path": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["subject", "objective"],
+      "required": ["subject", "learning_request"],
       "properties": {
         "name": {"type": ["string", "null"]},
-        "subject": {"type": "string"},
-        "objective": {"type": "string"},
+        "subject": {"type": "string", "maxLength": 120},
+        "learning_request": {"type": "string"},
+        "objective": {"type": ["string", "null"]},
         "desired_outcome": {"type": ["string", "null"]},
         "motivation": {"type": ["string", "null"]},
-        "deadline": {"type": ["string", "null"], "format": "date"}
+        "time_constraints": {"type": ["string", "null"]}
       }
     },
     "learner": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["preferred_language", "current_level", "weekly_hours"],
+      "required": ["preferred_language", "current_level"],
       "properties": {
-        "preferred_language": {"type": "string", "minLength": 1},
+        "preferred_language": {"enum": ["pt-BR", "en"]},
         "current_level": {"enum": ["none", "beginner", "intermediate", "advanced"]},
         "prior_knowledge": {"type": "array", "items": {"type": "string"}},
-        "weekly_hours": {"type": "number", "exclusiveMinimum": 0},
-        "preferred_days": {"type": "array", "items": {"type": "string"}},
-        "preferred_periods": {"type": "array", "items": {"type": "string"}},
         "accessibility_needs": {"type": "array", "items": {"type": "string"}}
       }
     },
@@ -51,7 +49,7 @@
       "required": ["formats", "theory_practice_balance", "assessment_style", "notes"],
       "properties": {
         "formats": {"type": "array", "items": {"type": "string"}},
-        "theory_practice_balance": {"type": "string"},
+        "theory_practice_balance": {"enum": ["theory", "balanced", "practical"]},
         "assessment_style": {"type": ["string", "array"]},
         "notes": {"type": ["string", "null"]}
       }
@@ -110,22 +108,12 @@
     "integration_preferences": {
       "type": "object",
       "additionalProperties": false,
-      "required": [
-        "experience",
-        "free_tier_only",
-        "account_connections",
-        "already_uses",
-        "willing_to_connect",
-        "avoid",
-        "notes"
-      ],
+      "required": ["experience", "account_connections", "already_uses", "willing_to_connect", "notes"],
       "properties": {
         "experience": {"enum": ["minimal", "guided_recommendations", "enriched"]},
-        "free_tier_only": {"type": "boolean"},
-        "account_connections": {"enum": ["ask_per_provider", "connected_services_only", "no_external_accounts"]},
+        "account_connections": {"enum": ["ask_per_provider", "no_external_accounts"]},
         "already_uses": {"type": "array", "items": {"type": "string"}, "uniqueItems": true},
         "willing_to_connect": {"type": "array", "items": {"type": "string"}, "uniqueItems": true},
-        "avoid": {"type": "array", "items": {"type": "string"}, "uniqueItems": true},
         "notes": {"type": ["string", "null"]}
       }
     },
@@ -199,7 +187,7 @@
           "properties": {
             "provider": {"enum": ["auto", "github_issues", "trello", "todoist", "markdown"]},
             "preferred": {"const": "trello"},
-            "alternatives": {"type": "array", "items": {"enum": ["todoist", "github_issues", "markdown"]}, "uniqueItems": true},
+            "alternatives": {"type": "array", "items": {"enum": ["github_issues", "todoist", "markdown"]}, "uniqueItems": true},
             "board_or_project": {"type": ["string", "null"]},
             "single_authoritative_backend": {"const": true}
           }
@@ -219,14 +207,13 @@
         "calendar": {
           "type": "object",
           "additionalProperties": false,
-          "required": ["provider", "preferred", "alternatives", "enabled", "required", "free_tier_only"],
+          "required": ["provider", "preferred", "alternatives", "enabled", "required"],
           "properties": {
             "provider": {"enum": ["auto", "none", "reclaim", "google_calendar", "outlook_calendar"]},
             "preferred": {"const": "reclaim"},
             "alternatives": {"type": "array", "items": {"enum": ["google_calendar", "outlook_calendar", "none"]}, "uniqueItems": true},
             "enabled": {"enum": ["auto", "enabled", "disabled"]},
-            "required": {"const": false},
-            "free_tier_only": {"type": "boolean"}
+            "required": {"const": false}
           }
         },
         "habit_tracking": {
@@ -354,6 +341,78 @@
           "intake": {
             "properties": {
               "issue_template": {"type": "string", "minLength": 1}
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "integration_preferences": {
+            "properties": {
+              "account_connections": {"const": "no_external_accounts"}
+            },
+            "required": ["account_connections"]
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "integrations": {
+            "properties": {
+              "research": {
+                "properties": {
+                  "provider": {"enum": ["auto", "web", "none"]}
+                }
+              },
+              "formative_practice": {
+                "properties": {
+                  "provider": {"enum": ["auto", "markdown_flashcards", "none"]}
+                }
+              },
+              "task_manager": {
+                "properties": {
+                  "provider": {"enum": ["auto", "github_issues", "markdown"]}
+                }
+              },
+              "reminders": {
+                "properties": {
+                  "provider": {"enum": ["auto", "none"]}
+                }
+              },
+              "calendar": {
+                "properties": {
+                  "provider": {"enum": ["auto", "none"]},
+                  "enabled": {"enum": ["auto", "disabled"]}
+                }
+              },
+              "habit_tracking": {
+                "properties": {
+                  "provider": {"enum": ["auto", "none"]}
+                }
+              },
+              "visual_workspace": {
+                "properties": {
+                  "external_provider": {"enum": ["auto", "none"]}
+                }
+              },
+              "artifact_workspace": {
+                "properties": {
+                  "provider": {"enum": ["auto", "none"]}
+                }
+              },
+              "analytics_projection": {
+                "properties": {
+                  "provider": {"enum": ["auto", "none"]}
+                }
+              },
+              "notifications": {
+                "properties": {
+                  "provider": {"enum": ["chat", "none"]},
+                  "email_enabled": {"const": false}
+                }
+              }
             }
           }
         }

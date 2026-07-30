@@ -61,21 +61,28 @@ REQUIRED_INTAKE_KEYS = {
     "objective",
     "current_level",
     "preferred_language",
-    "weekly_hours",
     "task_manager",
     "consent",
 }
 
 REQUIRED_INTEGRATION_INTAKE_KEYS = {
     "integration_experience",
-    "free_tier_only",
-    "account_connections",
     "already_uses",
     "willing_to_connect",
     "task_manager",
-    "scheduling_provider",
     "todoist_reminders",
     "email_summaries",
+}
+
+REMOVED_INTAKE_KEYS = {
+    "weekly_hours",
+    "deadline",
+    "preferred_days",
+    "preferred_periods",
+    "free_tier_only",
+    "account_connections",
+    "scheduling_provider",
+    "integration_notes",
 }
 
 
@@ -337,10 +344,28 @@ def check_intake() -> None:
     missing_required = expected_keys.difference(field_keys)
     if missing_required:
         fail(f"jotform specification is missing required keys: {sorted(missing_required)}")
+    unexpected_removed = REMOVED_INTAKE_KEYS.intersection(field_keys)
+    if unexpected_removed:
+        fail(f"jotform specification still contains removed intake keys: {sorted(unexpected_removed)}")
     if spec.get("privacy", {}).get("attachments_optional") is not True:
         fail("jotform specification must keep attachments optional")
     if spec.get("privacy", {}).get("persist_raw_submission") is not False:
         fail("jotform specification must prohibit raw-submission persistence")
+
+    language_field = next((field for field in fields if field.get("key") == "preferred_language"), None)
+    if option_values(language_field or {}) != {"pt-br", "en"}:
+        fail("Jotform preferred language must offer exactly pt-BR and en")
+
+    balance_field = next((field for field in fields if field.get("key") == "theory_practice_balance"), None)
+    if (balance_field or {}).get("default") != "balanced":
+        fail("Jotform theory/practice balance must default to balanced")
+
+    task_field = next((field for field in fields if field.get("key") == "task_manager"), None)
+    task_options = option_values(task_field or {})
+    if not {"auto", "trello", "github_issues", "todoist"}.issubset(task_options):
+        fail("Jotform task manager must support auto, Trello, GitHub Issues and Todoist")
+    if "markdown" in task_options:
+        fail("Jotform task manager must not offer Markdown-only tracking")
 
     email_field = next((field for field in fields if field.get("key") == "email_summaries"), None)
     if not email_field:
@@ -358,6 +383,9 @@ def check_intake() -> None:
     missing_mappings = persistable_keys.difference(mapped_keys)
     if missing_mappings:
         fail(f"field mapping is missing intake keys: {sorted(missing_mappings)}")
+    stale_mappings = REMOVED_INTAKE_KEYS.intersection(mapped_keys)
+    if stale_mappings:
+        fail(f"field mapping still contains removed intake keys: {sorted(stale_mappings)}")
     if "consent" in mapped_keys:
         fail("consent must be validated but not persisted as course configuration")
 
@@ -376,6 +404,30 @@ def check_intake() -> None:
     missing_issue_fields = expected_keys.difference(issue_ids)
     if missing_issue_fields:
         fail(f"GitHub Issue Form is missing required fields: {sorted(missing_issue_fields)}")
+    unexpected_issue_fields = REMOVED_INTAKE_KEYS.intersection(issue_ids)
+    if unexpected_issue_fields:
+        fail(f"GitHub Issue Form still contains removed fields: {sorted(unexpected_issue_fields)}")
+
+    issue_language = next((block for block in issue_blocks if block.get("id") == "preferred_language"), None)
+    issue_language_attributes = (issue_language or {}).get("attributes", {})
+    issue_language_options = option_values(issue_language_attributes)
+    if issue_language_options != {"português (brasil)", "english"}:
+        fail("GitHub Issue Form language must offer Portuguese and English")
+    if issue_language_attributes.get("default") != 0:
+        fail("GitHub Issue Form language must default to Portuguese")
+
+    issue_balance = next((block for block in issue_blocks if block.get("id") == "theory_practice_balance"), None)
+    if (issue_balance or {}).get("attributes", {}).get("default") != 1:
+        fail("GitHub Issue Form theory/practice balance must default to Equilibrado")
+
+    issue_task = next((block for block in issue_blocks if block.get("id") == "task_manager"), None)
+    issue_task_options = option_values((issue_task or {}).get("attributes", {}))
+    if not any("trello" in option for option in issue_task_options):
+        fail("GitHub Issue Form task manager must support Trello")
+    if not any("github issues" in option for option in issue_task_options):
+        fail("GitHub Issue Form task manager must support GitHub Issues")
+    if any("markdown" in option for option in issue_task_options):
+        fail("GitHub Issue Form task manager must not offer Markdown-only tracking")
 
     issue_email = next((block for block in issue_blocks if block.get("id") == "email_summaries"), None)
     issue_email_options = option_values((issue_email or {}).get("attributes", {}))

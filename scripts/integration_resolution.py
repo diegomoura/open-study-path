@@ -16,6 +16,7 @@ TERMINAL_OFFER_STATUSES = {"shown", "not_needed", "connected", "declined", "unav
 VALID_RESOLUTION_STATUSES = {"resolved", "action_required"}
 VALID_EMAIL_CADENCES = {"on_request", "after_each_assessment", "weekly", "monthly"}
 NONE_VALUES = {"", "none", "disabled", "false", "null"}
+NO_EXTERNAL_ACCOUNTS = "no_external_accounts"
 
 
 @dataclass(frozen=True)
@@ -43,9 +44,75 @@ def _section(markdown: str, heading: str) -> str:
     return markdown[start:] if next_heading < 0 else markdown[start:next_heading]
 
 
+def _no_external_accounts(config: Mapping[str, Any]) -> bool:
+    preferences = _mapping(config.get("integration_preferences"))
+    return _text(preferences.get("account_connections")) == NO_EXTERNAL_ACCOUNTS
+
+
 def has_materialized_flashcards(root: Path) -> bool:
     flashcards = root / "study" / "flashcards"
     return flashcards.is_dir() and any(flashcards.glob("TOPIC-*.tsv"))
+
+
+def validate_account_policy(config: Mapping[str, Any], plan_markdown: str) -> list[str]:
+    if not _no_external_accounts(config):
+        return []
+
+    errors: list[str] = []
+    integrations = _mapping(config.get("integrations"))
+
+    explicit_external = {
+        "task_manager": (_mapping(integrations.get("task_manager")), "provider", {"trello", "todoist"}),
+        "research": (_mapping(integrations.get("research")), "provider", {"consensus"}),
+        "formative_practice": (
+            _mapping(integrations.get("formative_practice")),
+            "provider",
+            {"quizlet", "ace_quiz_maker"},
+        ),
+        "reminders": (_mapping(integrations.get("reminders")), "provider", {"todoist", "calendar"}),
+        "calendar": (
+            _mapping(integrations.get("calendar")),
+            "provider",
+            {"reclaim", "google_calendar", "outlook_calendar"},
+        ),
+        "habit_tracking": (_mapping(integrations.get("habit_tracking")), "provider", {"habitify"}),
+        "visual_workspace": (
+            _mapping(integrations.get("visual_workspace")),
+            "external_provider",
+            {"whimsical", "miro", "lucid", "figma"},
+        ),
+        "artifact_workspace": (
+            _mapping(integrations.get("artifact_workspace")),
+            "provider",
+            {"google_drive", "notion", "sharepoint", "dropbox"},
+        ),
+        "analytics_projection": (
+            _mapping(integrations.get("analytics_projection")),
+            "provider",
+            {"airtable"},
+        ),
+    }
+    for capability, (section, key, providers) in explicit_external.items():
+        provider = _text(section.get(key))
+        if provider in providers:
+            errors.append(
+                f"{capability} selects external provider {provider} while account_connections is no_external_accounts"
+            )
+
+    notifications = _mapping(integrations.get("notifications"))
+    if notifications.get("email_enabled") is True or _text(notifications.get("provider")) in {
+        "gmail",
+        "outlook_email",
+    }:
+        errors.append("notifications cannot use email while account_connections is no_external_accounts")
+
+    lower = plan_markdown.lower()
+    if plan_markdown and "account_connections: no_external_accounts" not in lower:
+        errors.append("no-external-account integration plan must record account_connections: no_external_accounts")
+    if "connection-offer eligibility: eligible" in lower or "connection_offer_status: shown" in lower:
+        errors.append("no-external-account integration plan cannot make an app connection offer eligible")
+
+    return errors
 
 
 def expected_capabilities(config: Mapping[str, Any], plan_markdown: str, *, decks_exist: bool) -> dict[str, str]:
@@ -57,6 +124,9 @@ def expected_capabilities(config: Mapping[str, Any], plan_markdown: str, *, deck
     task_provider = _text(task.get("provider"))
     if task_provider not in NONE_VALUES | {"auto"}:
         expected["task_manager"] = task_provider
+
+    if _no_external_accounts(config):
+        return expected
 
     calendar = _mapping(integrations.get("calendar"))
     calendar_provider = _text(calendar.get("provider"))
@@ -85,6 +155,7 @@ def expected_capabilities(config: Mapping[str, Any], plan_markdown: str, *, deck
                 and (
                     "quizlet" in already_uses
                     or "formative_practice" in willing
+                    or "flashcards" in willing
                     or "provider: quizlet" in plan_lower
                 )
             )
@@ -97,7 +168,7 @@ def expected_capabilities(config: Mapping[str, Any], plan_markdown: str, *, deck
 
 
 def validate_plan(config: Mapping[str, Any], plan_markdown: str, *, decks_exist: bool) -> list[str]:
-    errors: list[str] = []
+    errors = validate_account_policy(config, plan_markdown)
     lower = plan_markdown.lower()
     expected = expected_capabilities(config, plan_markdown, decks_exist=decks_exist)
     unchosen = _section(plan_markdown, "## Ferramentas que não foram escolhidas").lower()
@@ -190,7 +261,7 @@ def validate_documents(
     *,
     decks_exist: bool,
 ) -> ResolutionResult:
-    errors = validate_plan(config, plan_markdown, decks_exist=decks_exist) if plan_markdown else []
+    errors = validate_plan(config, plan_markdown, decks_exist=decks_exist) if plan_markdown else validate_account_policy(config, "")
     expected = expected_capabilities(config, plan_markdown, decks_exist=decks_exist)
     selected = _mapping(state.get("selected_capabilities"))
     unresolved: list[str] = []

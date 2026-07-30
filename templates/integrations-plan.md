@@ -13,12 +13,22 @@ Este plano mostra somente ferramentas que têm uma utilidade concreta para o cur
 
 | Para quê | Ferramenta | Por que pode ajudar | É necessária? | Alternativa |
 | --- | --- | --- | --- | --- |
-| Acompanhar as etapas | substituir | substituir | sim/não | substituir |
+| Acompanhar as etapas | substituir | substituir | sim/não | GitHub Issues ou roadmap no repositório |
 | Praticar flashcards | substituir | substituir | não | flashcards no GitHub |
-| Reservar tempo | substituir | substituir | não | projeção semanal e agenda manual |
+| Reservar tempo | substituir | substituir | não | agenda manual ou nenhuma agenda |
 | Receber resumos | substituir | substituir | não | chat |
 
 Não mostre nesta tabela termos internos como `selected`, `optional_probe`, `required_for_selected_publication`, `not_enabled`, `authority` ou `sync_status`.
+
+## Preferência de conexão
+
+Explique em linguagem simples se a pessoa aceita sugestões contextuais de conexão ou prefere permanecer sem outras contas.
+
+Quando `integration_preferences.account_connections` for `no_external_accounts`, registre no bloco técnico:
+
+`account_connections: no_external_accounts`
+
+Nesse modo, não selecione nem recomende provedores que exigem outra conta, não torne ofertas de conexão elegíveis e use GitHub Issues ou Markdown do repositório, flashcards locais, Mermaid, arquivos do GitHub, fontes primárias/web e chat.
 
 ## Como cada ferramenta será usada
 
@@ -26,7 +36,7 @@ Crie uma seção para cada ferramenta selecionada ou recomendada. Uma preferênc
 
 ### <Ferramenta> — <benefício principal>
 
-- **Por que faz sentido para você:** use sinais concretos do objetivo, diagnóstico, duração, rotina ou formato de aprendizagem.
+- **Por que faz sentido para você:** use sinais concretos do objetivo, diagnóstico, restrições de tempo ou formato de aprendizagem.
 - **Como será usada:** descreva a operação real nesta trilha.
 - **Quando entra em cena:** diga em que momento a pessoa verá valor.
 - **O que será compartilhado:** liste apenas os dados mínimos em linguagem simples.
@@ -37,7 +47,7 @@ Para Quizlet, use linguagem equivalente a:
 
 > Os tópicos prontos contêm conceitos que funcionam bem como flashcards. Ao conectar o Quizlet, serão criados conjuntos interativos. Sem conexão, os mesmos cartões continuam disponíveis no GitHub.
 
-Quando a conexão for útil agora e ainda não estiver disponível, a resposta de chat deve apresentar o controle de conexão ou registrar honestamente que ele está indisponível. Não escreva um pedido técnico longo e não bloqueie o uso da alternativa local.
+Quando a conexão for útil agora, estiver permitida e ainda não estiver disponível, a resposta de chat deve apresentar o controle de conexão ou registrar honestamente que ele está indisponível. Não escreva um pedido técnico longo e não bloqueie o uso da alternativa local.
 
 Para Gmail ou Outlook selecionado, use linguagem equivalente a:
 
@@ -56,6 +66,12 @@ Não crie uma lista extensa de recusas. Resuma apenas decisões que poderiam ger
 
 Esta seção existe para o agente, revisão e auditoria. Ela não deve dominar a experiência de quem estuda.
 
+Registre primeiro:
+
+- account_connections: `ask_per_provider` ou `no_external_accounts`;
+- task fallback order: `trello`, `github_issues`, `markdown`, ajustado pela preferência da pessoa;
+- integration constraints preservadas do intake.
+
 Para cada capacidade selecionada ou recomendada, registre:
 
 - provider;
@@ -71,15 +87,11 @@ Para cada capacidade selecionada ou recomendada, registre:
 
 GitHub permanece responsável por currículo, conteúdo, avaliação e progresso verificado. Apenas um backend de tarefas mantém o estado de execução. Todoist pode ser principal ou lembrete auxiliar, nunca um segundo estado concorrente. Mermaid permanece a representação visual versionada. Airtable, quando usado, é uma projeção `github_to_airtable`.
 
-Uma oferta de conexão exige clique explícito. Exibir o controle não comprova autorização e não permite escritas externas por si só. Provedores recusados, evitados, proibidos, irrelevantes ou já conectados não devem ser sugeridos.
+Uma oferta de conexão exige clique explícito. Exibir o controle não comprova autorização e não permite escritas externas por si só. Provedores recusados, restringidos, irrelevantes, já conectados ou proibidos por `no_external_accounts` não devem ser sugeridos.
 
-Para Quizlet, a oferta é elegível somente quando existe ao menos um deck Markdown/TSV aprovado. O comando natural é:
+Para Quizlet, a oferta é elegível somente quando existe ao menos um deck Markdown/TSV aprovado e conexões externas estão permitidas. O comando natural é:
 
 `Conectei o Quizlet. Crie meus flashcards.`
-
-O alias técnico continua aceito:
-
-`Conectei o Quizlet ao ChatGPT. Verifique novamente e publique os flashcards dos tópicos materializados.`
 
 Quando o conector cria, mas não edita conjuntos, use uma nova versão após mudança de conteúdo e preserve o registro anterior como `superseded`.
 
@@ -102,15 +114,15 @@ Use Consensus para apoiar pesquisas empíricas quando fizer sentido, mas registr
 
 ### Flashcards
 
-Use Quizlet quando houver material útil para recuperação ativa. Mantenha sempre os decks Markdown e TSV. Pontuação formativa não conclui uma etapa. Quando houver decks aprovados e o Quizlet não estiver conectado, a publicação deve apresentar a oferta uma vez ou registrar `unavailable`; não use estados inventados como adiamento implícito.
+Use Quizlet quando houver material útil para recuperação ativa e conexões estiverem permitidas. Mantenha sempre os decks Markdown e TSV. Pontuação formativa não conclui uma etapa. Quando houver decks aprovados e o Quizlet não estiver conectado, a publicação deve apresentar a oferta uma vez ou registrar `unavailable`; não use estados inventados como adiamento implícito.
 
 ### Tarefas
 
-Trello é adequado para trilhas com várias etapas, links e checklists. Todoist pode ser mais simples. O cartão deve falar com a pessoa, não reproduzir estado técnico.
+Trello é adequado para trilhas com várias etapas, links e checklists. GitHub Issues é o primeiro fallback operacional. Todoist pode ser mais simples. Markdown do repositório é o último fallback interno quando não deve haver outro backend. O cartão ou registro deve falar com a pessoa, não reproduzir estado técnico.
 
 ### Agenda e lembretes
 
-Use Reclaim quando a rotina varia; Google ou Outlook Calendar para blocos fixos. Nenhuma presença em calendário comprova aprendizagem. Se faltarem dias e horários, explique isso e registre que a ativação não ocorreu.
+Use Reclaim quando a rotina varia; Google ou Outlook Calendar para blocos fixos. Nenhuma presença em calendário comprova aprendizagem. Colete detalhes mínimos somente quando a ativação for realmente solicitada.
 
 ### Resumos por e-mail
 

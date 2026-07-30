@@ -1,4 +1,4 @@
-version: 2
+version: 4
 id: open-study-path-intake
 
 form:
@@ -8,9 +8,9 @@ form:
   description: >-
     Formulário de onboarding para gerar uma trilha de aprendizagem personalizada.
     As respostas serão normalizadas no repositório da instância. Integrações são
-    opcionais e serão recomendadas somente depois do diagnóstico. GitHub permanece
-    como fonte de verdade do conteúdo, avaliações e domínio. Não informe segredos
-    ou dados pessoais desnecessários.
+    opcionais e serão recomendadas somente quando trouxerem benefício concreto.
+    GitHub permanece como fonte de verdade do conteúdo, avaliações e domínio. Não
+    informe segredos ou dados pessoais desnecessários.
   completion_message: >-
     Formulário enviado. Volte ao ChatGPT conectado ao seu repositório e peça
     para importar a submissão mais recente. O envio não gera a trilha automaticamente.
@@ -26,60 +26,70 @@ sections:
     title: Objetivo
   - id: context
     title: Contexto atual
-  - id: availability
-    title: Disponibilidade
   - id: preferences
     title: Preferências de aprendizagem
   - id: integrations
     title: Integrações opcionais
     description: >-
-      O agente analisará a trilha e recomendará somente ferramentas úteis. Para cada
-      recomendação, explicará finalidade, uso, limites gratuitos, dados, fallback e
-      autoridade. Nenhuma integração opcional bloqueará o curso.
+      O agente analisará o curso e recomendará somente ferramentas úteis. Para cada
+      recomendação, explicará finalidade, dados, fallback e autoridade. Nenhuma
+      integração opcional bloqueará o curso.
   - id: consent
     title: Consentimento
 
 fields:
   - key: path_name
     section: goal
-    label: Nome da trilha
+    label: Nome do curso
     type: short_text
-    required: false
+    required: true
 
   - key: subject
     section: goal
     label: O que você quer aprender?
-    type: short_text
+    help_text: Este é o campo principal. Descreva os temas, assuntos ou habilidades que deseja estudar.
+    type: long_text
     required: true
 
   - key: objective
     section: goal
-    label: Descreva detalhadamente seu objetivo
+    label: Conte um pouco mais sobre seu objetivo
+    help_text: Opcional. Informe contexto de uso, prioridades, tecnologias preferidas ou algo que deseja deixar de fora.
     type: long_text
-    required: true
+    required: false
 
   - key: desired_outcome
     section: goal
-    label: Qual resultado concreto gostaria de alcançar?
+    label: O que você gostaria de conseguir fazer ao final?
     type: long_text
     required: false
 
   - key: motivation
     section: goal
-    label: Por que deseja estudar isso?
+    label: Por que isso é importante para você agora?
+    type: long_text
+    required: false
+
+  - key: time_constraints
+    section: goal
+    label: Existe algum prazo ou limite de tempo importante?
+    help_text: >-
+      Opcional. Informe uma data relevante ou uma disponibilidade aproximada. Esse
+      dado ajuda a priorizar e explicar a viabilidade, mas não reduz silenciosamente
+      o conteúdo essencial do curso.
     type: long_text
     required: false
 
   - key: current_level
     section: context
-    label: Qual é seu nível atual?
+    label: Como você descreve seu nível atual?
     type: single_choice
     required: true
     options: [none, beginner, intermediate, advanced]
 
   - key: prior_knowledge
     section: context
-    label: Quais conhecimentos ou experiências anteriores são relevantes?
+    label: O que você já conhece ou já tentou?
     type: long_text
     required: false
 
@@ -100,56 +110,32 @@ fields:
 
   - key: preferred_language
     section: preferences
-    label: Em qual idioma deseja receber o conteúdo?
-    type: short_text
+    label: Em qual idioma prefere estudar?
+    help_text: Escolha o idioma principal das explicações e atividades.
+    type: single_choice
     required: true
     default: pt-BR
-
-  - key: weekly_hours
-    section: availability
-    label: Quantas horas por semana você possui?
-    type: number
-    required: true
-    validation:
-      minimum: 1
-
-  - key: deadline
-    section: availability
-    label: Existe uma data limite?
-    type: date
-    required: false
-
-  - key: preferred_days
-    section: availability
-    label: Quais dias prefere estudar?
-    type: multi_choice
-    required: false
-    options: [monday, tuesday, wednesday, thursday, friday, saturday, sunday]
-
-  - key: preferred_periods
-    section: availability
-    label: Quais períodos prefere?
-    type: multi_choice
-    required: false
-    options: [morning, afternoon, evening]
+    options: [pt-BR, en]
 
   - key: learning_formats
     section: preferences
-    label: Quais formatos de aprendizagem prefere?
+    label: Quais formas de aprender ajudam mais você?
+    help_text: Se não marcar nenhuma, o curso escolherá os formatos mais adequados ao conteúdo.
     type: multi_choice
     required: false
     options: [documentation, books, videos, courses, exercises, projects, discussions, flashcards]
 
   - key: theory_practice_balance
     section: preferences
-    label: Qual equilíbrio prefere entre teoria e prática?
+    label: Como prefere equilibrar explicação e prática?
     type: single_choice
     required: false
+    default: balanced
     options: [theory, balanced, practical]
 
   - key: assessment_style
     section: preferences
-    label: Como prefere ser avaliado?
+    label: Como prefere mostrar o que aprendeu?
     help_text: A evidência oficial continuará registrada nas avaliações do GitHub.
     type: multi_choice
     required: false
@@ -157,40 +143,25 @@ fields:
 
   - key: accessibility_needs
     section: preferences
-    label: Há alguma necessidade de acessibilidade ou restrição?
+    label: Existe alguma necessidade de acessibilidade ou restrição que devemos considerar?
     type: long_text
     required: false
 
   - key: integration_experience
     section: integrations
-    label: Quanto enriquecimento externo você deseja?
+    label: Como você prefere organizar a experiência?
     help_text: >-
-      minimal usa principalmente GitHub e Markdown; guided_recommendations recomenda
-      somente o que for útil; enriched considera mais recursos opcionais.
+      guided_recommendations sugere somente o que for útil; minimal usa principalmente
+      GitHub; enriched considera mais recursos opcionais; no_external_accounts mantém
+      a experiência sem sugestões que exijam conectar outras contas.
     type: single_choice
     required: true
     default: guided_recommendations
-    options: [minimal, guided_recommendations, enriched]
-
-  - key: free_tier_only
-    section: integrations
-    label: O curso deve funcionar apenas com recursos gratuitos?
-    help_text: Recursos pagos nunca serão obrigatórios sem alternativa gratuita.
-    type: yes_no
-    required: true
-    default: true
-
-  - key: account_connections
-    section: integrations
-    label: Como deseja tratar novas conexões de conta?
-    type: single_choice
-    required: true
-    default: ask_per_provider
-    options: [ask_per_provider, connected_services_only, no_external_accounts]
+    options: [guided_recommendations, minimal, enriched, no_external_accounts]
 
   - key: already_uses
     section: integrations
-    label: Quais serviços você já utiliza?
+    label: Quais ferramentas você já usa?
     help_text: >-
       Trello organiza tópicos visualmente; Todoist oferece tarefas simples e recorrentes;
       Reclaim protege tempo de foco; Quizlet cria flashcards; Consensus pesquisa literatura;
@@ -214,7 +185,7 @@ fields:
 
   - key: willing_to_connect
     section: integrations
-    label: Quais capacidades aceitaria conectar se forem recomendadas?
+    label: O que você aceitaria conectar se houver um bom motivo?
     help_text: Marcar não conecta nada automaticamente.
     type: multi_choice
     required: false
@@ -229,31 +200,28 @@ fields:
       - analytics_dashboard
       - course_discovery
 
+  - key: integration_constraints
+    section: integrations
+    label: Existe alguma ferramenta, conta ou restrição que devemos evitar?
+    help_text: Informe limitações de privacidade, regras do ambiente de trabalho ou serviços que não deseja usar.
+    type: long_text
+    required: false
+
   - key: task_manager
     section: integrations
-    label: Onde prefere acompanhar as tarefas?
+    label: Onde gostaria de acompanhar suas etapas?
     help_text: >-
-      Trello é o padrão para cursos ricos; Todoist é adequado para uma experiência
-      simples. Apenas um backend manterá o estado operacional autoritativo.
+      Trello é o padrão para uma visão em cards. Se ele não for conectado, GitHub
+      Issues é o primeiro fallback. O repositório continua como último fallback
+      interno. Apenas um backend manterá o estado operacional.
     type: single_choice
     required: true
     default: auto
-    options: [auto, trello, todoist, github_issues, markdown]
-
-  - key: scheduling_provider
-    section: integrations
-    label: Como prefere planejar as sessões de estudo?
-    help_text: >-
-      Reclaim é preferido para agenda adaptativa; Google ou Outlook oferecem blocos
-      fixos. A trilha nunca exigirá assinatura paga.
-    type: single_choice
-    required: true
-    default: auto
-    options: [auto, reclaim, google_calendar, outlook_calendar, none]
+    options: [auto, trello, github_issues, todoist]
 
   - key: todoist_reminders
     section: integrations
-    label: Deseja considerar Todoist apenas para lembretes recorrentes?
+    label: Gostaria de considerar lembretes recorrentes no Todoist?
     help_text: Concluir um lembrete não conclui o tópico no backend principal.
     type: single_choice
     required: false
@@ -262,21 +230,15 @@ fields:
 
   - key: email_summaries
     section: integrations
-    label: Deseja receber resumos por e-mail quando houver provedor compatível?
+    label: Gostaria de receber algum resumo por e-mail?
     type: single_choice
     required: false
     default: none
     options: [none, gmail, outlook_email]
 
-  - key: integration_notes
-    section: integrations
-    label: Restrições ou preferências sobre integrações
-    type: long_text
-    required: false
-
   - key: additional_notes
     section: preferences
-    label: Observações adicionais
+    label: Há mais alguma coisa que devemos considerar?
     type: long_text
     required: false
 
