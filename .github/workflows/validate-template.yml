@@ -36,7 +36,6 @@ jobs:
         run: python scripts/validate_review_framework.py
 
   validate:
-    name: Validate Open Study Path
     needs: review-generated-artifacts
     runs-on: ubuntu-latest
     steps:
