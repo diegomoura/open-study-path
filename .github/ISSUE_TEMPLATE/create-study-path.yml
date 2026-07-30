@@ -51,6 +51,12 @@ body:
       label: Por que isso é importante para você agora?
       description: Opcional. Essa resposta ajuda a tornar exemplos e prioridades mais relevantes.
 
+  - type: textarea
+    id: time_constraints
+    attributes:
+      label: Existe algum prazo ou limite de tempo importante?
+      description: Opcional. Informe, por exemplo, uma entrevista em 12 dias ou cerca de 3 horas disponíveis por semana. Isso ajuda a priorizar e explicar a viabilidade, mas não reduz silenciosamente o conteúdo essencial do curso.
+
   - type: dropdown
     id: current_level
     attributes:
@@ -79,7 +85,7 @@ body:
     id: preferred_language
     attributes:
       label: Em qual idioma prefere estudar?
-      description: O conteúdo será normalizado internamente como pt-BR ou en.
+      description: Escolha o idioma principal das explicações e atividades.
       options:
         - Português (Brasil)
         - English
@@ -149,6 +155,7 @@ body:
         - Quero sugestões de ferramentas quando forem úteis
         - Quero algo simples, principalmente no GitHub
         - Quero uma experiência mais interativa com ferramentas externas
+        - Não quero sugestões que exijam conectar outras contas
       default: 0
     validations:
       required: true
@@ -188,11 +195,17 @@ body:
         - label: Painel analítico, como Airtable
         - label: Cursos e aulas externas, como Coursera, edX, Udemy ou Khan Academy
 
+  - type: textarea
+    id: integration_constraints
+    attributes:
+      label: Existe alguma ferramenta, conta ou restrição que devemos evitar?
+      description: Opcional. Informe limitações de privacidade, regras do ambiente de trabalho ou serviços que não deseja usar.
+
   - type: dropdown
     id: task_manager
     attributes:
       label: Onde gostaria de acompanhar suas etapas?
-      description: O agente prioriza Trello para uma visão em cards. Se ele não for conectado, GitHub Issues é o primeiro fallback.
+      description: O agente prioriza Trello para uma visão em cards. Se ele não for conectado, GitHub Issues é o primeiro fallback; o repositório continua sendo o último fallback interno.
       options:
         - Deixar o agente recomendar
         - Trello
