@@ -102,4 +102,16 @@ A setup pull request may be merged only when all of these are true:
 
 A failing, pending, cancelled, missing or unreadable required check is not success. Fix the failure or leave the pull request open and report the blocker. Never merge first and assume a later push or default-branch run will validate the setup.
 
+## Bounded check observation
+
+Do not keep the person waiting through an unbounded sequence of workflow polls in one response. Read the current unchanged head, make only a small bounded number of status checks with increasing intervals, and stop the active wait when the workflow remains queued or running. Report that validation is still in progress without declaring setup complete.
+
+Create ongoing monitoring only after explicit opt-in. A monitor must handle every terminal outcome for the same PR head:
+
+- all required checks succeeded → report success and continue the merge policy;
+- any required check failed, was cancelled, became missing or unreadable → report the blocker immediately and identify the failing check;
+- checks still queued or running → remain silent and check again later.
+
+Never create a monitor that reports only success and silently ignores a terminal failure.
+
 Do not claim that the instance is configured until the merge gate is satisfied.
