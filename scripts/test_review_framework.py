@@ -1,0 +1,147 @@
+#!/usr/bin/env python3
+"""Regression tests for the shared generated-artifact review framework."""
+
+from __future__ import annotations
+
+from pathlib import Path
+import tempfile
+
+import yaml
+
+from review_framework import REVIEW_PROFILES, file_sha256, is_generated_artifact, validate_changed_coverage
+
+
+def write(path: Path, content: str) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(content, encoding="utf-8")
+
+
+def approved_review(root: Path, *, phase: str, artifacts: list[str], blocking=None) -> str:
+    profile = REVIEW_PROFILES[phase]
+    relative = f"state/reviews/{phase}.yml"
+    document = {
+        "contract_version": 1,
+        "operation_id": f"{phase}-review-v1",
+        "phase": phase,
+        "reviewer_role": profile["reviewer_role"],
+        "independent_pass": True,
+        "status": "approved",
+        "reviewed_at": "2026-07-30T12:00:00Z",
+        "artifacts": [{"path": path, "sha256": file_sha256(root / path)} for path in artifacts],
+        "checks": {check: "passed" for check in profile["checks"]},
+        "blocking_findings": blocking or [],
+        "non_blocking_findings": [],
+    }
+    write(root / relative, yaml.safe_dump(document, sort_keys=False))
+    return relative
+
+
+def test_valid_intake_review() -> None:
+    with tempfile.TemporaryDirectory() as directory:
+        root = Path(directory)
+        write(root / ".open-study-path/instance.yml", "kind: open-study-path-instance\n")
+        write(root / "study.config.yml", "path: {}\n")
+        write(root / "state/intake-summary.json", "{}\n")
+        review = approved_review(root, phase="intake", artifacts=[
+            ".open-study-path/instance.yml", "study.config.yml", "state/intake-summary.json"
+        ])
+        result = validate_changed_coverage(root, [
+            ".open-study-path/instance.yml", "study.config.yml", "state/intake-summary.json", review
+        ], instance_mode=True)
+        assert not result.errors, result.errors
+        assert len(result.covered_changes) == 3
+
+
+def test_missing_review_blocks_generated_change() -> None:
+    with tempfile.TemporaryDirectory() as directory:
+        root = Path(directory)
+        write(root / ".open-study-path/instance.yml", "kind: open-study-path-instance\n")
+        write(root / "study/roadmap.md", "# Roadmap\n")
+        result = validate_changed_coverage(root, ["study/roadmap.md"], instance_mode=True)
+        assert any("without an independent review artifact" in error for error in result.errors)
+        assert any("study/roadmap.md" in error for error in result.errors)
+
+
+def test_stale_hash_blocks_review() -> None:
+    with tempfile.TemporaryDirectory() as directory:
+        root = Path(directory)
+        write(root / ".open-study-path/instance.yml", "kind: open-study-path-instance\n")
+        write(root / "state/integrations.json", '{"sync":{"status":"success"}}\n')
+        review = approved_review(root, phase="publication", artifacts=["state/integrations.json"])
+        write(root / "state/integrations.json", '{"sync":{"status":"failed"}}\n')
+        result = validate_changed_coverage(root, ["state/integrations.json", review], instance_mode=True)
+        assert any("is stale" in error for error in result.errors)
+
+
+def test_blocking_finding_prevents_approval() -> None:
+    with tempfile.TemporaryDirectory() as directory:
+        root = Path(directory)
+        write(root / ".open-study-path/instance.yml", "kind: open-study-path-instance\n")
+        write(root / "state/diagnostic-summary.json", "{}\n")
+        review = approved_review(root, phase="diagnostic", artifacts=["state/diagnostic-summary.json"], blocking=[
+            "Placement conclusion is unsupported."
+        ])
+        result = validate_changed_coverage(root, ["state/diagnostic-summary.json", review], instance_mode=True)
+        assert any("blocking_findings" in error for error in result.errors)
+
+
+def test_required_check_cannot_be_skipped() -> None:
+    with tempfile.TemporaryDirectory() as directory:
+        root = Path(directory)
+        write(root / ".open-study-path/instance.yml", "kind: open-study-path-instance\n")
+        write(root / "state/progress.json", "{}\n")
+        review = approved_review(root, phase="progress", artifacts=["state/progress.json"])
+        document = yaml.safe_load((root / review).read_text(encoding="utf-8"))
+        document["checks"]["next_action_consistency"] = "pending"
+        write(root / review, yaml.safe_dump(document, sort_keys=False))
+        result = validate_changed_coverage(root, ["state/progress.json", review], instance_mode=True)
+        assert any("next_action_consistency" in error for error in result.errors)
+
+
+def test_review_must_cover_every_generated_change() -> None:
+    with tempfile.TemporaryDirectory() as directory:
+        root = Path(directory)
+        write(root / ".open-study-path/instance.yml", "kind: open-study-path-instance\n")
+        write(root / "study/roadmap.md", "# Roadmap\n")
+        write(root / "study/integrations.md", "# Integrations\n")
+        review = approved_review(root, phase="curriculum", artifacts=["study/roadmap.md"])
+        result = validate_changed_coverage(root, ["study/roadmap.md", "study/integrations.md", review], instance_mode=True)
+        assert any("study/integrations.md" in error for error in result.errors)
+
+
+def test_template_changes_do_not_require_instance_review() -> None:
+    with tempfile.TemporaryDirectory() as directory:
+        root = Path(directory)
+        write(root / "templates/topic.md", "# Template\n")
+        result = validate_changed_coverage(root, ["templates/topic.md"], instance_mode=False)
+        assert not result.errors
+
+
+def test_generated_path_classifier() -> None:
+    assert is_generated_artifact("study/roadmap.md")
+    assert is_generated_artifact("state/progress.json")
+    assert is_generated_artifact(".open-study-path/instance.yml")
+    assert is_generated_artifact(".github/ISSUE_TEMPLATE/assessment-topic-001.yml")
+    assert not is_generated_artifact("state/reviews/intake.yml")
+    assert not is_generated_artifact("state/content-reviews/TOPIC-001.yml")
+    assert not is_generated_artifact("scripts/validate_template.py")
+
+
+def main() -> None:
+    tests = [
+        test_valid_intake_review,
+        test_missing_review_blocks_generated_change,
+        test_stale_hash_blocks_review,
+        test_blocking_finding_prevents_approval,
+        test_required_check_cannot_be_skipped,
+        test_review_must_cover_every_generated_change,
+        test_template_changes_do_not_require_instance_review,
+        test_generated_path_classifier,
+    ]
+    for test in tests:
+        test()
+    print(f"Review framework regression tests passed ({len(tests)} cases).")
+
+
+if __name__ == "__main__":
+    main()
