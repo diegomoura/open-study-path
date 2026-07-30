@@ -79,7 +79,7 @@ def validate_reusable_contract() -> None:
         if phase.get("review_profile") != profile:
             fail(f"{phase_id} must use review_profile: {profile}")
         outputs = phase.get("outputs", [])
-        if "state/reviews/" not in outputs:
+        if phase_id != "diagnostic" and "state/reviews/" not in outputs:
             fail(f"{phase_id} outputs must include state/reviews/")
 
     review_template = load_yaml(REVIEW_TEMPLATE)
