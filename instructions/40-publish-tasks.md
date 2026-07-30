@@ -1,8 +1,8 @@
 # Publish tasks and selected integrations
 
-Use the approved roadmap, topic contracts, ready lessons, integration plan and current state. Publication creates execution and practice projections. It must not regenerate or rewrite pedagogical content, but it may synchronize bounded integration-reference blocks whose content is derived deterministically from approved artifacts and durable state.
+Use the approved roadmap, topic contracts, ready lessons, reviewed slide PDFs, integration plan and current state. Publication creates execution and practice projections. It must not regenerate or rewrite pedagogical content, slide sources or PDFs, but it may synchronize bounded integration-reference blocks whose content is derived deterministically from approved artifacts and durable state.
 
-Read `docs/learner-facing-language.md` before writing task descriptions or the completion response.
+Read `docs/learner-facing-language.md` and `docs/study-slides.md` before writing task descriptions or the completion response.
 
 The natural command is:
 
@@ -18,7 +18,7 @@ Do not wait for an optional connection click before completing work that can use
 
 ## Authority model
 
-GitHub stores approved curriculum, lessons, assessments and verified progress. Exactly one task backend tracks operational execution. External practice, reminders, calendars, habits, analytics and course platforms never establish learning completion.
+GitHub stores approved curriculum, lessons, slide PDFs, assessments and verified progress. Exactly one task backend tracks operational execution. External practice, reminders, calendars, habits, analytics and course platforms never establish learning completion.
 
 This is an internal contract. Do not repeat it verbatim in every learner-facing card.
 
@@ -35,15 +35,26 @@ Do not create empty assessment issues during publication.
 
 ## Task backend
 
-Create one task per topic in the single selected backend. The task is the learner's concise entry point into the lesson, primary practice and assessment. It is not an inventory of every repository artifact.
+Create one task per topic in the single selected backend. The task is the learner's concise entry point into the visual summary, complete lesson, primary practice and assessment. It is not an inventory of every repository artifact.
 
 ### One primary resource per capability
 
-Show one primary learner-facing resource per capability in the task:
+For every ready topic, show exactly these learner-facing capabilities in this order:
 
-- one lesson link;
-- one current practice link for the same practice capability;
-- one direct assessment link.
+1. one **Slides** link to the current reviewed PDF;
+2. one **Aula** link to the complete module;
+3. one current **Prática** link for the same practice capability;
+4. one direct **Avaliação** link.
+
+Keep one current practice link in the task. Do not duplicate local and external alternatives merely because both are stored.
+
+Build the slide URL from the exact instance identity and topic contract:
+
+```text
+https://github.com/OWNER/REPOSITORY/raw/HEAD/study/slides/TOPIC-000/slides.pdf
+```
+
+This route stays on GitHub, preserves private-repository access and returns the PDF directly for an authenticated viewer. Do not use a temporary signed `raw.githubusercontent.com` URL. Do not show the internal HTML, CSS, JavaScript, render metadata, slide-review evidence, topic contract or rubric.
 
 When an external integration is connected and its current resource was created successfully, show that external resource as the primary practice link. Keep local Markdown and TSV alternatives in the lesson and repository, but do not duplicate them in the task.
 
@@ -72,7 +83,8 @@ Use a description equivalent to:
 >
 > **Recursos**
 >
-> - **Aula:** <link direto para o módulo>
+> - **Slides:** <link direto para o PDF da versão atual>
+> - **Aula:** <link direto para o módulo completo>
 > - **Prática:** <um único recurso principal disponível agora>
 > - **Avaliação:** <link direto para o formulário>
 >
@@ -102,11 +114,11 @@ Use:
 > **Tempo sugerido:** <estimativa>  
 > **O que você vai produzir:** <entregável>
 >
-> A aula completa será preparada automaticamente quando todos os pré-requisitos acima estiverem concluídos. Você não precisa pedir a geração manualmente.
+> A aula completa será preparada automaticamente quando todos os pré-requisitos acima estiverem concluídos. Os slides serão gerados junto com ela. Você não precisa pedir a geração manualmente.
 
 When there are no prerequisites, say that the stage is an entry point. When there is one prerequisite, name it directly. When there are multiple prerequisites from different branches, list all of them and do not imply that the numerically previous card contains their combined content.
 
-The future card must stand on its own. Do not link the internal topic contract merely to provide a destination. Link a roadmap only when it genuinely helps the learner understand the wider sequence. Do not attach nonexistent module, rubric, flashcard or assessment links. Do not use `planned`, `materialized`, “janela ativa” or “ordem topológica” in learner copy.
+The future card must stand on its own. Do not link the internal topic contract merely to provide a destination. Link a roadmap only when it genuinely helps the learner understand the wider sequence. Do not attach nonexistent module, PDF, slide source, rubric, flashcard or assessment links. Do not use `planned`, `materialized`, “janela ativa” or “ordem topológica” in learner copy.
 
 Only dependency-ready lessons enter the ready list. Keep future lessons in the planned list.
 
@@ -125,7 +137,7 @@ Use “Revisão necessária” in visible copy instead of “Recuperação” wh
 
 ### Todoist or GitHub Issues
 
-When another task backend is selected, preserve the same human structure and projection rules. Todoist reminders may be auxiliary only and must point to the primary task or lesson.
+When another task backend is selected, preserve the same human structure, resource order and projection rules. Todoist reminders may be auxiliary only and must point to the primary task or lesson.
 
 ### Task projection review
 
@@ -136,9 +148,12 @@ Before publication success, review every created or updated task against the app
 - prerequisite copy contains exactly the direct prerequisite titles;
 - no wording assumes a linear previous card when the graph branches;
 - ready status comes from satisfied dependencies;
-- links point to the current reviewed content version.
+- the resource order is Slides, Aula, Prática, Avaliação;
+- the slide link uses the direct GitHub raw PDF route and points to the current `content_version` recorded by `slides.meta.json`;
+- the lesson, practice and assessment links point to the current reviewed content version;
+- no internal slide source or review artifact is exposed.
 
-Read the external task back when the connector exposes a harmless read. Correct mismatches before continuing. Persist the direct prerequisite IDs with the task resource so later synchronization can detect drift. This projection review does not replace `instructions/36-review-course-content.md`; it verifies that the reviewed course was represented correctly outside GitHub.
+Read the external task back when the connector exposes a harmless read. Correct mismatches before continuing. Persist the direct prerequisite IDs and current content version with the task resource so later synchronization can detect drift. This projection review does not replace `instructions/36-review-course-content.md` or `instructions/37-review-study-slides.md`; it verifies that the reviewed course was represented correctly outside GitHub.
 
 ## Scheduling
 
@@ -161,7 +176,7 @@ The script may change only the block delimited by:
 - `<!-- open-study-path:practice-links:start -->`
 - `<!-- open-study-path:practice-links:end -->`
 
-That block lists the current Quizlet set when one exists and always retains the local Markdown and TSV alternatives. The rest of the lesson must remain byte-for-byte unchanged. Older Quizlet sets whose `content_version` does not match the topic must not be linked.
+That block lists the current Quizlet set when one exists and always retains the local Markdown and TSV alternatives. The rest of the lesson, including the slide PDF link block, must remain byte-for-byte unchanged. Older Quizlet sets whose `content_version` does not match the topic must not be linked.
 
 For legacy lessons without markers, the script may migrate only the link list inside `## Pratique e revise` and add the markers. It must preserve the surrounding explanation and every other section.
 
@@ -213,7 +228,9 @@ Use human labels in visible resources. Keep provider authority, preflight, fallb
 
 Inspect `state/integrations.json` and matching provider resources before writing. Reuse or update exact resources when supported. Store capability, provider, safe ID, URL, topic, content version, direct prerequisite IDs, authority, sync status and timestamp. Never persist credentials, tokens, OAuth details, raw submissions or unnecessary identity data.
 
-Practice-link synchronization is idempotent. Re-running it with unchanged topic versions and integration state must produce no diff. When a topic version changes, the old external link is removed until a successful resource for the new version is recorded.
+Task synchronization is idempotent. Re-running publication with an unchanged topic version must retain the same slide PDF route and update only provider fields that genuinely drifted. A changed `content_version` requires a newly reviewed and rendered PDF before the task is updated.
+
+Practice-link synchronization is idempotent. Re-running it with unchanged topic versions and integration state must produce no diff. When a topic version changes, the old external practice link is removed until a successful resource for the new version is recorded.
 
 ## Persist publication completion
 
@@ -228,7 +245,7 @@ After the complete required publication set succeeds, all created or reused reso
 
 A Markdown or GitHub-native task backend still completes the publication phase; record the same successful sync state after its repository-native projection is ready.
 
-When required publication is blocked, failed, partial, still in progress, task projection is inconsistent or practice links are out of sync:
+When required publication is blocked, failed, partial, still in progress, task projection is inconsistent, the current slide PDF is missing or practice links are out of sync:
 
 - do not set a success status or `last_success_at`;
 - persist the accurate non-success status and a short non-sensitive reason;
@@ -239,7 +256,7 @@ Run `scripts/lifecycle_next_action.py` against the final persisted state before 
 
 ## Completion
 
-After publication, link the first ready lesson, primary task and assessment. Mention an alternative only when the primary resource is unavailable or the learner explicitly asks for it.
+After publication, link the first ready slide PDF, complete lesson, primary task and assessment. Mention an alternative only when the primary resource is unavailable or the learner explicitly asks for it.
 
 Do not lead with a publication report, provider inventory, PR status or CI result. Only after successful publication state is persisted, use:
 

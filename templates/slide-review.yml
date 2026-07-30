@@ -1,0 +1,27 @@
+version: 1
+topic_id: TOPIC-000
+content_version: 1
+reviewed_at: null
+reviewer_role: study_slides_reviewer
+review_mode: independent_pass
+status: pending
+
+source_lesson: study/modules/TOPIC-000.md
+source_lesson_sha256: replace-with-current-sha256
+slides_source: study/slides/TOPIC-000/index.html
+slides_source_sha256: replace-with-aggregate-source-sha256
+
+checks:
+  lesson_fidelity: pending
+  outcome_coverage: pending
+  summary_quality: pending
+  visual_hierarchy: pending
+  mermaid_quality: pending
+  accessibility: pending
+  link_consistency: pending
+
+outcomes_reviewed:
+  - LO-1
+
+blocking_findings: []
+non_blocking_findings: []

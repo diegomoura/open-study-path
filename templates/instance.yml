@@ -33,6 +33,16 @@ content_review:
   independent_pass: true
   require_outcome_traceability: true
 
+study_slides:
+  contract_version: 1
+  enabled: true
+  required_for_materialized_topics: true
+  source_format: html
+  learner_format: pdf
+  html_visibility: internal_only
+  generated_images_enabled: false
+  mermaid_required: true
+
 content_generation:
   strategy: adaptive_rolling_window
   lookahead_topics: 2

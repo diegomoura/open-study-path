@@ -12,7 +12,7 @@ This Project manages one personalized Open Study Path instance.
 - Template: `diegomoura/open-study-path`
 - Preferred language: `pt-BR`
 
-Treat the instance repository as the only learner repository for this Project. Read `AGENTS.md`, `.open-study-path/instance.yml`, `instructions/manifest.yml`, `instructions/phase-completion.md`, `docs/learner-facing-language.md`, `docs/content-quality-and-sources.md` and `docs/review-framework.md` before repository work.
+Treat the instance repository as the only learner repository for this Project. Read `AGENTS.md`, `.open-study-path/instance.yml`, `instructions/manifest.yml`, `instructions/phase-completion.md`, `docs/learner-facing-language.md`, `docs/content-quality-and-sources.md`, `docs/review-framework.md` and `docs/study-slides.md` before repository work.
 
 During first-chat setup, also read `instructions/02-setup-execution.md`. Repository size, code-search status, empty search results and incomplete local checkouts are not authoritative. Determine mode by reading `.open-study-path/template.yml`, `.open-study-path/instance.yml`, `AGENTS.md`, `instructions/manifest.yml` and the intake Issue Form directly from the target repository.
 
@@ -62,7 +62,7 @@ The reviewer is a distinct internal role for setup, intake, diagnostic, curricul
 
 Store the approval under `state/reviews/`. The review must cover every generated file changed in the pull request with its current SHA-256 fingerprint, pass every required profile check and contain no blocking findings. Missing review, partial coverage or stale evidence blocks CI, merge and a successful response.
 
-This shared review is additive. Materialized lessons still require the specialized course-content review; publication still requires integration resolution and projection review; assessment still requires independent rubric-based re-scoring.
+This shared review is additive. Materialized lessons require the specialized course-content review, their slide decks require the specialized study-slides review, publication requires integration resolution and projection review, and assessment requires independent rubric-based re-scoring.
 
 ## Curriculum and lessons
 
@@ -85,7 +85,8 @@ Every ready lesson must include:
 - deliverable and direct assessment;
 - `Como este conteúdo foi construído`;
 - `Outras formas de aprender`;
-- `Fontes e caminhos para aprofundar`.
+- `Fontes e caminhos para aprofundar`;
+- one direct `Slides da aula` PDF link.
 
 Use normally three to seven inspected sources. Include a primary or official source when available, a reliable explanatory source and an alternative format when it adds real value. Videos and courses need precise lessons or timestamps, purpose, effort, language/access and an active learning task. Potentially paid resources require a free or official alternative.
 
@@ -95,15 +96,38 @@ Never invent sources, cite an uninspected search result or cite a plugin answer 
 
 After authoring curriculum content, run `instructions/35-review-curriculum.md` for the plan and `instructions/36-review-course-content.md` as a separate reviewer pass for every materialized topic.
 
-The content reviewer must compare the approved topic contract with the lesson, practice, rubric, Issue Form and proposed task copy. Every outcome must be taught and assessed. Every materialized topic must have a current `state/content-reviews/TOPIC-000.yml` for its exact content version. A stale review, missing outcome, false prerequisite, navigation mismatch or unresolved blocking finding prevents merge.
+The content reviewer must compare the approved topic contract with the lesson, practice, rubric, Issue Form and proposed task copy. Every outcome must be taught and assessed. Every materialized topic must have a current `state/content-reviews/TOPIC-000.yml` for its exact content version. A stale review, missing outcome, false prerequisite, navigation mismatch or unresolved blocking finding prevents the slide-authoring handoff and merge.
 
 CI validates traceability, but do not approve markers mechanically. Verify that the marked content genuinely teaches the promised outcome and that assessment questions genuinely measure it.
+
+## Study slides and PDF
+
+After the course-content review passes, read `instructions/37-review-study-slides.md` and use `templates/study-slides/`.
+
+For every materialized topic:
+
+1. create semantic HTML, CSS and JavaScript under `study/slides/TOPIC-000/`;
+2. derive six to eighteen concise 16:9 slides from the reviewed lesson without new research;
+3. represent every learning outcome through honest `data-outcome-ids` values;
+4. include at least one focused Mermaid diagram rendered as SVG;
+5. do not generate raster illustrations or complete-slide images under the current contract;
+6. run the independent study-slides review and store it in `state/slide-reviews/TOPIC-000.yml`;
+7. render `slides.pdf` with `scripts/render_study_slides.mjs` and validate it with `scripts/validate_study_slides.py`;
+8. include the HTML sources, review, PDF and render metadata in the same PR and `content_version` as the lesson.
+
+The HTML exists only to build the PDF. Never show or link the HTML, CSS, JavaScript, render metadata or slide-review evidence. The module and task use only:
+
+`https://github.com/OWNER/REPOSITORY/raw/HEAD/study/slides/TOPIC-000/slides.pdf`
+
+This remains on GitHub and preserves private-repository access. Do not use GitHub Pages, RawGitHack, PowerPoint, Google Slides, manual printing, external CDNs or temporary signed raw URLs.
+
+PDF rendering is deterministic validation after semantic review. A missing PDF, stale source hash, Mermaid error, overflow, wrong page count or failed current-head check blocks merge and publication.
 
 ## Integrations
 
 Recommend only tools justified by the course and preferences. Explain them in simple language first; keep preflight, authority and synchronization details in collapsed technical sections and state files.
 
-GitHub stores curriculum, lessons, assessments and verified progress. Use one primary task backend. Quizlet and other formative tools support practice only and always have local alternatives. Mermaid remains canonical. Airtable is only a `github_to_airtable` projection.
+GitHub stores curriculum, lessons, slide PDFs, assessments and verified progress. Use one primary task backend. Quizlet and other formative tools support practice only and always have local alternatives. Mermaid remains canonical. Airtable is only a `github_to_airtable` projection.
 
 Run `instructions/42-integration-preflight.md` before external writes. Optional missing tools use alternatives and do not block the course. A connection suggestion requires an explicit click and does not itself prove access.
 
@@ -115,17 +139,18 @@ Ready tasks say:
 
 - what the person will learn;
 - time suggested;
-- one lesson link;
+- one direct slide PDF link;
+- one complete lesson link;
 - one primary practice link available now;
 - one direct assessment link;
 - what to produce;
 - how to finish.
 
-When an external practice resource such as Quizlet exists, show it as the task's practice link and keep Markdown/TSV alternatives inside the lesson. When it does not exist, show the best local learner-facing alternative. Do not show both merely because both are stored.
+Show resources in exactly this order: **Slides**, **Aula**, **Prática**, **Avaliação**. When an external practice resource such as Quizlet exists, show it as the task's practice link and keep Markdown/TSV alternatives inside the lesson. When it does not exist, show the best local learner-facing alternative. Do not show both merely because both are stored.
 
-Do not link `study/topics/` contracts, rubric YAML, state files or synchronization records from normal learner tasks. Summarize objective, deliverable and completion criteria directly in the task.
+Do not link `study/topics/` contracts, slide HTML/CSS/JavaScript, render metadata, slide reviews, rubric YAML, state files or synchronization records from normal learner tasks. Summarize objective, deliverable and completion criteria directly in the task.
 
-Future tasks begin with **Pré-requisitos desta etapa**, list exactly the direct prerequisite titles and say to follow that list rather than card numbering. They say what the person will learn, what they will produce and that the lesson will be prepared automatically after those prerequisites. Do not use “todas as etapas anteriores” in a branched graph and do not add an internal topic-contract link merely to provide a destination.
+Future tasks begin with **Pré-requisitos desta etapa**, list exactly the direct prerequisite titles and say to follow that list rather than card numbering. They say what the person will learn, what they will produce and that the complete lesson and slides will be prepared automatically after those prerequisites. Do not use “todas as etapas anteriores” in a branched graph and do not add nonexistent lesson or slide links.
 
 ## Assessments and progress
 
@@ -135,11 +160,11 @@ The detailed rubric remains available to the evaluator and repository validation
 
 Resolve intake through its current hidden marker or the complete legacy fallback; resolve assessments through labels, hidden marker and history. Ask for an issue number only when multiple valid candidates remain. Grade each response, report a clear score and feedback, persist the attempt and update progress.
 
-After success, prepare the next eligible lessons automatically. After an insufficient result, create a focused review and reassessment.
+After success, prepare the next eligible lessons and their reviewed slide PDFs automatically. After an insufficient result, create a focused review and reassessment.
 
 ## Repository and safety
 
-Use pull requests for structural changes and generated learning content. Validate, run every specialized review, run the shared operation review and safely merge when the policy permits and no decision remains. Do not ask the person to review or merge routine PRs.
+Use pull requests for structural changes and generated learning content. Validate, run every specialized review, render and validate slide PDFs, run the shared operation review and safely merge when the policy permits and no decision remains. Do not ask the person to review or merge routine PRs.
 
 For setup, build one allowed diff from the files already present in the target repository and apply `instructions/02-setup-execution.md`. Inspect required checks for the current unchanged PR head. A failing, pending, cancelled, missing or unreadable required check blocks merge and blocks a success response. Never report that the trail is configured while CI is red or unknown.
 
