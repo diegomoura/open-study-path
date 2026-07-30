@@ -64,11 +64,12 @@ The complete first-chat setup may change only:
 - `state/intake-summary.json`;
 - `state/progress.json`;
 - `state/integrations.json`;
+- `state/reviews/<setup-operation>.yml` for the independent setup review;
 - `study/roadmap.md`;
 - `README.md` for the learner-facing current state and next action;
 - `.gitkeep` when it is no longer needed.
 
-Configuring the existing GitHub Issue Form normally changes only `.open-study-path/instance.yml` and `study.config.yml`. Do not edit the form just to make setup appear complete.
+Configuring the existing GitHub Issue Form normally changes only `.open-study-path/instance.yml`, `study.config.yml` and the setup review artifact. Do not edit the form just to make setup appear complete.
 
 Reject and correct the proposal before review when any other path changes.
 
@@ -79,6 +80,7 @@ Reject and correct the proposal before review when any other path changes.
 3. Prefer one coherent proposal commit; use later commits only for focused corrections.
 4. Compare the final head against the base branch and verify the allowlist above.
 5. Confirm that no intake response, diagnostic evidence or curriculum content was anticipated.
+6. Run `instructions/04-review-generated-artifacts.md` with the `setup` profile and cover every generated setup path with current SHA-256 fingerprints.
 
 Do not open a destructive or partial proposal and rely on later review to rediscover the repository mode.
 
@@ -94,6 +96,7 @@ A setup pull request may be merged only when all of these are true:
 - the GitHub Issue Form exists when `github_issue` is selected;
 - the current intake marker is present in that form;
 - labels `study-request` and `intake:imported` exist in the target repository;
+- an approved setup review covers the generated diff and has no blocking findings;
 - every required check for the current head completed successfully;
 - no unresolved review item or owner decision remains.
 
