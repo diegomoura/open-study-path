@@ -85,6 +85,10 @@ When import only was requested, use:
 
 `Vamos fazer meu diagnóstico.`
 
+The explicit chained command remains accepted:
+
+`Inicie o diagnóstico proporcional desta trilha. Faça perguntas curtas, uma por vez. Não gere a trilha ainda.`
+
 If no unique candidate exists or a real decision is required, stop and surface only the action that resolves it.
 
 <!-- Contract markers: expected field headings; exactly one valid candidate; When none remain; more than one remains; state/intake-summary.json.source_reference; intake:imported; immediately invoke `instructions/20-diagnostic.md`; auto_when_unambiguous; repairable consistency signals; unsupported. -->
