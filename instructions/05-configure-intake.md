@@ -20,7 +20,7 @@ Do not silently select Jotform or create external resources without the owner's 
 2. Read the exact repository identity from `.open-study-path/instance.yml`.
 3. Confirm the form contains the current hidden identity marker:
 
-   `<!-- open-study-path:intake form_id=create-study-path version=3 -->`
+   `<!-- open-study-path:intake form_id=create-study-path version=4 -->`
 
 4. Confirm the form does not prefill the native issue title and that its first visible instructions explain: use **Add a title** for the course name. GitHub requires that title before submission; the form must not ask for the name a second time.
 5. Verify repository labels `study-request` and `intake:imported` exist. Create only missing labels through the GitHub labels API or run **Prepare ChatGPT Project Instructions**, which invokes `scripts/ensure_repository_labels.py`. Read the labels again after provisioning.
@@ -40,7 +40,9 @@ Do not mark setup or intake ready when label existence, title guidance or the cu
 
 ### Compatibility
 
-Continue accepting older forms, including the supported marker:
+Continue accepting older forms, including the supported markers:
+
+`<!-- open-study-path:intake form_id=create-study-path version=3 -->`
 
 `<!-- open-study-path:intake form_id=create-study-path version=2 -->`
 
@@ -68,7 +70,7 @@ Stop before reading submissions.
 
 ## Manual YAML
 
-Set the manual provider and return the configuration path. Required facts are subject, objective, current level, preferred language and weekly hours. Do not invent them.
+Set the manual provider and return the configuration path. Required facts are course name, subject, current level and preferred language. Do not invent them. Objective details, learning preferences and integration choices remain optional.
 
 Use:
 
