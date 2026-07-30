@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """Deterministic GitHub Issue Form intake resolution.
 
-Version 4 is the current form. Versions 3 and 2 remain accepted through explicit
-markers, while unmarked legacy submissions require the stricter legacy signals.
+Only the current marked form is supported. The hidden marker, expected headings,
+course title and import state jointly identify a valid submission.
 """
 
 from __future__ import annotations
@@ -13,22 +13,10 @@ from typing import Iterable, Sequence
 
 CURRENT_FORM_ID = "create-study-path"
 CURRENT_FORM_VERSION = 4
-COMPATIBLE_FORM_VERSIONS = frozenset({2, 3})
-SUPPORTED_FORM_VERSIONS = frozenset({CURRENT_FORM_VERSION, *COMPATIBLE_FORM_VERSIONS})
 CURRENT_MARKER = (
     "<!-- open-study-path:intake "
     f"form_id={CURRENT_FORM_ID} version={CURRENT_FORM_VERSION} -->"
 )
-VERSION_3_MARKER = (
-    "<!-- open-study-path:intake "
-    f"form_id={CURRENT_FORM_ID} version=3 -->"
-)
-VERSION_2_MARKER = (
-    "<!-- open-study-path:intake "
-    f"form_id={CURRENT_FORM_ID} version=2 -->"
-)
-LEGACY_CURRENT_PREFIX = "[Nova trilha]"
-LEGACY_PREFIX = "[Study Path]:"
 DISCOVERY_LABEL = "study-request"
 IMPORTED_LABEL = "intake:imported"
 
@@ -76,8 +64,7 @@ def _has_expected_headings(body: str, expected_headings: Sequence[str]) -> bool:
 
 
 def _has_course_title(title: str) -> bool:
-    value = title.strip()
-    return bool(value) and value not in {LEGACY_CURRENT_PREFIX, LEGACY_PREFIX}
+    return bool(title.strip())
 
 
 def classify_issue(
@@ -100,47 +87,32 @@ def classify_issue(
         reasons.append("already_labeled_imported")
     if not _has_expected_headings(issue.body, expected_headings):
         reasons.append("missing_expected_headings")
+    if not _has_course_title(issue.title):
+        reasons.append("missing_course_title")
 
     marker_matches = list(ANY_MARKER_RE.finditer(issue.body))
     detail_matches = list(INTAKE_MARKER_RE.finditer(issue.body))
-
-    if marker_matches:
-        if (
-            len(marker_matches) != 1
-            or len(detail_matches) != 1
-            or marker_matches[0].span() != detail_matches[0].span()
-        ):
-            reasons.append("unsupported_or_ambiguous_marker")
-            return CandidateDecision(issue.number, False, None, tuple(reasons), ())
-
+    if not marker_matches:
+        reasons.append("missing_current_marker")
+    elif (
+        len(marker_matches) != 1
+        or len(detail_matches) != 1
+        or marker_matches[0].span() != detail_matches[0].span()
+    ):
+        reasons.append("unsupported_or_ambiguous_marker")
+    else:
         marker = detail_matches[0]
         form_id = marker.group("form_id")
         version = int(marker.group("version"))
-        if form_id != CURRENT_FORM_ID or version not in SUPPORTED_FORM_VERSIONS:
+        if form_id != CURRENT_FORM_ID or version != CURRENT_FORM_VERSION:
             reasons.append("unsupported_or_ambiguous_marker")
-            return CandidateDecision(issue.number, False, None, tuple(reasons), ())
-        if version in {CURRENT_FORM_VERSION, 3} and not _has_course_title(issue.title):
-            reasons.append("missing_course_title")
-        if reasons:
-            return CandidateDecision(issue.number, False, None, tuple(reasons), ())
-
-        if DISCOVERY_LABEL not in labels:
-            repairs.append("add_study_request_label")
-        if version == CURRENT_FORM_VERSION:
-            mode = "current_marker"
-        else:
-            mode = f"compatible_marker_v{version}"
-        return CandidateDecision(issue.number, True, mode, (), tuple(repairs))
-
-    legacy_title = issue.title.startswith(LEGACY_CURRENT_PREFIX) or issue.title.startswith(LEGACY_PREFIX)
-    if DISCOVERY_LABEL not in labels:
-        reasons.append("legacy_missing_study_request_label")
-    if not legacy_title:
-        reasons.append("legacy_unrecognized_title")
 
     if reasons:
         return CandidateDecision(issue.number, False, None, tuple(reasons), ())
-    return CandidateDecision(issue.number, True, "legacy_signals", (), ())
+
+    if DISCOVERY_LABEL not in labels:
+        repairs.append("add_study_request_label")
+    return CandidateDecision(issue.number, True, "current_marker", (), tuple(repairs))
 
 
 def resolve_candidates(
