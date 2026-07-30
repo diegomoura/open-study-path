@@ -21,27 +21,23 @@
     "path": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["subject", "objective"],
+      "required": ["subject"],
       "properties": {
         "name": {"type": ["string", "null"]},
         "subject": {"type": "string"},
-        "objective": {"type": "string"},
+        "objective": {"type": ["string", "null"]},
         "desired_outcome": {"type": ["string", "null"]},
-        "motivation": {"type": ["string", "null"]},
-        "deadline": {"type": ["string", "null"], "format": "date"}
+        "motivation": {"type": ["string", "null"]}
       }
     },
     "learner": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["preferred_language", "current_level", "weekly_hours"],
+      "required": ["preferred_language", "current_level"],
       "properties": {
-        "preferred_language": {"type": "string", "minLength": 1},
+        "preferred_language": {"enum": ["pt-BR", "en"]},
         "current_level": {"enum": ["none", "beginner", "intermediate", "advanced"]},
         "prior_knowledge": {"type": "array", "items": {"type": "string"}},
-        "weekly_hours": {"type": "number", "exclusiveMinimum": 0},
-        "preferred_days": {"type": "array", "items": {"type": "string"}},
-        "preferred_periods": {"type": "array", "items": {"type": "string"}},
         "accessibility_needs": {"type": "array", "items": {"type": "string"}}
       }
     },
@@ -51,7 +47,7 @@
       "required": ["formats", "theory_practice_balance", "assessment_style", "notes"],
       "properties": {
         "formats": {"type": "array", "items": {"type": "string"}},
-        "theory_practice_balance": {"type": "string"},
+        "theory_practice_balance": {"enum": ["theory", "balanced", "practical"]},
         "assessment_style": {"type": ["string", "array"]},
         "notes": {"type": ["string", "null"]}
       }
@@ -110,23 +106,11 @@
     "integration_preferences": {
       "type": "object",
       "additionalProperties": false,
-      "required": [
-        "experience",
-        "free_tier_only",
-        "account_connections",
-        "already_uses",
-        "willing_to_connect",
-        "avoid",
-        "notes"
-      ],
+      "required": ["experience", "already_uses", "willing_to_connect"],
       "properties": {
         "experience": {"enum": ["minimal", "guided_recommendations", "enriched"]},
-        "free_tier_only": {"type": "boolean"},
-        "account_connections": {"enum": ["ask_per_provider", "connected_services_only", "no_external_accounts"]},
         "already_uses": {"type": "array", "items": {"type": "string"}, "uniqueItems": true},
-        "willing_to_connect": {"type": "array", "items": {"type": "string"}, "uniqueItems": true},
-        "avoid": {"type": "array", "items": {"type": "string"}, "uniqueItems": true},
-        "notes": {"type": ["string", "null"]}
+        "willing_to_connect": {"type": "array", "items": {"type": "string"}, "uniqueItems": true}
       }
     },
     "integrations": {
@@ -197,9 +181,9 @@
           "additionalProperties": false,
           "required": ["provider", "preferred", "alternatives", "board_or_project", "single_authoritative_backend"],
           "properties": {
-            "provider": {"enum": ["auto", "github_issues", "trello", "todoist", "markdown"]},
+            "provider": {"enum": ["auto", "github_issues", "trello", "todoist"]},
             "preferred": {"const": "trello"},
-            "alternatives": {"type": "array", "items": {"enum": ["todoist", "github_issues", "markdown"]}, "uniqueItems": true},
+            "alternatives": {"type": "array", "items": {"enum": ["github_issues", "todoist"]}, "uniqueItems": true},
             "board_or_project": {"type": ["string", "null"]},
             "single_authoritative_backend": {"const": true}
           }
@@ -219,14 +203,13 @@
         "calendar": {
           "type": "object",
           "additionalProperties": false,
-          "required": ["provider", "preferred", "alternatives", "enabled", "required", "free_tier_only"],
+          "required": ["provider", "preferred", "alternatives", "enabled", "required"],
           "properties": {
             "provider": {"enum": ["auto", "none", "reclaim", "google_calendar", "outlook_calendar"]},
             "preferred": {"const": "reclaim"},
             "alternatives": {"type": "array", "items": {"enum": ["google_calendar", "outlook_calendar", "none"]}, "uniqueItems": true},
             "enabled": {"enum": ["auto", "enabled", "disabled"]},
-            "required": {"const": false},
-            "free_tier_only": {"type": "boolean"}
+            "required": {"const": false}
           }
         },
         "habit_tracking": {
