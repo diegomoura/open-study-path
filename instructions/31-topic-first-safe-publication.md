@@ -6,7 +6,7 @@ Use this contract during curriculum generation, integration preflight, task publ
 
 `planning.unit: topic` is authoritative. Organize the learning path as areas, dependency-aware topics, lessons, activities, evidence and assessments.
 
-`learner.weekly_hours` is capacity information only. It may help explain approximate workload or configure a calendar after the learner chooses scheduling, but it does not authorize:
+The intake does not define weekly availability, preferred days, study periods or a deadline. Do not invent those values and do not use them to impose:
 
 - a fixed course duration in weeks;
 - week-numbered structural groups;
@@ -16,11 +16,11 @@ Use this contract during curriculum generation, integration preflight, task publ
 
 Without an explicit learner request for a calendar projection, show total estimated effort and effort per topic. Say that the pace is flexible and follows prerequisites and verified progress.
 
-When the learner explicitly requests a dated or weekly projection, keep topics as the canonical structure and add this hidden marker to the optional projection:
+When the learner explicitly requests a dated or weekly projection, collect the minimum missing scheduling details at activation, keep topics as the canonical structure and add this hidden marker to the optional projection:
 
 `<!-- open-study-path:calendar-projection explicitly_requested=true -->`
 
-A deadline alone is a constraint to discuss, not permission to silently invent a week-by-week plan.
+A date mentioned later is a constraint to discuss, not permission to silently invent a week-by-week plan.
 
 ## Required-operation preflight
 
