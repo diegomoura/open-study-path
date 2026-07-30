@@ -5,7 +5,7 @@ body:
   - type: markdown
     attributes:
       value: |
-        <!-- open-study-path:intake form_id=create-study-path version=3 -->
+        <!-- open-study-path:intake form_id=create-study-path version=4 -->
 
         # Vamos criar um curso que faça sentido para você
 
@@ -19,11 +19,14 @@ body:
 
         Depois deste formulário, faremos um diagnóstico curto para escolher o melhor ponto de partida.
 
-  - type: input
+  - type: textarea
     id: subject
     attributes:
       label: O que você quer aprender?
-      placeholder: "Exemplo: criar aplicações com inteligência artificial"
+      description: Este é o campo principal. Descreva os temas, assuntos ou habilidades que deseja estudar.
+      placeholder: |
+        Exemplo: Quero aprender a desenvolver aplicações com IA generativa,
+        incluindo LLMs, RAG, agentes, avaliações e boas práticas de produção.
     validations:
       required: true
 
@@ -31,10 +34,10 @@ body:
     id: objective
     attributes:
       label: Conte um pouco mais sobre seu objetivo
-      description: Inclua assuntos importantes, contexto de uso e algo que prefere deixar de fora.
-      placeholder: "Quero aprender para..."
-    validations:
-      required: true
+      description: Opcional. Informe contexto de uso, prioridades, tecnologias preferidas ou algo que deseja deixar de fora.
+      placeholder: |
+        Exemplo: Quero aplicar esse conhecimento no meu trabalho como desenvolvedor backend.
+        Prefiro exemplos em Python e não preciso estudar treinamento de modelos do zero.
 
   - type: textarea
     id: desired_outcome
@@ -72,59 +75,23 @@ body:
       label: Existe algum material que você gostaria que fosse considerado?
       description: Opcional. Cole textos e links ou anexe arquivos não sensíveis. As fontes serão verificadas antes de entrar nas aulas.
 
-  - type: input
+  - type: dropdown
     id: preferred_language
     attributes:
       label: Em qual idioma prefere estudar?
-      value: pt-BR
+      description: O conteúdo será normalizado internamente como pt-BR ou en.
+      options:
+        - Português (Brasil)
+        - English
+      default: 0
     validations:
       required: true
-
-  - type: input
-    id: weekly_hours
-    attributes:
-      label: Quanto tempo por semana você consegue reservar?
-      placeholder: "2"
-      description: Informe um número aproximado de horas.
-    validations:
-      required: true
-
-  - type: input
-    id: deadline
-    attributes:
-      label: Existe uma data importante?
-      placeholder: YYYY-MM-DD
-      description: Opcional.
-
-  - type: checkboxes
-    id: preferred_days
-    attributes:
-      label: Em quais dias costuma ser mais fácil estudar?
-      description: Opcional.
-      options:
-        - label: Segunda-feira
-        - label: Terça-feira
-        - label: Quarta-feira
-        - label: Quinta-feira
-        - label: Sexta-feira
-        - label: Sábado
-        - label: Domingo
-
-  - type: checkboxes
-    id: preferred_periods
-    attributes:
-      label: Qual período costuma funcionar melhor?
-      description: Opcional.
-      options:
-        - label: Manhã
-        - label: Tarde
-        - label: Noite
 
   - type: checkboxes
     id: learning_formats
     attributes:
       label: Quais formas de aprender ajudam mais você?
-      description: Opcional. O curso pode combinar vários formatos quando isso realmente ajudar.
+      description: Opcional. Se não marcar nenhuma, o curso escolherá os formatos mais adequados ao conteúdo.
       options:
         - label: Explicações escritas e documentação
         - label: Livros e textos longos
@@ -139,11 +106,12 @@ body:
     id: theory_practice_balance
     attributes:
       label: Como prefere equilibrar explicação e prática?
-      description: Opcional.
+      description: O padrão é uma combinação equilibrada.
       options:
         - Mais teoria
         - Equilibrado
         - Mais prática
+      default: 1
 
   - type: checkboxes
     id: assessment_style
@@ -168,7 +136,7 @@ body:
       value: |
         ## Ferramentas opcionais
 
-        Algumas ferramentas podem deixar o acompanhamento, a prática ou a agenda mais convenientes. Elas só serão sugeridas quando houver um benefício concreto, e o curso continuará funcionando no GitHub quando você não quiser conectá-las.
+        Algumas ferramentas podem deixar o acompanhamento, a prática ou a organização mais convenientes. Elas só serão sugeridas quando houver um benefício concreto, e o curso continuará funcionando no GitHub quando você não quiser conectá-las.
 
         <!-- contrato técnico: GitHub é a fonte de verdade; integrações são opcionais -->
 
@@ -181,28 +149,7 @@ body:
         - Quero sugestões de ferramentas quando forem úteis
         - Quero algo simples, principalmente no GitHub
         - Quero uma experiência mais interativa com ferramentas externas
-    validations:
-      required: true
-
-  - type: dropdown
-    id: free_tier_only
-    attributes:
-      label: O curso deve funcionar somente com opções gratuitas?
-      description: Mesmo escolhendo “Não”, nenhum recurso pago será o único caminho para estudar.
-      options:
-        - Sim
-        - Não
-    validations:
-      required: true
-
-  - type: dropdown
-    id: account_connections
-    attributes:
-      label: Quando uma ferramenta puder ajudar, o que devemos fazer?
-      options:
-        - Perguntar antes de sugerir ou conectar cada serviço
-        - Usar somente ferramentas que eu já conectei
-        - Manter tudo sem contas externas
+      default: 0
     validations:
       required: true
 
@@ -245,27 +192,13 @@ body:
     id: task_manager
     attributes:
       label: Onde gostaria de acompanhar suas etapas?
-      description: Trello oferece uma visão mais rica; Todoist é mais simples. Também é possível manter tudo no GitHub.
+      description: O agente prioriza Trello para uma visão em cards. Se ele não for conectado, GitHub Issues é o primeiro fallback.
       options:
         - Deixar o agente recomendar
         - Trello
-        - Todoist
         - GitHub Issues
-        - Somente Markdown
-    validations:
-      required: true
-
-  - type: dropdown
-    id: scheduling_provider
-    attributes:
-      label: Gostaria de reservar horários de estudo em alguma agenda?
-      description: Reclaim ajuda quando a rotina varia; Google ou Outlook criam blocos fixos.
-      options:
-        - Deixar o agente recomendar
-        - Reclaim
-        - Google Calendar
-        - Outlook Calendar
-        - Sem integração de agenda
+        - Todoist
+      default: 0
     validations:
       required: true
 
@@ -273,11 +206,12 @@ body:
     id: todoist_reminders
     attributes:
       label: Gostaria de considerar lembretes recorrentes no Todoist?
-      description: Opcional.
+      description: Opcional. O agente só recomendará essa integração quando ela trouxer benefício concreto.
       options:
         - Deixar o agente recomendar
         - Sim
         - Não
+      default: 0
 
   - type: dropdown
     id: email_summaries
@@ -288,12 +222,7 @@ body:
         - Não
         - Gmail
         - Outlook
-
-  - type: textarea
-    id: integration_notes
-    attributes:
-      label: Alguma preferência ou limite sobre ferramentas externas?
-      description: Opcional. Informe serviços que deseja evitar, limites de privacidade ou regras do ambiente de trabalho.
+      default: 0
 
   - type: textarea
     id: additional_notes
