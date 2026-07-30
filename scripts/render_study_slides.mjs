@@ -6,11 +6,13 @@ import { promises as fs } from "node:fs";
 import { createRequire } from "node:module";
 import path from "node:path";
 import process from "node:process";
+import { PDFDocument } from "pdf-lib";
 import { chromium } from "playwright";
 
 const require = createRequire(import.meta.url);
 const PLAYWRIGHT_VERSION = require("playwright/package.json").version;
 const MERMAID_VERSION = require("mermaid/package.json").version;
+const PDF_LIB_VERSION = require("pdf-lib/package.json").version;
 const SOURCE_FILES = ["index.html", "slides.css", "slides.js"];
 const DIAGNOSTIC_ROOT = ".open-study-path/rendered-slides";
 
@@ -151,16 +153,9 @@ async function diagnostics(page) {
   });
 }
 
-function pdfPageCount(buffer) {
-  const text = buffer.toString("latin1");
-  const counts = [];
-  for (const object of text.split("endobj")) {
-    if (!/\/Type\s*\/Pages\b/.test(object)) continue;
-    const match = object.match(/\/Count\s+(\d+)/);
-    if (match) counts.push(Number(match[1]));
-  }
-  if (counts.length) return Math.max(...counts);
-  return (text.match(/\/Type\s*\/Page\b/g) || []).length;
+async function pdfPageCount(buffer) {
+  const document = await PDFDocument.load(buffer, { ignoreEncryption: true });
+  return document.getPageCount();
 }
 
 async function sourceMetadata(root, topic) {
@@ -169,7 +164,7 @@ async function sourceMetadata(root, topic) {
   const files = [...SOURCE_FILES.map((name) => path.join(topicDir, name)), lesson];
   const sourceSha256 = {};
   for (const file of files) {
-    sourceSha256[path.relative(root, file).split(path.sep).join("/")] = await fileHash(file);
+    sourceSha256[path.relativeTo ? path.relativeTo(root, file) : path.relative(root, file).split(path.sep).join("/")] = await fileHash(file);
   }
   return { files, sourceSha256, sourceDigest: await aggregateHash(root, files) };
 }
@@ -192,13 +187,14 @@ async function currentArtifactsAreFresh(topicDir, expected) {
       meta.content_version === expected.contentVersion &&
       meta?.renderer?.playwright === PLAYWRIGHT_VERSION &&
       meta?.renderer?.mermaid === MERMAID_VERSION &&
+      meta?.renderer?.pdf_lib === PDF_LIB_VERSION &&
       meta.slide_count === expected.slideCount &&
       meta.mermaid_count === expected.mermaidCount &&
       arraysEqual(meta.outcome_ids, expected.outcomeIds) &&
       meta.source_digest === expected.sourceDigest &&
       JSON.stringify(meta.source_sha256) === JSON.stringify(expected.sourceSha256) &&
       meta?.pdf?.pages === expected.slideCount &&
-      meta?.pdf?.pages === pdfPageCount(pdf) &&
+      meta?.pdf?.pages === await pdfPageCount(pdf) &&
       meta?.pdf?.bytes === pdf.length &&
       meta?.pdf?.sha256 === sha256(pdf) &&
       diagnosticsAreClean
@@ -206,6 +202,46 @@ async function currentArtifactsAreFresh(topicDir, expected) {
   } catch {
     return false;
   }
+}
+
+async function renderSinglePage(page, slideIndex) {
+  await page.evaluate((index) => {
+    const slides = Array.from(document.querySelectorAll(".osp-slide"));
+    slides.forEach((slide, position) => {
+      const selected = position === index;
+      slide.style.setProperty("display", selected ? "flex" : "none", "important");
+      slide.style.setProperty("break-before", "auto", "important");
+      slide.style.setProperty("break-after", "auto", "important");
+      slide.style.setProperty("break-inside", "avoid-page", "important");
+      slide.style.setProperty("page-break-before", "auto", "important");
+      slide.style.setProperty("page-break-after", "auto", "important");
+      slide.style.setProperty("page-break-inside", "avoid", "important");
+    });
+  }, slideIndex);
+  const bytes = await page.pdf({
+    width: "1280px",
+    height: "720px",
+    printBackground: true,
+    preferCSSPageSize: true,
+    margin: { top: "0", right: "0", bottom: "0", left: "0" },
+  });
+  const document = await PDFDocument.load(bytes, { ignoreEncryption: true });
+  if (document.getPageCount() !== 1) {
+    throw new Error(`slide ${slideIndex + 1} rendered as ${document.getPageCount()} PDF pages`);
+  }
+  return document;
+}
+
+async function renderDeckPdf(page, slideCount) {
+  await page.emulateMedia({ media: "print" });
+  const merged = await PDFDocument.create();
+  for (let index = 0; index < slideCount; index += 1) {
+    const source = await renderSinglePage(page, index);
+    const [copied] = await merged.copyPages(source, [0]);
+    merged.addPage(copied);
+  }
+  const bytes = await merged.save({ useObjectStreams: false });
+  return Buffer.from(bytes);
 }
 
 async function renderTopic({ browser, root, origin, topic, check }) {
@@ -263,19 +299,14 @@ async function renderTopic({ browser, root, origin, topic, check }) {
     return { topic, status: "unchanged", output: topicDir };
   }
 
-  await page.emulateMedia({ media: "print" });
-  const pdfBuffer = await page.pdf({
-    width: "1280px",
-    height: "720px",
-    printBackground: true,
-    preferCSSPageSize: true,
-    tagged: true,
-    outline: true,
-    margin: { top: "0", right: "0", bottom: "0", left: "0" },
-  });
-  await page.close();
+  let pdfBuffer;
+  try {
+    pdfBuffer = await renderDeckPdf(page, browserDiagnostics.slideCount);
+  } finally {
+    await page.close();
+  }
 
-  const pageCount = pdfPageCount(pdfBuffer);
+  const pageCount = await pdfPageCount(pdfBuffer);
   if (pageCount !== browserDiagnostics.slideCount) {
     throw new Error(`${topic}: rendered PDF has ${pageCount} pages for ${browserDiagnostics.slideCount} slides`);
   }
@@ -284,7 +315,12 @@ async function renderTopic({ browser, root, origin, topic, check }) {
     topic_id: topic,
     content_version: tags.contentVersion,
     generated_at: new Date().toISOString(),
-    renderer: { playwright: PLAYWRIGHT_VERSION, mermaid: MERMAID_VERSION },
+    renderer: {
+      playwright: PLAYWRIGHT_VERSION,
+      mermaid: MERMAID_VERSION,
+      pdf_lib: PDF_LIB_VERSION,
+      strategy: "one_page_per_slide_merge",
+    },
     slide_count: browserDiagnostics.slideCount,
     mermaid_count: browserDiagnostics.mermaidCount,
     outcome_ids: browserDiagnostics.outcomeIds,
@@ -311,13 +347,15 @@ async function renderTopic({ browser, root, origin, topic, check }) {
   try {
     const currentMeta = JSON.parse(await fs.readFile(committedMeta, "utf8"));
     const currentPdf = await fs.readFile(committedPdf);
-    const currentPages = pdfPageCount(currentPdf);
+    const currentPages = await pdfPageCount(currentPdf);
     const comparable = [
       [currentMeta.contract_version, 1],
       [currentMeta.topic_id, topic],
       [currentMeta.content_version, meta.content_version],
       [currentMeta?.renderer?.playwright, PLAYWRIGHT_VERSION],
       [currentMeta?.renderer?.mermaid, MERMAID_VERSION],
+      [currentMeta?.renderer?.pdf_lib, PDF_LIB_VERSION],
+      [currentMeta?.renderer?.strategy, "one_page_per_slide_merge"],
       [currentMeta.slide_count, meta.slide_count],
       [currentMeta.mermaid_count, meta.mermaid_count],
       [JSON.stringify(currentMeta.outcome_ids), JSON.stringify(meta.outcome_ids)],
