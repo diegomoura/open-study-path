@@ -49,6 +49,12 @@ jobs:
         with:
           python-version: "3.12"
 
+      - name: Set up Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: "22"
+          package-manager-cache: false
+
       - name: Install validation dependencies
         run: python -m pip install --quiet --disable-pip-version-check pyyaml jsonschema
 
@@ -88,6 +94,27 @@ jobs:
       - name: Validate independent course-content review
         run: python scripts/validate_course_content_review.py
 
+      - name: Test study-slide contract
+        run: python scripts/test_study_slides.py
+
+      - name: Validate study-slide contract
+        run: python scripts/validate_study_slides.py
+
+      - name: Install study-slide render dependencies
+        run: |
+          if find study/slides -mindepth 2 -maxdepth 2 -name index.html -print -quit 2>/dev/null | grep -q .; then
+            npm install --no-save --package-lock=false playwright@1.62.0 mermaid@11.16.0
+            npx playwright install --with-deps chromium
+          fi
+
+      - name: Render and verify study-slide PDFs
+        run: |
+          if find study/slides -mindepth 2 -maxdepth 2 -name index.html -print -quit 2>/dev/null | grep -q .; then
+            node scripts/render_study_slides.mjs --check
+          else
+            echo "No materialized study-slide sources found."
+          fi
+
       - name: Test selected integration resolution
         run: python scripts/test_integration_resolution.py
 
@@ -120,6 +147,15 @@ jobs:
 
       - name: Test curriculum placeholder detection
         run: python scripts/test_curriculum_placeholder_detection.py
+
+      - name: Upload study-slide render diagnostics
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: study-slide-render-output
+          path: .open-study-path/rendered-slides/
+          if-no-files-found: ignore
+          retention-days: 3
 
       - name: Upload guided validation diagnostics
         if: failure()
