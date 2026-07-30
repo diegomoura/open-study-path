@@ -1,0 +1,37 @@
+contract_version: 1
+
+# Stable lowercase identifier for the reviewed operation.
+operation_id: replace-me
+
+# One of: setup, intake, diagnostic, curriculum, publication,
+# assessment, progress, replan, migration.
+phase: setup
+
+# Must match the selected profile in scripts/review_framework.py.
+reviewer_role: setup_reviewer
+
+# True only after a distinct review pass reconstructed evidence from outputs.
+independent_pass: false
+
+# Use action_required while blocking findings remain.
+status: action_required
+reviewed_at: null
+
+# List every generated artifact changed by the operation.
+# Digests are lowercase SHA-256 of the exact current bytes.
+artifacts:
+  - path: .open-study-path/instance.yml
+    sha256: replace-with-64-hex-characters
+
+# Replace with every required check for the selected profile.
+checks:
+  repository_identity: pending
+  reusable_assets_preserved: pending
+  intake_entrypoint_ready: pending
+  safety_and_secrets: pending
+  next_phase_consistency: pending
+
+blocking_findings:
+  - Replace with a concrete blocking finding, or use [] only after correction.
+
+non_blocking_findings: []
