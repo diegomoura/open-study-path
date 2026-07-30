@@ -49,7 +49,8 @@ A review records:
 - the operation and profile;
 - the specialized reviewer role;
 - confirmation that review was a separate pass;
-- exact SHA-256 fingerprints of every generated artifact covered by the review;
+- exact SHA-256 fingerprints of current generated artifacts;
+- the previous base fingerprint for each reviewed deletion;
 - required checks and their disposition;
 - blocking and non-blocking findings;
 - review time and status.
@@ -60,7 +61,8 @@ A review is mergeable only when:
 - `independent_pass` is `true`;
 - every required profile check is `passed`;
 - `blocking_findings` is empty;
-- every covered artifact exists and its current SHA-256 matches the review;
+- every current covered artifact exists and its SHA-256 matches the review;
+- every reviewed deletion is absent at the head and its `previous_sha256` matches the file in the pull-request base;
 - every generated artifact changed in the pull request is covered by at least one approved review artifact changed in that pull request.
 
 A changed output invalidates its previous fingerprint. The operation must run a new review pass rather than reusing an old approval.
@@ -72,6 +74,7 @@ CI blocks:
 - generated changes without review;
 - incomplete profile checklists;
 - stale fingerprints;
+- deletion claims that do not match the pull-request base;
 - unknown reviewer roles or profiles;
 - approval with blocking findings;
 - a review that covers only part of the generated diff;
@@ -108,6 +111,8 @@ The inherited workflow checks the diff against the pull request base. Generated 
 - intake and assessment Issue Forms.
 
 Generic reviews under `state/reviews/` and specialized content reviews under `state/content-reviews/` are review evidence, so they are not required to review themselves.
+
+A current or added artifact uses `change: current` and `sha256`. A reviewed deletion uses `change: deleted` and `previous_sha256`; CI reads the exact base file before accepting the deletion. This allows safe cleanup and migration without making deletion an unreviewed exception.
 
 Reusable template files such as scripts, instructions and templates are governed by normal template development review rather than learner-instance review artifacts.
 
