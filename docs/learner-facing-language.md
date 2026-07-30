@@ -67,6 +67,26 @@ Não use como navegação principal:
 
 Resuma no próprio cartão o objetivo, o tempo, o entregável e os critérios de conclusão que a pessoa realmente precisa conhecer.
 
+## Numeração não é pré-requisito
+
+Uma trilha pode ter ramificações. Nesse caso, o cartão 9 não precisa depender do cartão 8: ambos podem seguir ramos diferentes do mesmo roadmap.
+
+Por padrão, use o título da aula sem prefixo numérico nas ferramentas de tarefas. Quando a numeração for útil ou solicitada, deixe claro que ela identifica a posição no roadmap, não uma sequência obrigatória.
+
+Em cartões de aulas futuras, escreva:
+
+> **Pré-requisitos desta etapa:** <títulos dos pré-requisitos diretos>.
+>
+> Siga esta lista de pré-requisitos, não apenas a numeração dos cartões.
+
+Evite:
+
+- “esta etapa vem depois da etapa anterior”;
+- “conclua todas as etapas anteriores”;
+- qualquer frase que transforme a ordem visual ou numérica em dependência conceitual.
+
+Quando o grafo tiver vários ramos, nomeie todos os pré-requisitos diretos. Uma aula fica pronta porque esses requisitos foram satisfeitos, não porque seu número chegou.
+
 ## A aula começa pela aprendizagem
 
 Arquivos em `study/modules/` são páginas destinadas à pessoa que estuda. Eles devem começar pelo título e pela orientação da aula, sem uma tabela de frontmatter YAML com `topic_id`, versão, duração, contagem de diagramas ou caminhos de arquivos.
