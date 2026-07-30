@@ -42,7 +42,8 @@ The instance is configured, but no learning path has been generated yet.
 - The approved roadmap includes a Mermaid visualization of the real topic dependencies.
 - Detailed modules and assessments may use an adaptive rolling window.
 - Topics are the structural planning unit.
-- The intake does not define a weekly schedule.
+- The intake does not define a structured weekly schedule, but it may preserve an optional free-text time constraint.
+- A time constraint may influence priority and feasibility guidance, but it must not silently remove mastery-required content or redefine partial coverage as course completion.
 - Without an explicit learner request for a calendar projection, show total effort and effort per topic instead of fixed weeks, weekly tables or week-numbered groups.
 - Activities normally take 10–25 minutes and topics normally take 45–90 minutes.
 - A topic is complete only after verified evidence satisfies its mastery criteria.
