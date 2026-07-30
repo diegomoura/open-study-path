@@ -2,6 +2,8 @@
 
 Run this review after an authoring pass creates or changes any materialized lesson, assessment, flashcard deck or learner-facing task projection. It is a separate internal role from curriculum planning and from content authorship. Do not ask the learner for a generic review command.
 
+This review approves the complete teaching content before slide authoring begins. It does not approve the visual summary or rendered PDF. After this review passes, generate the internal HTML slide sources and run `instructions/37-review-study-slides.md` as another independent role.
+
 ## Role
 
 Act as the **course-content reviewer**, not as the original author. Re-read the approved intake, diagnostic, roadmap, topic contract, lesson, rubric, Issue Form, practice materials and proposed task copy from the repository. Do not approve content merely because CI passes or because the same agent wrote it.
@@ -106,10 +108,22 @@ Approve only when:
 
 A stale approval never authorizes a changed lesson. Incrementing `content_version` requires a new review.
 
+## Study-slide handoff
+
+Only after approval:
+
+1. derive a concise visual narrative from the reviewed lesson;
+2. generate the HTML, CSS and JavaScript sources under `study/slides/TOPIC-000/`;
+3. preserve every approved learning outcome through `data-outcome-ids`;
+4. avoid new research, unsupported claims and generated raster slide images;
+5. run `instructions/37-review-study-slides.md` before rendering the PDF.
+
+The course-content reviewer must not pre-approve the slide summary. The study-slides reviewer independently compares it with this reviewed lesson.
+
 ## Independence boundary
 
 The same runtime may execute authoring and review, but they must be separate passes with separate instructions and artifacts. During the review pass, inspect the repository output as evidence and actively search for contradictions. Do not rely on the authoring rationale or mark the review approved by default.
 
 ## Merge boundary
 
-Course-content review is required before a curriculum or materialization PR can merge when `content_review.required_for_materialized_topics` is enabled. CI validates traceability and review state; the reviewer remains responsible for semantic honesty.
+Course-content review is required before a curriculum or materialization PR can merge when `content_review.required_for_materialized_topics` is enabled. When study slides are enabled, the same PR must subsequently contain a current approved slide review, generated PDF and passing deterministic slide validation. CI validates traceability and review state; each reviewer remains responsible for semantic honesty within its role.
