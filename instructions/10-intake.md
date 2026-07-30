@@ -20,12 +20,12 @@ Continue accepting older technical intake commands as aliases.
 
 Search only the instance repository. Apply the algorithm in `scripts/intake_resolution.py`; do not replace it with similarity or newest-issue heuristics.
 
-### Current version 3 submissions
+### Current version 4 submissions
 
 A current candidate must satisfy all of these identity and state checks:
 
 - it is an issue, not a pull request;
-- its body contains exactly one supported marker: `<!-- open-study-path:intake form_id=create-study-path version=3 -->`;
+- its body contains exactly one supported marker: `<!-- open-study-path:intake form_id=create-study-path version=4 -->`;
 - its body contains the expected field headings from `.github/ISSUE_TEMPLATE/create-study-path.yml`;
 - its issue title contains a non-empty course name;
 - it is not already identified by `state/intake-summary.json.source_reference`;
@@ -35,15 +35,23 @@ Treat the trimmed issue title as the synthetic field `issue_title` and map it to
 
 For a uniquely resolved current candidate, the `study-request` label is a repairable consistency signal. Add it when missing only after unique selection.
 
+### Compatible marked version 3 submissions
+
+Continue accepting exactly one version 3 marker:
+
+`<!-- open-study-path:intake form_id=create-study-path version=3 -->`
+
+Version 3 also uses the issue title as `path.name`. Import retained fields through the mapping and ignore answers for fields that no longer belong to the current configuration contract. Do not rewrite the issue body or title.
+
 ### Compatible marked version 2 submissions
 
-Continue accepting exactly one supported older marker:
+Continue accepting exactly one version 2 marker:
 
 `<!-- open-study-path:intake form_id=create-study-path version=2 -->`
 
 For version 2, use the non-empty `path_name` answer as `path.name`. When that optional answer is empty, remove the known `[Nova trilha]` or `[Study Path]:` prefix from the issue title and use the non-empty remainder. If neither source yields a course name, stop and ask the owner to provide one; do not invent it.
 
-The version 2 title and discovery label remain compatibility signals. Add a missing `study-request` label after unique selection, but do not rewrite the issue title or the learner's answers.
+The compatible title and discovery label remain consistency signals. Add a missing `study-request` label after unique selection, but do not rewrite the issue title or the learner's answers.
 
 If any `open-study-path:intake` marker is present but its form ID, version, count or syntax is unsupported, reject that issue. Do not reinterpret it as an unmarked legacy submission.
 
@@ -79,13 +87,13 @@ Read only learner-approved values in `study.config.yml`. Do not interpret placeh
 
 ## Planning facts
 
-Required facts are course name, subject, detailed objective, current level, preferred language and weekly availability. Other schedule, motivation, accessibility, reference and integration answers are optional.
+Required facts are course name, subject, current level and preferred language. Objective details, desired outcome, motivation, accessibility, references, learning preferences and integration answers are optional.
 
-Normalize approved answers through the provider-specific mappings in `intake/field-mapping.yml` into `study.config.yml` and `state/intake-summary.json`. Missing optional answers must not block the course. Record only necessary conservative assumptions.
+Normalize approved answers through the provider-specific mappings in `intake/field-mapping.yml` into `study.config.yml` and `state/intake-summary.json`. Normalize language to `pt-BR` or `en`. Missing optional answers must not block the course. Record only necessary conservative assumptions.
 
-Do not recommend, connect or probe external tools during intake. Keep delegated provider choices as `auto` until diagnostic and curriculum context exist.
+Do not recommend, connect or probe external tools during intake. Keep delegated provider choices as `auto` until diagnostic and curriculum context exist. An empty learning-format selection delegates the choice to the course generator. The theory/practice balance defaults to `balanced`.
 
-Internal invariants such as GitHub authority, formative-practice limits, Mermaid canonical status, one primary task backend and `github_to_airtable` analytics are normalized without requiring the learner to repeat them. Do not surface those terms in the success response.
+Internal invariants such as GitHub authority, formative-practice limits, Mermaid canonical status, Trello preference with GitHub Issues as the first task fallback, one primary task backend and `github_to_airtable` analytics are normalized without requiring the learner to repeat them. Do not surface those terms in the success response.
 
 Update `.open-study-path/instance.yml` with completed intake status.
 
