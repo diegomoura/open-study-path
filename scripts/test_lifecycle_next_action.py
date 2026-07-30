@@ -8,6 +8,7 @@ from lifecycle_next_action import (
     GENERATE_COMMAND,
     PUBLISH_COMMAND,
     RESUME_PUBLISH_COMMAND,
+    integration_resolution_complete,
     publication_complete,
     resolve_next_action,
 )
@@ -22,14 +23,25 @@ def integrations(
     success_at: str | None = None,
     *,
     resources: list | None = None,
+    selected: dict | None = None,
+    resolution_status: str | None = None,
+    unresolved: list[str] | None = None,
 ) -> dict:
-    return {
+    document = {
+        "selected_capabilities": selected or {},
         "resources": resources or [],
         "sync": {
             "status": status,
             "last_success_at": success_at,
         },
     }
+    if resolution_status is not None:
+        document["resolution"] = {
+            "status": resolution_status,
+            "unresolved_capabilities": unresolved or [],
+            "validated_at": "2026-07-29T23:00:00Z",
+        }
+    return document
 
 
 def test_generation_precedes_publication() -> None:
@@ -71,7 +83,7 @@ def test_recorded_partial_publication_uses_resume_command() -> None:
     )
     action = resolve_next_action(instance(generated=True), state)
     assert action.phase == "publish"
-    assert action.reason == "publication_partial"
+    assert action.reason == "publication_partial_or_integration_action_required"
     assert action.command == RESUME_PUBLISH_COMMAND
     assert "1WDlmBlM" not in action.command
 
@@ -82,8 +94,74 @@ def test_success_requires_timestamp() -> None:
     assert action.phase == "publish"
 
 
-def test_evaluation_is_available_only_after_publication() -> None:
-    state = integrations("success", "2026-07-28T22:00:00Z")
+def test_selected_capabilities_require_resolution_contract() -> None:
+    state = integrations(
+        "success",
+        "2026-07-28T22:00:00Z",
+        resources=[{"provider": "trello"}],
+        selected={"task_manager": {"provider": "trello", "status": "success"}},
+    )
+    assert integration_resolution_complete(state) is False
+    action = resolve_next_action(instance(generated=True), state)
+    assert action.phase == "publish"
+    assert action.command == RESUME_PUBLISH_COMMAND
+
+
+def test_unresolved_email_or_quizlet_blocks_evaluation() -> None:
+    state = integrations(
+        "action_required",
+        resources=[{"provider": "trello"}],
+        selected={
+            "task_manager": {
+                "provider": "trello",
+                "status": "success",
+                "resolution_status": "resolved",
+            },
+            "formative_practice": {
+                "provider": "markdown_flashcards",
+                "status": "fallback_active",
+                "resolution_status": "action_required",
+            },
+            "notifications": {
+                "provider": "gmail",
+                "status": "pending_configuration",
+                "resolution_status": "action_required",
+            },
+        },
+        resolution_status="action_required",
+        unresolved=["formative_practice", "notifications"],
+    )
+    action = resolve_next_action(instance(generated=True), state)
+    assert action.phase == "publish"
+    assert action.command == RESUME_PUBLISH_COMMAND
+
+
+def test_evaluation_is_available_only_after_publication_and_resolution() -> None:
+    state = integrations(
+        "success",
+        "2026-07-28T22:00:00Z",
+        resources=[{"provider": "trello"}],
+        selected={
+            "task_manager": {
+                "provider": "trello",
+                "status": "success",
+                "resolution_status": "resolved",
+            },
+            "formative_practice": {
+                "provider": "markdown_flashcards",
+                "status": "fallback_active",
+                "resolution_status": "resolved",
+                "connection_offer_status": "shown",
+            },
+            "notifications": {
+                "provider": "gmail",
+                "status": "configured",
+                "delivery_policy": "on_request",
+                "resolution_status": "resolved",
+            },
+        },
+        resolution_status="resolved",
+    )
     action = resolve_next_action(
         instance(generated=True),
         state,
@@ -102,7 +180,9 @@ def main() -> None:
     test_failed_or_unrecorded_partial_publication_restarts_safely()
     test_recorded_partial_publication_uses_resume_command()
     test_success_requires_timestamp()
-    test_evaluation_is_available_only_after_publication()
+    test_selected_capabilities_require_resolution_contract()
+    test_unresolved_email_or_quizlet_blocks_evaluation()
+    test_evaluation_is_available_only_after_publication_and_resolution()
     print("Lifecycle next-action behavioral regressions passed.")
 
 
