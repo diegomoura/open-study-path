@@ -11,6 +11,12 @@ workflow:
   diagnostic_merge_policy: auto_when_unambiguous
   curriculum_merge_policy: agent_review_then_merge
 
+content_review:
+  contract_version: 1
+  required_for_materialized_topics: true
+  independent_pass: true
+  require_outcome_traceability: true
+
 content_generation:
   strategy: adaptive_rolling_window
   lookahead_topics: 2
