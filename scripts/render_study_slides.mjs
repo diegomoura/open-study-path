@@ -152,7 +152,15 @@ async function diagnostics(page) {
 }
 
 function pdfPageCount(buffer) {
-  return (buffer.toString("latin1").match(/\/Type\s*\/Page\b/g) || []).length;
+  const text = buffer.toString("latin1");
+  const counts = [];
+  for (const object of text.split("endobj")) {
+    if (!/\/Type\s*\/Pages\b/.test(object)) continue;
+    const match = object.match(/\/Count\s+(\d+)/);
+    if (match) counts.push(Number(match[1]));
+  }
+  if (counts.length) return Math.max(...counts);
+  return (text.match(/\/Type\s*\/Page\b/g) || []).length;
 }
 
 async function sourceMetadata(root, topic) {
