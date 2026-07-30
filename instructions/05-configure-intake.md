@@ -38,21 +38,7 @@ The form is inherited reusable infrastructure. Do not edit, recreate or replace 
 
 Do not mark setup or intake ready when label existence, title guidance or the current marker cannot be verified. Do not create or submit an issue, import answers, run the diagnostic or generate curriculum during setup. Do not require an issue number.
 
-### Compatibility
-
-Continue accepting older forms, including the supported markers:
-
-`<!-- open-study-path:intake form_id=create-study-path version=3 -->`
-
-`<!-- open-study-path:intake form_id=create-study-path version=2 -->`
-
-Also continue accepting:
-
-- `Enviei o formulário. Localize e importe a única submissão válida.`
-- `Enviei o formulário. Localize e importe a única submissão válida. Conclua e valide esta etapa; depois, inicie o diagnóstico proporcional com perguntas curtas, uma por vez.`
-- an explicit issue number when supplied or when multiple valid candidates require disambiguation.
-
-Older `intake.submission_strategy: explicit_issue` means deterministic lookup with an optional number, not a burden to copy it every time.
+Only the current marked form is supported. An explicit issue number may narrow deterministic lookup when the owner supplies it or when multiple valid current candidates require disambiguation, but it never bypasses marker, heading, title or import-state checks.
 
 ## Jotform
 
@@ -70,13 +56,11 @@ Stop before reading submissions.
 
 ## Manual YAML
 
-Set the manual provider and return the configuration path. Required facts are course name, subject, current level and preferred language. Do not invent them. Objective details, learning preferences and integration choices remain optional.
+Set the manual provider and return the configuration path. Required facts are course name, the complete learning request, a concise subject, current level and preferred language. Do not invent them. Objective details, time constraints, learning preferences and integration choices remain optional.
 
 Use:
 
 `Preenchi minha configuração. Pode continuar.`
-
-Continue accepting the older technical YAML command as an alias.
 
 ## Instance marker
 
@@ -86,4 +70,4 @@ Validate the complete setup diff and required checks for the current head. Do no
 
 Complete with `instructions/phase-completion.md`. Return the selected form or configuration path and make the next human action unmistakable.
 
-<!-- Compatibility markers: direct clickable link; explicit_issue; explicit issue number remains accepted; Do not require the owner to copy an issue number; older forms. -->
+<!-- Contract markers: direct clickable link; explicit_issue; explicit issue number remains accepted; Do not require the owner to copy an issue number; Only the current marked form is supported. -->
