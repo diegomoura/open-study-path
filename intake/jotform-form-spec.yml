@@ -1,4 +1,4 @@
-version: 3
+version: 4
 id: open-study-path-intake
 
 form:
@@ -70,6 +70,16 @@ fields:
     type: long_text
     required: false
 
+  - key: time_constraints
+    section: goal
+    label: Existe algum prazo ou limite de tempo importante?
+    help_text: >-
+      Opcional. Informe uma data relevante ou uma disponibilidade aproximada. Esse
+      dado ajuda a priorizar e explicar a viabilidade, mas não reduz silenciosamente
+      o conteúdo essencial do curso.
+    type: long_text
+    required: false
+
   - key: current_level
     section: context
     label: Como você descreve seu nível atual?
@@ -101,6 +111,7 @@ fields:
   - key: preferred_language
     section: preferences
     label: Em qual idioma prefere estudar?
+    help_text: Escolha o idioma principal das explicações e atividades.
     type: single_choice
     required: true
     default: pt-BR
@@ -140,12 +151,13 @@ fields:
     section: integrations
     label: Como você prefere organizar a experiência?
     help_text: >-
-      minimal usa principalmente GitHub; guided_recommendations sugere somente o que
-      for útil; enriched considera mais recursos opcionais.
+      guided_recommendations sugere somente o que for útil; minimal usa principalmente
+      GitHub; enriched considera mais recursos opcionais; no_external_accounts mantém
+      a experiência sem sugestões que exijam conectar outras contas.
     type: single_choice
     required: true
     default: guided_recommendations
-    options: [guided_recommendations, minimal, enriched]
+    options: [guided_recommendations, minimal, enriched, no_external_accounts]
 
   - key: already_uses
     section: integrations
@@ -188,12 +200,20 @@ fields:
       - analytics_dashboard
       - course_discovery
 
+  - key: integration_constraints
+    section: integrations
+    label: Existe alguma ferramenta, conta ou restrição que devemos evitar?
+    help_text: Informe limitações de privacidade, regras do ambiente de trabalho ou serviços que não deseja usar.
+    type: long_text
+    required: false
+
   - key: task_manager
     section: integrations
     label: Onde gostaria de acompanhar suas etapas?
     help_text: >-
       Trello é o padrão para uma visão em cards. Se ele não for conectado, GitHub
-      Issues é o primeiro fallback. Apenas um backend manterá o estado operacional.
+      Issues é o primeiro fallback. O repositório continua como último fallback
+      interno. Apenas um backend manterá o estado operacional.
     type: single_choice
     required: true
     default: auto
