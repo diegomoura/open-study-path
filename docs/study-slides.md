@@ -48,7 +48,7 @@ The default presentation uses:
 - restrained accent colors;
 - semantic headings and lists;
 - keyboard navigation for build inspection;
-- print rules that place exactly one slide on each PDF page.
+- deterministic one-page rendering for each slide.
 
 The source uses system fonts only. Rendering must not depend on a CDN, remote font, public repository, GitHub Pages, RawGitHack or any external slide service.
 
@@ -60,15 +60,16 @@ The slide reviewer reviews the HTML source and rendered browser state. PDF valid
 
 ## Rendering
 
-Use `scripts/render_study_slides.mjs` with pinned Playwright and Mermaid versions. The renderer:
+Use `scripts/render_study_slides.mjs` with pinned Playwright, Mermaid and pdf-lib versions. The renderer:
 
 1. serves the repository on a local-only HTTP server;
 2. blocks external network requests;
 3. waits for fonts and Mermaid;
 4. checks browser console errors and slide overflow;
-5. prints one 16:9 page per slide with backgrounds enabled;
-6. creates a tagged PDF;
-7. writes source hashes and render diagnostics to `slides.meta.json`.
+5. renders each slide in isolation as one 16:9 PDF page with backgrounds enabled;
+6. merges those pages locally into the final PDF, avoiding browser pagination drift;
+7. verifies the merged page count;
+8. writes source hashes, renderer versions and diagnostics to `slides.meta.json`.
 
 Normal generation writes the PDF into the topic directory. `--check` renders to an internal diagnostic directory and verifies that the committed PDF and metadata are current. When a runtime cannot render locally, the inherited GitHub Actions job creates the same internal artifact; the agent adds the resulting PDF and metadata to the existing draft pull request before final review. The learner never performs this step.
 
