@@ -11,6 +11,9 @@ phases:
   - id: bootstrap_instance
     instruction: instructions/00-bootstrap.md
     execution_contract: instructions/02-setup-execution.md
+    phase_review: instructions/04-review-generated-artifacts.md
+    review_profile: setup
+    review_outputs: [state/reviews/]
     allowed_modes: [fork_unconfigured, instance]
     next_phase: configure_intake
     outputs:
@@ -24,6 +27,9 @@ phases:
   - id: configure_intake
     instruction: instructions/05-configure-intake.md
     execution_contract: instructions/02-setup-execution.md
+    phase_review: instructions/04-review-generated-artifacts.md
+    review_profile: setup
+    review_outputs: [state/reviews/]
     allowed_modes: [instance]
     depends_on: [bootstrap_instance]
     next_phase: intake
@@ -34,6 +40,9 @@ phases:
 
   - id: intake
     instruction: instructions/10-intake.md
+    phase_review: instructions/04-review-generated-artifacts.md
+    review_profile: intake
+    review_outputs: [state/reviews/]
     allowed_modes: [instance]
     depends_on: [configure_intake]
     next_phase: diagnostic
@@ -47,6 +56,9 @@ phases:
 
   - id: diagnostic
     instruction: instructions/20-diagnostic.md
+    phase_review: instructions/04-review-generated-artifacts.md
+    review_profile: diagnostic
+    review_outputs: [state/reviews/]
     allowed_modes: [instance]
     depends_on: [intake]
     next_phase: generate
@@ -61,6 +73,9 @@ phases:
     execution_contract: instructions/32-generation-execution.md
     internal_review: instructions/35-review-curriculum.md
     internal_content_review: instructions/36-review-course-content.md
+    phase_review: instructions/04-review-generated-artifacts.md
+    review_profile: curriculum
+    review_outputs: [state/reviews/]
     allowed_modes: [instance]
     depends_on: [diagnostic]
     next_phase: publish
@@ -81,6 +96,9 @@ phases:
   - id: publish
     instruction: instructions/40-publish-tasks.md
     internal_preflight: instructions/42-integration-preflight.md
+    phase_review: instructions/04-review-generated-artifacts.md
+    review_profile: publication
+    review_outputs: [state/reviews/]
     allowed_modes: [instance]
     depends_on: [generate]
     next_phase: evaluate
@@ -93,6 +111,9 @@ phases:
     instruction: instructions/55-evaluate-topic.md
     internal_materialization: instructions/57-materialize-next-content.md
     internal_content_review: instructions/36-review-course-content.md
+    phase_review: instructions/04-review-generated-artifacts.md
+    review_profile: assessment
+    review_outputs: [state/reviews/]
     allowed_modes: [instance]
     depends_on: [publish]
     next_phase: track
@@ -112,6 +133,9 @@ phases:
 
   - id: track
     instruction: instructions/50-track-progress.md
+    phase_review: instructions/04-review-generated-artifacts.md
+    review_profile: progress
+    review_outputs: [state/reviews/]
     allowed_modes: [instance]
     depends_on: [publish]
     next_phase: replan
@@ -121,6 +145,16 @@ phases:
 
   - id: replan
     instruction: instructions/60-replan.md
+    phase_review: instructions/04-review-generated-artifacts.md
+    review_profile: replan
+    review_outputs: [state/reviews/]
     allowed_modes: [instance]
     depends_on: [track]
     next_phase: track
+    outputs:
+      - .open-study-path/instance.yml
+      - study.config.yml
+      - study/roadmap.md
+      - study/integrations.md
+      - study/topics/
+      - state/progress.json

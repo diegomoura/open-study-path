@@ -67,21 +67,50 @@ Calculate a total score from 0 to 100. A topic is mastered only when:
 
 Checklist completion, time spent, task state, Todoist reminders, Habitify streaks, calendar attendance, external-course completion or a formative quiz/flashcard score is not sufficient mastery evidence by itself.
 
-## Persist and label the result
+## Persist and label the proposed result
 
-Post the detailed evaluation as a comment on the assessment issue. Create the next versioned result under:
+Prepare the detailed evaluation comment and create the next versioned result under:
 
 `state/assessments/TOPIC-000/attempt-001.json`
 
 Record topic ID, issue number and URL, attempt, timestamp, per-question score and feedback, total, mastery, critical misconceptions, recovery actions and evaluator method.
 
-Update `state/progress.json` through a pull request. GitHub is the only authority allowed to persist `mastered: true`.
+Prepare the matching `state/progress.json` transition. GitHub is the only authority allowed to persist `mastered: true`.
 
-After evaluation:
+Do not publish the comment, final labels, external projections or a mastery completion response until the independent assessment review has approved the proposed score and state transition.
 
+## Independent assessment review
+
+After the grading pass, run `instructions/04-review-generated-artifacts.md` with the `assessment` profile as a separate reviewer role.
+
+The assessment reviewer must re-read the submission and rubric and independently recompute:
+
+- the candidate issue resolution;
+- the score for every response;
+- the total score;
+- every critical misconception decision;
+- whether the evidence satisfies the deliverable;
+- mastery or recovery status;
+- the progress transition;
+- the next materialization and learner action.
+
+The reviewer must not copy the original evaluator's score and merely check arithmetic. It must compare the reasoning with each rubric criterion and record any disagreement as a blocking finding until corrected.
+
+When successful evaluation automatically materializes new topics, the assessment review covers those generated artifacts too and confirms that every new materialized topic has its specialized current content review.
+
+Store the approved operation review under `state/reviews/<assessment-operation>.yml`, with current fingerprints for every generated attempt, progress, curriculum, integration and assessment artifact changed by the operation.
+
+## Finalize repository and issue state
+
+Only after the independent assessment review and CI pass:
+
+- post the approved detailed evaluation as a comment on the assessment issue;
+- persist the reviewed attempt and progress files;
 - remove `assessment:submitted` from the issue;
 - add `assessment:graded` when mastered;
 - add `assessment:recovery-required` when recovery is required.
+
+If the connector write-back occurs after the repository merge, read the issue back and persist or reconcile the safe external result in the operation state before declaring completion.
 
 ## Synchronize derived providers
 
@@ -102,9 +131,11 @@ Run harmless provider probes before writes. An unavailable optional provider rec
 1. complete or move the authoritative task to `Concluído`;
 2. unlock eligible dependent topics;
 3. automatically execute `instructions/57-materialize-next-content.md` to restore the configured content window;
-4. update newly materialized external resources after capability-based probes;
-5. project the verified result to Airtable only when selected and available;
-6. return the next ready materialized topic with module, authoritative task and form links.
+4. run the specialized content reviewer for every newly materialized topic;
+5. update newly materialized external resources after capability-based probes;
+6. project the verified result to Airtable only when selected and available;
+7. include all resulting generated artifacts in the assessment operation review;
+8. return the next ready materialized topic with module, authoritative task and form links.
 
 The learner must not send a separate command to generate the next topic.
 

@@ -18,6 +18,8 @@ When a checkout and command execution are available, run the complete local vali
 python scripts/validate_template.py all
 python scripts/validate_intake_resolution.py
 python scripts/validate_guided_lifecycle.py
+python scripts/test_review_framework.py
+python scripts/validate_review_framework.py
 python scripts/validate_generation_efficiency.py
 python scripts/test_curriculum_placeholder_detection.py
 python scripts/validate_curriculum_safe.py
@@ -29,6 +31,14 @@ Keep operational metadata in `study/topics/TOPIC-000.md`. Generated learner modu
 
 GitHub Actions is the final confirmation, not the primary trial-and-error linter.
 
+## Independent review before final validation
+
+After the authoring pass and specialized curriculum/content reviews, run `instructions/04-review-generated-artifacts.md` using the phase's `review_profile`.
+
+Create or update the review artifact under `state/reviews/` only after actively checking the complete operation output. Cover every generated path changed by the pull request with its current SHA-256 fingerprint. Correct blocking findings before setting the review to approved.
+
+A review file is part of the allowed phase diff. It is evidence, not learner-facing curriculum, and must not be linked as a study resource.
+
 ## Failure handling
 
 When CI fails:
@@ -36,7 +46,7 @@ When CI fails:
 1. inspect the exact failed step and its log once;
 2. reproduce the failure locally when possible;
 3. correct the root cause in the allowed curriculum files;
-4. rerun the complete local suite;
+4. rerun the complete local suite and the independent review when a covered artifact changed;
 5. push one focused correction and wait for the new head's checks.
 
 Do not search Gists, generic web pages or unrelated repositories for validator behavior when the active repository code and exact CI log are available.
@@ -65,6 +75,8 @@ Avoid repeated remote CI experimentation. After a second remote failure on the s
 The operation is complete when all of the following are true for the current, unchanged PR head:
 
 - the final diff is within the allowed phase scope;
+- specialized reviews are complete;
+- an approved shared review artifact covers every generated change;
 - required local or contract checks pass;
 - required GitHub Actions checks succeed;
 - the pull request is mergeable;

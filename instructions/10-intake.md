@@ -91,13 +91,15 @@ Update `.open-study-path/instance.yml` with completed intake status.
 
 ## Pull request and merge
 
-Create a PR limited to the instance marker, `study.config.yml` and `state/intake-summary.json`. Apply `workflow.intake_merge_policy`. Auto-merge only when facts, validation, privacy, scope and assumptions are unambiguous.
+Create a PR limited to the instance marker, `study.config.yml`, `state/intake-summary.json` and one intake review artifact under `state/reviews/`. Apply `workflow.intake_merge_policy`.
+
+After authoring, run `instructions/04-review-generated-artifacts.md` with the `intake` profile. The reviewer must compare the selected source with every normalized learner fact, integration preference, assumption and consent decision. Auto-merge only when facts, validation, privacy, scope, assumptions and generated diff coverage are unambiguous.
 
 Technical review belongs in GitHub. In chat, do not report changed files, CI or merge details after success unless requested or needed to explain a blocker.
 
 ## Diagnostic continuation
 
-Do not begin diagnostic until import, validation and required merge complete.
+Do not begin diagnostic until import, independent intake review, validation and required merge complete.
 
 When the command authorizes continuing, immediately run `instructions/20-diagnostic.md`, state the small question range and ask the first question.
 

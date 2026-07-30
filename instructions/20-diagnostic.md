@@ -68,25 +68,44 @@ Record:
 
 Do not persist the raw transcript, unnecessary personal details or conversational filler. Update `.open-study-path/instance.yml` with `status.diagnostic_complete: true`.
 
+## Independent diagnostic review
+
+After the authoring pass, run `instructions/04-review-generated-artifacts.md` with the `diagnostic` profile.
+
+The diagnostic reviewer must reconstruct each placement conclusion from the bounded evidence recorded in the summary. It must verify that:
+
+- the starting depth is supported rather than guessed;
+- transferable experience was not treated as subject mastery;
+- observed gaps and misconceptions were not invented;
+- the question budget and stopping rule were respected;
+- raw answers and unnecessary personal data were not persisted;
+- the next phase is generation, not additional teaching disguised as diagnosis.
+
+Store the review separately under `state/reviews/<diagnostic-operation>.yml`. The manifest keeps this in `review_outputs`; it is audit evidence rather than a diagnostic-domain output.
+
 ## Diagnostic pull-request policy
 
 Read `workflow.diagnostic_merge_policy` from `.open-study-path/instance.yml`. If it is missing, use `manual`.
 
-The diagnostic PR may change only:
+The diagnostic domain output may change only:
 
 - `.open-study-path/instance.yml`;
 - `state/diagnostic-summary.json`.
+
+The pull request also includes exactly one diagnostic review artifact under `state/reviews/`. No other generated path is allowed.
 
 For `auto_when_unambiguous`, self-review the diff and merge after required checks pass only when:
 
 - the diagnostic summary validates;
 - the question budget was respected or has an allowed explicit exception;
-- the diff contains only the two files above;
+- the domain diff contains only the two files above;
+- the diagnostic review covers both current files with exact SHA-256 fingerprints;
+- every diagnostic review check passed and no blocking finding remains;
 - no raw transcript or unnecessary personal data was persisted;
 - the starting depth is supported by the recorded evidence;
 - no unresolved contradiction requires owner review.
 
-Do not attempt to formally approve a PR authored by the same account. Verification against the phase contract and successful CI constitute the automated review before merge.
+Do not attempt to formally approve a PR authored by the same account. Verification against the phase contract, the separate diagnostic reviewer pass and successful CI constitute the automated review before merge.
 
 ## Completion
 

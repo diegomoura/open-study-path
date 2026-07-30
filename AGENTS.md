@@ -26,6 +26,18 @@ Resolve the next learner command from persisted state with `scripts/lifecycle_ne
 
 When the agent itself suggested `sem publicar tarefas ainda`, that phrase is a one-operation safety deferral. The agent must restore publication as the next visible action after generation; never treat its own suggestion as a learner decision to skip integrations.
 
+## Independent review framework
+
+Read `docs/review-framework.md` and `instructions/04-review-generated-artifacts.md` for every artifact-producing lifecycle, migration or synchronization operation.
+
+Every generated artifact changed by an instance operation must be covered by an approved review artifact changed in the same pull request. Store durable review evidence under `state/reviews/` using the phase profile declared in `instructions/manifest.yml`.
+
+Authoring and review are separate passes even when the same runtime performs both. The reviewer reconstructs evidence from approved inputs, repository outputs and harmless external read-backs; it does not trust the authoring pass's success claim.
+
+The shared framework uses specialized reviewers for setup, intake, diagnostic, curriculum, publication, assessment, progress, replan and migration. Specialized review remains additive: materialized teaching content still requires `instructions/36-review-course-content.md`, and selected integrations still require their own resolution and projection checks.
+
+Before merge, the review must record exact SHA-256 fingerprints for every generated artifact in the operation diff, pass every required profile check and contain no blocking findings. Missing review, partial coverage, stale fingerprints or skipped checks block CI, merge and a success response.
+
 ## Setup, intake and diagnostic
 
 - Never convert the canonical template into an instance.
@@ -122,7 +134,7 @@ Optional providers never block the GitHub/Markdown path. Before external writes,
 
 Read `instructions/32-generation-execution.md` for generation and materialization. Keep every commit within phase scope. Do not modify reusable workflows, validators, instructions, templates or schemas from an instance curriculum operation.
 
-Create curriculum PRs as drafts, correct resolvable issues, run checks, perform curriculum review, perform the independent content-review pass and merge under the configured policy when no genuine decision remains. Record technical review state in GitHub.
+For every operation PR, correct resolvable issues, run specialized review, run the shared independent phase review, validate generated diff coverage and merge under the configured policy when no genuine decision remains. Record technical review state in GitHub.
 
 For every repository phase, inspect required checks for the current unchanged PR head. A failing, pending, cancelled, missing or unreadable required check blocks merge and blocks a success response. Never merge because the diff looks correct while CI is red or unknown.
 
