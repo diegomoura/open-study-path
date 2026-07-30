@@ -12,7 +12,7 @@ This Project manages one personalized Open Study Path instance.
 - Template: `diegomoura/open-study-path`
 - Preferred language: `pt-BR`
 
-Treat the instance repository as the only learner repository for this Project. Read `AGENTS.md`, `.open-study-path/instance.yml`, `instructions/manifest.yml`, `instructions/phase-completion.md`, `docs/learner-facing-language.md` and `docs/content-quality-and-sources.md` before repository work.
+Treat the instance repository as the only learner repository for this Project. Read `AGENTS.md`, `.open-study-path/instance.yml`, `instructions/manifest.yml`, `instructions/phase-completion.md`, `docs/learner-facing-language.md`, `docs/content-quality-and-sources.md` and `docs/review-framework.md` before repository work.
 
 During first-chat setup, also read `instructions/02-setup-execution.md`. Repository size, code-search status, empty search results and incomplete local checkouts are not authoritative. Determine mode by reading `.open-study-path/template.yml`, `.open-study-path/instance.yml`, `AGENTS.md`, `instructions/manifest.yml` and the intake Issue Form directly from the target repository.
 
@@ -53,6 +53,16 @@ If this Project itself suggested wording such as `sem publicar tarefas ainda`, t
 The first chat configures only the instance and intake provider. Do not import answers, run diagnostic, generate curriculum or publish tasks during setup.
 
 Diagnostic is bounded placement. Ask one short question at a time. For beginners, target 3–5 and never exceed 7 unless comprehensive assessment is explicitly requested.
+
+## Independent review for every operation
+
+For every phase or migration that creates or changes instance artifacts, run `instructions/04-review-generated-artifacts.md` after authoring and before merge. Use the profile declared in `instructions/manifest.yml`.
+
+The reviewer is a distinct internal role for setup, intake, diagnostic, curriculum, publication, assessment, progress, replan or migration. It must reconstruct evidence from approved inputs, generated artifacts and harmless external read-backs instead of trusting the authoring pass.
+
+Store the approval under `state/reviews/`. The review must cover every generated file changed in the pull request with its current SHA-256 fingerprint, pass every required profile check and contain no blocking findings. Missing review, partial coverage or stale evidence blocks CI, merge and a successful response.
+
+This shared review is additive. Materialized lessons still require the specialized course-content review; publication still requires integration resolution and projection review; assessment still requires independent rubric-based re-scoring.
 
 ## Curriculum and lessons
 
@@ -129,7 +139,7 @@ After success, prepare the next eligible lessons automatically. After an insuffi
 
 ## Repository and safety
 
-Use pull requests for structural changes and generated learning content. Validate, perform curriculum review, perform the independent content-review pass and safely merge when the policy permits and no decision remains. Do not ask the person to review or merge routine PRs.
+Use pull requests for structural changes and generated learning content. Validate, run every specialized review, run the shared operation review and safely merge when the policy permits and no decision remains. Do not ask the person to review or merge routine PRs.
 
 For setup, build one allowed diff from the files already present in the target repository and apply `instructions/02-setup-execution.md`. Inspect required checks for the current unchanged PR head. A failing, pending, cancelled, missing or unreadable required check blocks merge and blocks a success response. Never report that the trail is configured while CI is red or unknown.
 
