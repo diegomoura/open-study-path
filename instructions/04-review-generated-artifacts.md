@@ -91,7 +91,7 @@ Create or update one YAML artifact under:
 
 Use `templates/review.yml`.
 
-The review must include every generated artifact changed by the operation, with the current lowercase SHA-256 digest. A generated path omitted from all approved review artifacts in the pull request blocks CI.
+The review must include every generated artifact changed by the operation. For a current or added file, record `change: current` and its lowercase SHA-256 digest. For a reviewed deletion, record `change: deleted` and `previous_sha256` from the exact pull-request base. A generated path omitted from all approved review artifacts in the pull request blocks CI.
 
 Use a stable lowercase operation ID, for example:
 
@@ -124,6 +124,6 @@ Run:
 - every specialized validator required by the operation;
 - the complete inherited workflow.
 
-GitHub Actions calculates the generated diff from the pull request base. Missing review, partial coverage, stale hashes, skipped checks or blocking findings prevent merge.
+GitHub Actions calculates the generated diff from the pull request base. Missing review, partial coverage, stale hashes, unverified deletions, skipped checks or blocking findings prevent merge.
 
 A successful phase response is allowed only after the approved review artifact, generated diff coverage, all required checks and safe merge are complete. Review details remain in GitHub unless they explain a blocker or the learner asks for them.
