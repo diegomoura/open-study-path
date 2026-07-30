@@ -15,6 +15,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -53,6 +55,14 @@ jobs:
 
       - name: Test lifecycle next-action routing
         run: python scripts/test_lifecycle_next_action.py
+
+      - name: Test generated-artifact review framework
+        run: python scripts/test_review_framework.py
+
+      - name: Validate generated-artifact review framework
+        env:
+          REVIEW_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: python scripts/validate_review_framework.py
 
       - name: Test independent course-content review
         run: python scripts/test_course_content_review.py
