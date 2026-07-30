@@ -61,7 +61,7 @@ jobs:
 
       - name: Validate generated-artifact review framework
         env:
-          REVIEW_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          REVIEW_BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
         run: python scripts/validate_review_framework.py
 
       - name: Test independent course-content review
