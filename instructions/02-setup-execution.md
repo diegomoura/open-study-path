@@ -47,7 +47,7 @@ File sentinels determine repository mode, but a GitHub Issue Form is ready only 
 
 When `github_issue` is selected:
 
-- verify the form contains `<!-- open-study-path:intake form_id=create-study-path version=2 -->`;
+- verify the form contains `<!-- open-study-path:intake form_id=create-study-path version=4 -->`;
 - verify repository labels `study-request` and `intake:imported` exist;
 - create only missing labels through the GitHub labels API or run the inherited **Prepare ChatGPT Project Instructions** workflow, which executes `scripts/ensure_repository_labels.py`;
 - read the labels again after provisioning;
