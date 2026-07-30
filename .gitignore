@@ -15,3 +15,6 @@ intake/uploads/
 .DS_Store
 .idea/
 .vscode/
+node_modules/
+npm-debug.log*
+.open-study-path/rendered-slides/
