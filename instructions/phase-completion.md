@@ -6,6 +6,10 @@ Use this contract at the end of every lifecycle phase. Read `docs/learner-facing
 
 Finish validation, review, correction, safe merge and configured rolling-window materialization before responding. Pull requests, checks and repository state remain the technical audit trail.
 
+Read `instructions/04-review-generated-artifacts.md` and run the phase profile declared in `instructions/manifest.yml`. A successful phase requires an approved review artifact under `state/reviews/` and generated diff coverage for every instance artifact changed by the operation. Specialized reviews remain additional requirements.
+
+Missing review, partial coverage, stale artifact fingerprints, a skipped required check or any blocking finding blocks merge and blocks a successful response. Do not treat CI structure checks as a substitute for the independent semantic review pass.
+
 Verify every required check for the current unchanged pull-request head. If any required check is failing, pending, cancelled, missing or cannot be verified, the phase is blocked. Do not merge and do not send a successful phase response. Never treat a correct-looking diff, an earlier green commit or a future default-branch run as validation of the current head.
 
 Do not send a transition message immediately before repository work. Complete the operation and send one final response.
