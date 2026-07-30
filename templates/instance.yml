@@ -11,6 +11,22 @@ workflow:
   diagnostic_merge_policy: auto_when_unambiguous
   curriculum_merge_policy: agent_review_then_merge
 
+review_framework:
+  contract_version: 1
+  enabled: true
+  independent_pass: true
+  require_generated_diff_coverage: true
+  required_profiles:
+    - setup
+    - intake
+    - diagnostic
+    - curriculum
+    - publication
+    - assessment
+    - progress
+    - replan
+    - migration
+
 content_review:
   contract_version: 1
   required_for_materialized_topics: true
