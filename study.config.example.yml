@@ -4,9 +4,11 @@ configured: false
 path:
   name: null
   subject: ""
+  learning_request: ""
   objective: null
   desired_outcome: null
   motivation: null
+  time_constraints: null
 
 learner:
   preferred_language: pt-BR
@@ -30,7 +32,7 @@ intake:
   form_id: null
   form_url: null
   form_spec_id: open-study-path-intake
-  form_spec_version: 3
+  form_spec_version: 4
   created_by: null
   issue_template: .github/ISSUE_TEMPLATE/create-study-path.yml
   submission_strategy: not_applicable
@@ -39,8 +41,10 @@ intake:
 
 integration_preferences:
   experience: guided_recommendations
+  account_connections: ask_per_provider
   already_uses: []
   willing_to_connect: []
+  notes: null
 
 integrations:
   source_of_truth:
@@ -80,6 +84,7 @@ integrations:
     alternatives:
       - github_issues
       - todoist
+      - markdown
     board_or_project: null
     single_authoritative_backend: true
 
