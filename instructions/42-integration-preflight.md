@@ -13,6 +13,21 @@ Read:
 
 Do not infer enabled providers from a global app catalog. A provider is relevant only when selected by the approved plan, recommended with an immediate use in the materialized window or needed as its fallback.
 
+## Account-connection policy
+
+Read `integration_preferences.account_connections` before app discovery, probes or writes.
+
+When it is `no_external_accounts`:
+
+- do not suggest, install, connect, probe or write to a provider that requires another account;
+- do not treat `already_uses` as permission to connect that provider;
+- resolve task tracking to GitHub Issues or the repository-native Markdown fallback;
+- use local flashcards, Mermaid, repository artifacts, web or primary sources and chat notifications;
+- record external capabilities as `not_enabled` rather than unavailable;
+- keep the course fully usable without an app-connection step.
+
+When it is `ask_per_provider`, every optional connection remains contextual, nonblocking and subject to an explicit user click. Also respect concrete restrictions recorded in `integration_preferences.notes`.
+
 ## Classify capabilities
 
 Classify every capability as one of:
@@ -23,7 +38,7 @@ Classify every capability as one of:
 
 GitHub access is always required.
 
-The authoritative external task backend is required when the selected plan expects tasks outside Markdown. A provider explicitly promoted to required by the owner is also required. By default, research, flashcards, reminders, scheduling, habits, external visuals, artifact workspaces, analytics, course discovery and notifications are optional.
+The authoritative external task backend is required when the selected plan expects tasks outside the repository-native Markdown fallback. A provider explicitly promoted to required by the owner is also required. By default, research, flashcards, reminders, scheduling, habits, external visuals, artifact workspaces, analytics, course discovery and notifications are optional.
 
 ## Provider resolution
 
@@ -40,13 +55,13 @@ Resolve the concrete providers configured for each capability:
 - analytics: Airtable or none;
 - notifications: Gmail, Outlook email, chat or none.
 
-A value of `auto` must already have a documented recommendation and fallback in `study/integrations.md`. Resolve it before writes and persist the actual provider used in `study.config.yml` or `state/integrations.json`.
+A value of `auto` must already have a documented recommendation and fallback in `study/integrations.md`. Resolve it before writes and persist the actual provider used in `study.config.yml` or `state/integrations.json`. Task fallback order is Trello when justified, GitHub Issues when available, then repository-native Markdown. Do not expose Markdown as an intake choice merely because it remains the final internal fallback.
 
 ## Optional app discovery and connection offer
 
 For an optional provider marked `selected` or `recommended`, first confirm that it has an immediate concrete use in the current materialized window. A recommendation alone is not enough to advertise an app.
 
-When the provider is useful now but is not installed, connected or authorized in the current ChatGPT Project:
+When the provider is useful now, account connections are allowed and the provider is not installed, connected or authorized in the current ChatGPT Project:
 
 1. use the platform Plugin Management capability to search for the exact provider;
 2. when an exact connectable app is found, render its install/connect suggestion directly;
@@ -56,9 +71,9 @@ When the provider is useful now but is not installed, connected or authorized in
 6. continue independent repository work and the approved fallback without waiting for a click;
 7. never claim that the provider is connected merely because the suggestion was shown.
 
-Do not suggest providers marked `declined`, listed in `avoid`, forbidden by account-connection preferences, irrelevant to the materialized content or already verified as connected.
+Do not suggest providers that the learner declined, ruled out in integration notes, disallowed through `no_external_accounts`, made irrelevant by the materialized content or already verified as connected.
 
-Quizlet is immediately useful only when at least one materialized topic has an approved Markdown/TSV flashcard deck. If Quizlet is recommended or selected and access is missing, offer the Quizlet connection once and retain the local decks. Use this return command after the learner connects it:
+Quizlet is immediately useful only when at least one materialized topic has an approved Markdown/TSV flashcard deck. If Quizlet is recommended or selected, account connections are allowed and access is missing, offer the Quizlet connection once and retain the local decks. Use this return command after the learner connects it:
 
 `Conectei o Quizlet ao ChatGPT. Verifique novamente e publique os flashcards dos tópicos materializados.`
 
@@ -75,7 +90,7 @@ A displayed offer is not consent for an external write. A successful connection 
 
 A provider name, installed app, visible tool definition, displayed connection suggestion or learner statement does not prove that the current ChatGPT Project is authorized.
 
-For every relevant external provider, execute one harmless minimal read-only operation supported by its connector. Examples:
+For every relevant external provider allowed by the account policy, execute one harmless minimal read-only operation supported by its connector. Examples:
 
 - GitHub: read the instance marker or repository metadata;
 - Trello: list a small number of boards;
@@ -115,34 +130,36 @@ The return command does not prove access. Run the read-only probes again.
 When an optional provider is unavailable, unauthorized, unsupported, paid-only for the needed action or outside the learner's account policy:
 
 1. create no resource in that provider;
-2. when the provider is useful and connectable, render the nonblocking connection offer before finalizing the fallback unless it was already shown, declined or forbidden;
-3. mark the provider `unavailable` or `not_connected` with the reason category in `state/integrations.json`, without storing sensitive error details;
+2. when the provider is useful, connectable and allowed, render the nonblocking connection offer before finalizing the fallback unless it was already shown or declined;
+3. mark the provider `unavailable`, `not_connected` or `not_enabled` with a short reason category in `state/integrations.json`, without storing sensitive error details;
 4. activate the approved fallback;
 5. continue the publication operation;
 6. report the fallback briefly at completion.
 
 Examples:
 
-- Quizlet unavailable or not connected → offer connection once when eligible and link local TSV/Markdown flashcards;
+- Quizlet unavailable or not connected → offer connection once when eligible and allowed, then link local TSV/Markdown flashcards;
 - Consensus unavailable → retain primary sources, official documentation and web research;
 - Reclaim unavailable → use approved Google/Outlook Calendar fallback or no schedule;
 - Habitify unavailable → keep habits in the task backend or module checklist;
 - Whimsical unavailable → use Mermaid only;
 - Drive unavailable → use repository artifacts;
 - Airtable unavailable → use repository state and omit the dashboard;
-- email unavailable → report in chat.
+- email unavailable → report in chat;
+- Trello and GitHub Issues unavailable or not selected → keep the roadmap and operational state in repository-native Markdown.
 
 Optional failure must never block generation, study, assessment, recovery or mastery.
 
-## Free-tier policy
+## Cost and fallback policy
 
-When `integration_preferences.free_tier_only` or a capability's `free_tier_only` is true:
+No optional paid capability may become the only way to study. Before recommending or activating a provider:
 
 - do not probe by performing a paid write;
 - do not assume current plan entitlements from documentation or memory;
-- use only capabilities confirmed by harmless reads or safe attempted operations;
+- verify the capability and relevant limits through harmless reads or the first intended safe operation;
+- explain possible cost or account constraints without guaranteeing current pricing;
 - avoid requiring upgrades;
-- select the documented free fallback when the needed feature is unavailable.
+- select the documented repository-native or otherwise accessible fallback when the needed feature is unavailable.
 
 ## Idempotency before writes
 
