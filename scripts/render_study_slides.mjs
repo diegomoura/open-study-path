@@ -6,7 +6,6 @@ import { promises as fs } from "node:fs";
 import { createRequire } from "node:module";
 import path from "node:path";
 import process from "node:process";
-import { fileURLToPath, pathToFileURL } from "node:url";
 import { chromium } from "playwright";
 
 const require = createRequire(import.meta.url);
@@ -128,7 +127,11 @@ async function diagnostics(page) {
       .map((item) => item.index);
     const mermaidNodes = Array.from(document.querySelectorAll(".mermaid"));
     const unrenderedMermaid = mermaidNodes
-      .map((node, index) => ({ index: index + 1, processed: node.dataset.processed === "true", svg: Boolean(node.querySelector("svg")) }))
+      .map((node, index) => ({
+        index: index + 1,
+        processed: node.dataset.processed === "true",
+        svg: Boolean(node.querySelector("svg")),
+      }))
       .filter((item) => !item.processed || !item.svg)
       .map((item) => item.index);
     const outcomeIds = [];
@@ -163,12 +166,46 @@ async function sourceMetadata(root, topic) {
   return { files, sourceSha256, sourceDigest: await aggregateHash(root, files) };
 }
 
+function arraysEqual(left, right) {
+  return JSON.stringify(left) === JSON.stringify(right);
+}
+
+async function currentArtifactsAreFresh(topicDir, expected) {
+  try {
+    const meta = JSON.parse(await fs.readFile(path.join(topicDir, "slides.meta.json"), "utf8"));
+    const pdf = await fs.readFile(path.join(topicDir, "slides.pdf"));
+    const diagnosticsAreClean =
+      arraysEqual(meta?.diagnostics?.console_errors, []) &&
+      arraysEqual(meta?.diagnostics?.overflow_slides, []) &&
+      arraysEqual(meta?.diagnostics?.external_requests, []);
+    return (
+      meta.contract_version === 1 &&
+      meta.topic_id === expected.topicId &&
+      meta.content_version === expected.contentVersion &&
+      meta?.renderer?.playwright === PLAYWRIGHT_VERSION &&
+      meta?.renderer?.mermaid === MERMAID_VERSION &&
+      meta.slide_count === expected.slideCount &&
+      meta.mermaid_count === expected.mermaidCount &&
+      arraysEqual(meta.outcome_ids, expected.outcomeIds) &&
+      meta.source_digest === expected.sourceDigest &&
+      JSON.stringify(meta.source_sha256) === JSON.stringify(expected.sourceSha256) &&
+      meta?.pdf?.pages === expected.slideCount &&
+      meta?.pdf?.pages === pdfPageCount(pdf) &&
+      meta?.pdf?.bytes === pdf.length &&
+      meta?.pdf?.sha256 === sha256(pdf) &&
+      diagnosticsAreClean
+    );
+  } catch {
+    return false;
+  }
+}
+
 async function renderTopic({ browser, root, origin, topic, check }) {
   const topicDir = path.join(root, "study", "slides", topic);
   for (const source of SOURCE_FILES) await fs.access(path.join(topicDir, source));
   const consoleErrors = [];
   const externalRequests = [];
-  const page = await browser.newPage({ viewport: { width: 1600, height: 900 }, deviceScaleFactor: 1 });
+  const page = await browser.newPage({ viewport: { width: 1280, height: 720 }, deviceScaleFactor: 1 });
   page.on("console", (message) => {
     if (message.type() === "error") consoleErrors.push(message.text());
   });
@@ -202,10 +239,26 @@ async function renderTopic({ browser, root, origin, topic, check }) {
   if (consoleErrors.length) throw new Error(`${topic}: browser console errors: ${consoleErrors.join(" | ")}`);
   if (externalRequests.length) throw new Error(`${topic}: external requests are forbidden: ${externalRequests.join(" | ")}`);
 
+  const source = await sourceMetadata(root, topic);
+  const expected = {
+    topicId: topic,
+    contentVersion: tags.contentVersion,
+    slideCount: browserDiagnostics.slideCount,
+    mermaidCount: browserDiagnostics.mermaidCount,
+    outcomeIds: browserDiagnostics.outcomeIds,
+    sourceSha256: source.sourceSha256,
+    sourceDigest: source.sourceDigest,
+  };
+
+  if (!check && (await currentArtifactsAreFresh(topicDir, expected))) {
+    await page.close();
+    return { topic, status: "unchanged", output: topicDir };
+  }
+
   await page.emulateMedia({ media: "print" });
   const pdfBuffer = await page.pdf({
-    width: "13.333333in",
-    height: "7.5in",
+    width: "1280px",
+    height: "720px",
     printBackground: true,
     preferCSSPageSize: true,
     tagged: true,
@@ -218,7 +271,6 @@ async function renderTopic({ browser, root, origin, topic, check }) {
   if (pageCount !== browserDiagnostics.slideCount) {
     throw new Error(`${topic}: rendered PDF has ${pageCount} pages for ${browserDiagnostics.slideCount} slides`);
   }
-  const source = await sourceMetadata(root, topic);
   const meta = {
     contract_version: 1,
     topic_id: topic,
@@ -249,21 +301,27 @@ async function renderTopic({ browser, root, origin, topic, check }) {
   const committedMeta = path.join(topicDir, "slides.meta.json");
   let mismatch = false;
   try {
-    const currentMeta = JSON.parse(await fs.readFile(committedMeta, "utf-8"));
+    const currentMeta = JSON.parse(await fs.readFile(committedMeta, "utf8"));
     const currentPdf = await fs.readFile(committedPdf);
     const currentPages = pdfPageCount(currentPdf);
     const comparable = [
       [currentMeta.contract_version, 1],
       [currentMeta.topic_id, topic],
       [currentMeta.content_version, meta.content_version],
+      [currentMeta?.renderer?.playwright, PLAYWRIGHT_VERSION],
+      [currentMeta?.renderer?.mermaid, MERMAID_VERSION],
       [currentMeta.slide_count, meta.slide_count],
       [currentMeta.mermaid_count, meta.mermaid_count],
       [JSON.stringify(currentMeta.outcome_ids), JSON.stringify(meta.outcome_ids)],
+      [JSON.stringify(currentMeta.source_sha256), JSON.stringify(meta.source_sha256)],
       [currentMeta.source_digest, meta.source_digest],
       [currentMeta?.pdf?.pages, currentPages],
       [currentMeta?.pdf?.pages, meta.slide_count],
       [currentMeta?.pdf?.bytes, currentPdf.length],
       [currentMeta?.pdf?.sha256, sha256(currentPdf)],
+      [JSON.stringify(currentMeta?.diagnostics?.console_errors), "[]"],
+      [JSON.stringify(currentMeta?.diagnostics?.overflow_slides), "[]"],
+      [JSON.stringify(currentMeta?.diagnostics?.external_requests), "[]"],
     ];
     mismatch = comparable.some(([left, right]) => left !== right);
   } catch {
