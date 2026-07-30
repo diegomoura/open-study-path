@@ -42,12 +42,12 @@ The instance is configured, but no learning path has been generated yet.
 - The approved roadmap includes a Mermaid visualization of the real topic dependencies.
 - Detailed modules and assessments may use an adaptive rolling window.
 - Topics are the structural planning unit.
-- Weekly availability is capacity information only.
+- The intake does not define a weekly schedule.
 - Without an explicit learner request for a calendar projection, show total effort and effort per topic instead of fixed weeks, weekly tables or week-numbered groups.
 - Activities normally take 10–25 minutes and topics normally take 45–90 minutes.
 - A topic is complete only after verified evidence satisfies its mastery criteria.
 
-An explicitly requested optional dated or weekly projection must preserve topics as the canonical structure and include:
+An explicitly requested optional dated or weekly projection must collect the minimum missing scheduling details, preserve topics as the canonical structure and include:
 
 `<!-- open-study-path:calendar-projection explicitly_requested=true -->`
 
