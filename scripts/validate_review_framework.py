@@ -12,6 +12,7 @@ from typing import Any
 import yaml
 
 from review_framework import REVIEW_PROFILES, changed_files, validate_changed_coverage
+from review_framework_guard import instance_transition_errors, review_path_errors, review_phases
 
 ROOT = Path(__file__).resolve().parents[1]
 INSTANCE_MARKER = ".open-study-path/instance.yml"
@@ -169,6 +170,20 @@ def validate_instance_diff() -> None:
         return
 
     paths = changed_files(ROOT, base_sha)
+    preflight_errors = [
+        *review_path_errors(ROOT, paths),
+        *instance_transition_errors(
+            base_document=base_document,
+            head_document=head_document,
+            head_marker_exists=head_marker.is_file(),
+            changed_review_phases=review_phases(ROOT, paths),
+        ),
+    ]
+    if preflight_errors:
+        for error in preflight_errors:
+            print(f"REVIEW ERROR: {error}", file=sys.stderr)
+        raise SystemExit(1)
+
     result = validate_changed_coverage(
         ROOT,
         paths,
