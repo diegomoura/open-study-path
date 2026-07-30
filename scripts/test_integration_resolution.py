@@ -60,6 +60,42 @@ def config() -> dict:
     }
 
 
+def untouched_config(task_provider: str = "auto") -> dict:
+    return {
+        "integration_preferences": {
+            "experience": "guided_recommendations",
+            "account_connections": "ask_per_provider",
+            "already_uses": [],
+            "willing_to_connect": [],
+            "notes": None,
+        },
+        "integrations": {
+            "task_manager": {"provider": task_provider},
+            "formative_practice": {"provider": "auto", "preferred": "quizlet"},
+            "calendar": {"provider": "auto", "enabled": "auto"},
+            "notifications": {"provider": "chat", "email_enabled": False},
+        },
+    }
+
+
+def untouched_state() -> dict:
+    return {
+        "selected_capabilities": {},
+        "resources": [],
+        "resolution": {
+            "status": "not_started",
+            "unresolved_capabilities": [],
+            "validated_at": None,
+        },
+        "sync": {
+            "status": "not_started",
+            "last_attempt_at": None,
+            "last_success_at": None,
+            "errors": [],
+        },
+    }
+
+
 def no_external_config() -> dict:
     return {
         "integration_preferences": {
@@ -147,6 +183,29 @@ def assert_error(state: dict, fragment: str, plan: str = PLAN, selected_config: 
         raise AssertionError(f"missing error containing {fragment!r}: {result.errors}")
 
 
+def test_fresh_setup_may_remain_not_started() -> None:
+    result = validate_documents(untouched_config(), untouched_state(), "", decks_exist=False)
+    assert not result.errors, result.errors
+    assert result.expected == ()
+    assert result.unresolved == ()
+
+
+def test_explicit_choice_may_wait_for_publication() -> None:
+    result = validate_documents(untouched_config("trello"), untouched_state(), "", decks_exist=False)
+    assert not result.errors, result.errors
+    assert result.expected == ("task_manager",)
+    assert result.unresolved == ()
+
+
+def test_not_started_is_rejected_after_publication_begins() -> None:
+    state = untouched_state()
+    state["sync"]["status"] = "in_progress"
+    state["sync"]["last_attempt_at"] = "2026-07-30T22:00:00Z"
+    result = validate_documents(untouched_config(), state, "", decks_exist=False)
+    if not any("cannot remain not_started" in error for error in result.errors):
+        raise AssertionError(result.errors)
+
+
 def test_fully_resolved_state_passes() -> None:
     result = validate_documents(config(), resolved_state(), PLAN, decks_exist=True)
     assert not result.errors, result.errors
@@ -227,6 +286,9 @@ def test_no_external_accounts_requires_plan_disposition() -> None:
 
 def main() -> None:
     tests = [
+        test_fresh_setup_may_remain_not_started,
+        test_explicit_choice_may_wait_for_publication,
+        test_not_started_is_rejected_after_publication_begins,
         test_fully_resolved_state_passes,
         test_quizlet_cannot_be_silently_deferred,
         test_email_choice_cannot_disappear,
