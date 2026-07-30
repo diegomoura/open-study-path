@@ -49,6 +49,33 @@ def _no_external_accounts(config: Mapping[str, Any]) -> bool:
     return _text(preferences.get("account_connections")) == NO_EXTERNAL_ACCOUNTS
 
 
+def _publication_started(state: Mapping[str, Any]) -> bool:
+    """Return whether external publication has left its pristine initial state.
+
+    A curriculum or integration plan may already exist while publication is
+    still legitimately untouched. Publication starts only when persisted state
+    records a selected capability, resource, attempt, terminal disposition or
+    synchronization transition.
+    """
+
+    selected = _mapping(state.get("selected_capabilities"))
+    resources = state.get("resources")
+    resolution = _mapping(state.get("resolution"))
+    sync = _mapping(state.get("sync"))
+
+    return any(
+        [
+            bool(selected),
+            bool(resources),
+            _text(sync.get("status")) not in {"", "not_started"},
+            bool(sync.get("last_attempt_at")),
+            bool(sync.get("last_success_at")),
+            _text(resolution.get("status")) not in {"", "not_started"},
+            bool(resolution.get("validated_at")),
+        ]
+    )
+
+
 def has_materialized_flashcards(root: Path) -> bool:
     flashcards = root / "study" / "flashcards"
     return flashcards.is_dir() and any(flashcards.glob("TOPIC-*.tsv"))
@@ -264,7 +291,21 @@ def validate_documents(
     errors = validate_plan(config, plan_markdown, decks_exist=decks_exist) if plan_markdown else validate_account_policy(config, "")
     expected = expected_capabilities(config, plan_markdown, decks_exist=decks_exist)
     selected = _mapping(state.get("selected_capabilities"))
+    resolution = _mapping(state.get("resolution"))
+    resolution_status = _text(resolution.get("status"))
+    declared_unresolved = tuple(sorted(_text(value) for value in resolution.get("unresolved_capabilities", []) if value))
+    sync = _mapping(state.get("sync"))
+
+    if not _publication_started(state):
+        if resolution and resolution_status != "not_started":
+            errors.append(f"pristine publication resolution.status must be not_started, got {resolution_status or '<missing>'}")
+        if declared_unresolved:
+            errors.append("pristine publication cannot declare unresolved capabilities")
+        return ResolutionResult(tuple(sorted(expected)), (), tuple(errors))
+
     unresolved: list[str] = []
+    if resolution_status == "not_started":
+        errors.append("resolution.status cannot remain not_started after publication begins")
 
     for capability, provider in expected.items():
         entry = _mapping(selected.get(capability))
@@ -282,9 +323,6 @@ def validate_documents(
         if not resolved:
             unresolved.append(capability)
 
-    resolution = _mapping(state.get("resolution"))
-    resolution_status = _text(resolution.get("status"))
-    declared_unresolved = tuple(sorted(_text(value) for value in resolution.get("unresolved_capabilities", []) if value))
     computed_unresolved = tuple(sorted(set(unresolved)))
 
     if expected and not resolution:
@@ -299,7 +337,6 @@ def validate_documents(
                 f"expected {computed_unresolved}, got {declared_unresolved}"
             )
 
-    sync = _mapping(state.get("sync"))
     if _text(sync.get("status")) in {"success", "succeeded", "completed"} and computed_unresolved:
         errors.append("sync.status cannot be success while selected integrations remain unresolved")
 
