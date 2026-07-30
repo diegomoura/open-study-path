@@ -11,6 +11,7 @@ import tempfile
 import yaml
 
 from review_framework import REVIEW_PROFILES, file_sha256, is_generated_artifact, validate_changed_coverage
+from review_framework_guard import instance_transition_errors, review_path_errors
 
 
 def write(path: Path, content: str) -> None:
@@ -170,6 +171,62 @@ def test_wrong_profile_cannot_cover_generated_artifact() -> None:
         assert any("out-of-scope artifact" in error for error in result.errors)
 
 
+def test_review_path_cannot_escape_repository() -> None:
+    with tempfile.TemporaryDirectory() as directory:
+        root = Path(directory)
+        review = "state/reviews/migration.yml"
+        write(root / review, yaml.safe_dump({
+            "phase": "migration",
+            "artifacts": [{"path": "study/../../outside.txt", "sha256": "0" * 64}],
+        }, sort_keys=False))
+        errors = review_path_errors(root, [review])
+        assert any("safe repository-relative path" in error for error in errors)
+
+
+def test_review_cannot_fingerprint_symbolic_link() -> None:
+    with tempfile.TemporaryDirectory() as directory:
+        root = Path(directory)
+        write(root / "outside.txt", "outside\n")
+        link = root / "study/link.md"
+        link.parent.mkdir(parents=True, exist_ok=True)
+        link.symlink_to(root / "outside.txt")
+        review = "state/reviews/curriculum.yml"
+        write(root / review, yaml.safe_dump({
+            "phase": "curriculum",
+            "artifacts": [{"path": "study/link.md", "sha256": "0" * 64}],
+        }, sort_keys=False))
+        errors = review_path_errors(root, [review])
+        assert any("symbolic link" in error for error in errors)
+
+
+def test_enabled_framework_cannot_be_disabled() -> None:
+    errors = instance_transition_errors(
+        base_document={"review_framework": {"enabled": True}},
+        head_document={"review_framework": {"enabled": False}},
+        head_marker_exists=True,
+        changed_review_phases=["migration"],
+    )
+    assert any("cannot be disabled" in error for error in errors)
+
+
+def test_marker_deletion_requires_migration_review() -> None:
+    blocked = instance_transition_errors(
+        base_document={"review_framework": {"enabled": True}},
+        head_document=None,
+        head_marker_exists=False,
+        changed_review_phases=["setup"],
+    )
+    assert any("requires a changed approved migration review" in error for error in blocked)
+
+    allowed = instance_transition_errors(
+        base_document={"review_framework": {"enabled": True}},
+        head_document=None,
+        head_marker_exists=False,
+        changed_review_phases=["migration"],
+    )
+    assert not allowed
+
+
 def test_template_changes_do_not_require_instance_review() -> None:
     with tempfile.TemporaryDirectory() as directory:
         root = Path(directory)
@@ -199,6 +256,10 @@ def main() -> None:
         test_review_must_cover_every_generated_change,
         test_reviewed_deletion_uses_base_fingerprint,
         test_wrong_profile_cannot_cover_generated_artifact,
+        test_review_path_cannot_escape_repository,
+        test_review_cannot_fingerprint_symbolic_link,
+        test_enabled_framework_cannot_be_disabled,
+        test_marker_deletion_requires_migration_review,
         test_template_changes_do_not_require_instance_review,
         test_generated_path_classifier,
     ]
