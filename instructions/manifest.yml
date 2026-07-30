@@ -73,6 +73,7 @@ phases:
     execution_contract: instructions/32-generation-execution.md
     internal_review: instructions/35-review-curriculum.md
     internal_content_review: instructions/36-review-course-content.md
+    internal_slide_review: instructions/37-review-study-slides.md
     phase_review: instructions/04-review-generated-artifacts.md
     review_profile: curriculum
     review_outputs: [state/reviews/]
@@ -87,9 +88,11 @@ phases:
       - study/integrations.md
       - study/topics/
       - study/modules/
+      - study/slides/
       - study/flashcards/
       - study/assessments/
       - state/content-reviews/
+      - state/slide-reviews/
       - .github/ISSUE_TEMPLATE/assessment-topic-*.yml
     stop_after_phase: true
 
@@ -111,6 +114,7 @@ phases:
     instruction: instructions/55-evaluate-topic.md
     internal_materialization: instructions/57-materialize-next-content.md
     internal_content_review: instructions/36-review-course-content.md
+    internal_slide_review: instructions/37-review-study-slides.md
     phase_review: instructions/04-review-generated-artifacts.md
     review_profile: assessment
     review_outputs: [state/reviews/]
@@ -122,10 +126,12 @@ phases:
       - state/progress.json
       - state/integrations.json
       - state/content-reviews/
+      - state/slide-reviews/
       - study/roadmap.md
       - study/integrations.md
       - study/topics/
       - study/modules/
+      - study/slides/
       - study/flashcards/
       - study/assessments/
       - .github/ISSUE_TEMPLATE/assessment-topic-*.yml
