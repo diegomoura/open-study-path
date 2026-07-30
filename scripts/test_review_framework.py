@@ -3,7 +3,9 @@
 
 from __future__ import annotations
 
+from hashlib import sha256
 from pathlib import Path
+import subprocess
 import tempfile
 
 import yaml
@@ -109,6 +111,51 @@ def test_review_must_cover_every_generated_change() -> None:
         assert any("study/integrations.md" in error for error in result.errors)
 
 
+def test_reviewed_deletion_uses_base_fingerprint() -> None:
+    with tempfile.TemporaryDirectory() as directory:
+        root = Path(directory)
+        subprocess.run(["git", "init", "-q"], cwd=root, check=True)
+        subprocess.run(["git", "config", "user.email", "review@example.com"], cwd=root, check=True)
+        subprocess.run(["git", "config", "user.name", "Review Test"], cwd=root, check=True)
+        write(root / ".open-study-path/instance.yml", "kind: open-study-path-instance\n")
+        write(root / "study/obsolete.md", "# Old content\n")
+        subprocess.run(["git", "add", "."], cwd=root, check=True)
+        subprocess.run(["git", "commit", "-qm", "base"], cwd=root, check=True)
+        base_sha = subprocess.run(
+            ["git", "rev-parse", "HEAD"], cwd=root, check=True, capture_output=True, text=True
+        ).stdout.strip()
+        previous = sha256((root / "study/obsolete.md").read_bytes()).hexdigest()
+        (root / "study/obsolete.md").unlink()
+
+        profile = REVIEW_PROFILES["migration"]
+        review = "state/reviews/migration.yml"
+        document = {
+            "contract_version": 1,
+            "operation_id": "migration-delete-v1",
+            "phase": "migration",
+            "reviewer_role": profile["reviewer_role"],
+            "independent_pass": True,
+            "status": "approved",
+            "reviewed_at": "2026-07-30T12:00:00Z",
+            "artifacts": [{
+                "path": "study/obsolete.md",
+                "change": "deleted",
+                "previous_sha256": previous,
+            }],
+            "checks": {check: "passed" for check in profile["checks"]},
+            "blocking_findings": [],
+            "non_blocking_findings": [],
+        }
+        write(root / review, yaml.safe_dump(document, sort_keys=False))
+        result = validate_changed_coverage(
+            root,
+            ["study/obsolete.md", review],
+            instance_mode=True,
+            base_sha=base_sha,
+        )
+        assert not result.errors, result.errors
+
+
 def test_template_changes_do_not_require_instance_review() -> None:
     with tempfile.TemporaryDirectory() as directory:
         root = Path(directory)
@@ -135,6 +182,7 @@ def main() -> None:
         test_blocking_finding_prevents_approval,
         test_required_check_cannot_be_skipped,
         test_review_must_cover_every_generated_change,
+        test_reviewed_deletion_uses_base_fingerprint,
         test_template_changes_do_not_require_instance_review,
         test_generated_path_classifier,
     ]
