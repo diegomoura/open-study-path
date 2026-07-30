@@ -162,6 +162,6 @@ p, li { font-size: clamp(20px, 2vw, 32px); line-height: 1.35; }
   .osp-controls { display: none !important; }
 }
 
-@media (max-aspect-ratio: 16/9) {
+@media screen and (max-aspect-ratio: 16/9) {
   .osp-slide { width: 177.7778vh; height: 100vh; }
 }
