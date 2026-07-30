@@ -8,6 +8,11 @@ materialized_at: null
 difficulty: beginner
 estimated_hours: 0
 prerequisites: []
+learning_outcomes:
+  - id: LO-1
+    statement: Replace me with one observable result promised by this topic.
+    required_concepts:
+      - Replace me with a concept that must be taught.
 module: study/modules/TOPIC-000.md
 flashcards: null
 flashcards_study: null
@@ -21,7 +26,7 @@ assessment_form: .github/ISSUE_TEMPLATE/assessment-topic-000.yml
 
 ## O que você vai aprender
 
-Descreva uma capacidade observável que a pessoa desenvolverá.
+Descreva uma capacidade observável que a pessoa desenvolverá. O texto deve corresponder aos `learning_outcomes` do frontmatter. Use entre um e sete resultados estáveis, com conceitos obrigatórios explícitos, para permitir rastrear o plano até a aula e a avaliação.
 
 ## Por que isso importa para você
 
@@ -29,7 +34,7 @@ Conecte a etapa ao objetivo final, à motivação registrada ou a uma lacuna obs
 
 ## O que você já precisa saber
 
-- Nada, ou indique as etapas anteriores em linguagem simples.
+- Nada, ou indique somente os pré-requisitos declarados no frontmatter em linguagem simples. Não trate a etapa numericamente anterior como pré-requisito automático.
 
 ## Seu plano para esta etapa
 
@@ -45,7 +50,7 @@ Quando `content_status: materialized`, registre internamente [a aula completa](.
 
 Quando `content_status: planned`, use:
 
-> Esta aula será preparada automaticamente quando você concluir as etapas necessárias. Você não precisa pedir a geração manualmente.
+> Esta aula será preparada automaticamente quando você concluir os pré-requisitos desta etapa. Você não precisa pedir a geração manualmente.
 
 Não mostre `materialized`, `planned`, “janela ativa” ou outros termos internos no texto voltado para a pessoa.
 
