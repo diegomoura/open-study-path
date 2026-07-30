@@ -41,7 +41,8 @@ def validate_contract() -> None:
         "instructions/31-topic-first-safe-publication.md",
         [
             "`planning.unit: topic` is authoritative",
-            "The intake does not define weekly availability",
+            "optional free-text `path.time_constraints`",
+            "does not authorize silently removing mastery-required topics",
             "collect the minimum missing scheduling details at activation",
             "Never create `tmp`, `test`, `probe`",
             "After each successful external creation or update",
@@ -53,6 +54,7 @@ def validate_contract() -> None:
         [
             "instructions/31-topic-first-safe-publication.md",
             "Do not create fixed durations in weeks",
+            "must not silently remove mastery-required content",
             "Never create disposable external probe resources.",
         ],
     )
@@ -60,7 +62,8 @@ def validate_contract() -> None:
         "templates/roadmap.md",
         [
             "Topics are the structural planning unit.",
-            "The intake does not define a weekly schedule.",
+            "optional free-text time constraint",
+            "must not silently remove mastery-required content",
         ],
     )
     workflow = read(".github/workflows/validate-template.yml")
