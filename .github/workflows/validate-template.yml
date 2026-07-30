@@ -102,7 +102,7 @@ jobs:
 
       - name: Install study-slide render dependencies
         run: |
-          npm install --no-save --package-lock=false playwright@1.62.0 mermaid@11.16.0
+          npm install --no-save --package-lock=false playwright@1.62.0 mermaid@11.16.0 pdf-lib@1.17.1
           npx playwright install --with-deps chromium
 
       - name: Smoke test study-slide Chromium rendering
