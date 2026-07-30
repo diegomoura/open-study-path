@@ -32,7 +32,7 @@ python scripts/validate_curriculum_safe.py
 After lesson and slide reviews pass, render current slide sources with the pinned browser toolchain:
 
 ```text
-npm install --no-save --package-lock=false playwright@1.62.0 mermaid@11.16.0
+npm install --no-save --package-lock=false playwright@1.62.0 mermaid@11.16.0 pdf-lib@1.17.1
 npx playwright install chromium
 node scripts/render_study_slides.mjs
 python scripts/validate_study_slides.py
