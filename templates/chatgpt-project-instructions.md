@@ -60,6 +60,8 @@ Initial generation creates the complete roadmap, every topic overview and the in
 
 A topic is one coherent independently assessable capability with three to seven focused activities. A checklist is not a lesson.
 
+A topic number is a stable identifier and roadmap aid, not a prerequisite rule. Use only the direct prerequisite list from the topic contract. In a branched course, a later-numbered topic may become ready before the numerically previous topic.
+
 Every ready lesson must include:
 
 - clear personal orientation and outcome;
@@ -79,6 +81,14 @@ Use normally three to seven inspected sources. Include a primary or official sou
 
 Never invent sources, cite an uninspected search result or cite a plugin answer instead of the original document. Keep the module self-contained.
 
+## Independent course-content review
+
+After authoring curriculum content, run `instructions/35-review-curriculum.md` for the plan and `instructions/36-review-course-content.md` as a separate reviewer pass for every materialized topic.
+
+The content reviewer must compare the approved topic contract with the lesson, practice, rubric, Issue Form and proposed task copy. Every outcome must be taught and assessed. Every materialized topic must have a current `state/content-reviews/TOPIC-000.yml` for its exact content version. A stale review, missing outcome, false prerequisite, navigation mismatch or unresolved blocking finding prevents merge.
+
+CI validates traceability, but do not approve markers mechanically. Verify that the marked content genuinely teaches the promised outcome and that assessment questions genuinely measure it.
+
 ## Integrations
 
 Recommend only tools justified by the course and preferences. Explain them in simple language first; keep preflight, authority and synchronization details in collapsed technical sections and state files.
@@ -89,7 +99,7 @@ Run `instructions/42-integration-preflight.md` before external writes. Optional 
 
 ## Tasks
 
-Use human task titles such as `1. <título>`. Treat the selected task tool as a concise learner interface, not an inventory of repository artifacts.
+Use the learner-facing lesson title without a numeric prefix by default. Use `Etapa <n> · <título>` only when the path is genuinely linear or the learner explicitly requests numbering. Treat the selected task tool as a concise learner interface, not an inventory of repository artifacts.
 
 Ready tasks say:
 
@@ -105,7 +115,7 @@ When an external practice resource such as Quizlet exists, show it as the task's
 
 Do not link `study/topics/` contracts, rubric YAML, state files or synchronization records from normal learner tasks. Summarize objective, deliverable and completion criteria directly in the task.
 
-Future tasks say what the person will learn, what they will produce and that the lesson will be prepared automatically after previous steps. They do not need an internal topic-contract link merely to provide a destination. Do not repeat technical authority or materialization language in every card.
+Future tasks begin with **Pré-requisitos desta etapa**, list exactly the direct prerequisite titles and say to follow that list rather than card numbering. They say what the person will learn, what they will produce and that the lesson will be prepared automatically after those prerequisites. Do not use “todas as etapas anteriores” in a branched graph and do not add an internal topic-contract link merely to provide a destination.
 
 ## Assessments and progress
 
@@ -119,7 +129,7 @@ After success, prepare the next eligible lessons automatically. After an insuffi
 
 ## Repository and safety
 
-Use pull requests for structural changes and generated learning content. Validate, self-review and safely merge when the policy permits and no decision remains. Do not ask the person to review or merge routine PRs.
+Use pull requests for structural changes and generated learning content. Validate, perform curriculum review, perform the independent content-review pass and safely merge when the policy permits and no decision remains. Do not ask the person to review or merge routine PRs.
 
 For setup, build one allowed diff from the files already present in the target repository and apply `instructions/02-setup-execution.md`. Inspect required checks for the current unchanged PR head. A failing, pending, cancelled, missing or unreadable required check blocks merge and blocks a success response. Never report that the trail is configured while CI is red or unknown.
 

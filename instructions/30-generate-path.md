@@ -8,7 +8,9 @@ Read before generating:
 - `docs/beginner-first-pedagogy.md`;
 - `docs/content-quality-and-sources.md`;
 - `docs/mermaid-visual-learning.md`;
-- `docs/integration-capabilities.md`.
+- `docs/integration-capabilities.md`;
+- `instructions/35-review-curriculum.md`;
+- `instructions/36-review-course-content.md`.
 
 ## Planning contract
 
@@ -17,11 +19,25 @@ Always create upfront:
 - `study/roadmap.md` with the complete topic graph and estimated effort;
 - one concise contract per topic under `study/topics/` using `templates/topic.md`;
 - observable objectives, prerequisites, effort, deliverables, evidence, completion criteria and precise resources;
+- one to seven stable learning outcome IDs per topic, with the concepts that must be taught;
 - `study/integrations.md` using `templates/integrations-plan.md`.
+
+Stable learning outcome IDs use `LO-1`, `LO-2` and so on inside each topic. They are internal traceability keys. The learner-facing objective remains natural prose, but it must describe the same promised results.
 
 The learner must be able to understand the whole path without reading workflow terminology or already knowing the course vocabulary. In learner-facing prose, translate `materialized` to “aula pronta” and `planned` to “aula futura”. Keep internal values in frontmatter and state files.
 
 For beginner paths, the first roadmap occurrence of a technical concept should combine its technical name with a short plain-language description. A list of requested subjects defines desired scope, not prior knowledge.
+
+## Dependency graph, not numbered sequence
+
+Topic numbers provide stable identity and a convenient roadmap order. They do not establish prerequisites by themselves. Use only the direct prerequisite IDs declared in each topic contract.
+
+When the graph branches:
+
+- do not claim that a topic depends on the numerically previous topic unless that dependency is declared;
+- do not use “todas as etapas anteriores” as a substitute for direct prerequisites;
+- write future task copy from the direct prerequisite list;
+- explain in learner-facing navigation that readiness follows prerequisites, not card number.
 
 ## Personalization
 
@@ -94,7 +110,21 @@ For every materialized topic, create:
 - a 100-point rubric under `study/assessments/`;
 - a GitHub Issue Form under `.github/ISSUE_TEMPLATE/`;
 - paired Markdown and TSV flashcards when useful;
-- positive content version and materialization date.
+- positive content version and materialization date;
+- a current independent review under `state/content-reviews/`.
+
+## Outcome traceability
+
+For every materialized topic:
+
+1. preserve the approved learning outcome IDs and required concepts from the topic contract;
+2. place exactly one hidden `open-study-path:outcome` marker for each outcome beside content that genuinely teaches it;
+3. add `outcome_ids` to every assessment-rubric question;
+4. ensure every outcome is taught and assessed at least once;
+5. run `instructions/36-review-course-content.md` as a separate pass;
+6. create `state/content-reviews/TOPIC-000.yml` from `templates/content-review.yml` for the current content version.
+
+A marker beside a heading or a passing CI check does not prove coverage. The independent reviewer must verify that the explanation, examples, practice and assessment actually match the promised outcome.
 
 ## Complete-content contract
 
@@ -103,7 +133,7 @@ Every ready lesson must be self-contained for the configured time and level. It 
 1. a personal orientation and clear outcome;
 2. a granular study session;
 3. first-principles onboarding when required by level or diagnostic;
-4. prerequisite retrieval;
+4. prerequisite retrieval based on direct prerequisites;
 5. actual explanatory content;
 6. definitions, relationships, limits and nuance;
 7. an intuition bridge through a bounded analogy or concrete example;
@@ -182,6 +212,8 @@ Link the Markdown deck first, the TSV second and the external set only after it 
 
 Each assessment contains five substantial prompts covering understanding, analysis, transfer, misconception correction and evidence. Issue Forms include labels, hidden topic marker and complete prefilled title.
 
+Every rubric question declares one or more valid `outcome_ids`. All approved outcomes must be assessed. The independent reviewer verifies that the question genuinely measures those outcomes rather than merely mentioning their vocabulary.
+
 For beginner topics, at least one assessment prompt must verify that the learner can define the central object and distinguish it from a nearby concept before applying it.
 
 The lesson may teach the later return command:
@@ -212,7 +244,7 @@ Do not foreground generation thresholds, topological order, PR status, CI or int
 
 ## Pull request and automatic review
 
-Open a draft PR containing only allowed curriculum artifacts. Run `instructions/35-review-curriculum.md`, correct resolvable issues, validate, self-review and merge under the configured policy when no material decision remains.
+Open a draft PR containing only allowed curriculum artifacts. Run `instructions/35-review-curriculum.md`, correct curriculum-architecture issues, then run `instructions/36-review-course-content.md` as an independent pass for every materialized topic. Create current review artifacts, run deterministic validation, inspect the final diff and merge under the configured policy only when no material decision or blocking finding remains.
 
 Operational review and CI are recorded in GitHub. The learner-facing response does not require a fixed PR-status sentence.
 

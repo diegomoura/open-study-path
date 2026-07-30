@@ -49,6 +49,8 @@ Read `instructions/31-topic-first-safe-publication.md` before generating or revi
 
 For beginner paths, explain a technical term in plain language at its first meaningful roadmap occurrence. A requested topic is desired scope, not proof that the learner knows its vocabulary.
 
+A topic number is not a prerequisite rule. The dependency graph and each topic's direct prerequisite list are authoritative. In a branched course, TOPIC-009 may be ready without TOPIC-008. Do not infer adjacency from numbering.
+
 ## Granularity and teaching quality
 
 A topic is one coherent independently assessable capability. Use three to seven focused actions, normally 10–25 minutes each, and prefer 45–90 minutes per topic.
@@ -77,6 +79,23 @@ Read `docs/content-quality-and-sources.md`. Every ready lesson normally uses thr
 
 Do not cite a plugin response instead of the original source. Do not add uninspected links, invent citations or turn a lesson into a reading list.
 
+## Independent course-content review
+
+Read `instructions/35-review-curriculum.md` and `instructions/36-review-course-content.md` as different roles.
+
+The curriculum reviewer verifies scope, graph, topic contracts and course architecture. The course-content reviewer independently verifies that every materialized lesson, practice and assessment delivers what the contract promised.
+
+For new review-contract instances:
+
+- every topic defines stable `learning_outcomes` and required concepts;
+- every materialized lesson contains one hidden outcome marker per approved outcome;
+- every rubric question maps to one or more outcome IDs;
+- every materialized topic has a current `state/content-reviews/TOPIC-000.yml`;
+- a stale review, missing outcome, false prerequisite, learner-navigation mismatch or blocking finding prevents merge;
+- CI checks traceability, but the reviewer remains responsible for semantic honesty.
+
+Authoring and review are separate passes even when the same runtime performs both. During review, read repository artifacts as evidence, actively look for contradictions and do not approve because the authoring pass appeared confident.
+
 ## Mermaid visual learning
 
 Every roadmap contains the actual topic dependency graph. Every ready module contains the configured minimum number of explained Mermaid diagrams. A diagram supplements prose and practice; it does not replace them.
@@ -94,7 +113,7 @@ GitHub stores curriculum, lessons, assessments and verified progress. Exactly on
 - Habitify supports consistency only.
 - Mermaid remains canonical with any external diagram workspace.
 - Drive may store deliverables.
-- Airtable remains a `github_to_airtable` projection.
+- Airtable remains `github_to_airtable` projection.
 - Coursera, edX, Udemy, Khan Academy, YouTube and other media sources must point to precise useful lessons, sections, exercises or timestamps.
 
 Optional providers never block the GitHub/Markdown path. Before external writes, run `instructions/42-integration-preflight.md` and `instructions/31-topic-first-safe-publication.md`. Store only safe external identifiers and synchronization metadata.
@@ -103,7 +122,7 @@ Optional providers never block the GitHub/Markdown path. Before external writes,
 
 Read `instructions/32-generation-execution.md` for generation and materialization. Keep every commit within phase scope. Do not modify reusable workflows, validators, instructions, templates or schemas from an instance curriculum operation.
 
-Create curriculum PRs as drafts, correct resolvable issues, run checks, self-review and merge under the configured policy when no genuine decision remains. Record technical review state in GitHub.
+Create curriculum PRs as drafts, correct resolvable issues, run checks, perform curriculum review, perform the independent content-review pass and merge under the configured policy when no genuine decision remains. Record technical review state in GitHub.
 
 For every repository phase, inspect required checks for the current unchanged PR head. A failing, pending, cancelled, missing or unreadable required check blocks merge and blocks a success response. Never merge because the diff looks correct while CI is red or unknown.
 
@@ -113,9 +132,13 @@ Do not require a fixed “PR approved and merged” sentence in chat. Link a PR 
 
 Read `instructions/40-publish-tasks.md`, `instructions/42-integration-preflight.md` and `instructions/31-topic-first-safe-publication.md`.
 
-Create one task per topic. Use human titles such as `1. Agência sem garantia`, not `[TOPIC-001]`, unless technical IDs were requested. Do not organize Trello by week unless the learner explicitly requested an optional calendar projection.
+Create one task per topic. By default, use the human lesson title without a numeric prefix. Use `Etapa <n> · <título>` only for a genuinely linear course or an explicit learner preference. Do not organize Trello by week unless the learner explicitly requested an optional calendar projection.
 
-A ready card says what the learner will do, how long it may take, where the lesson, primary practice and assessment are, what to produce and how to finish. A future card summarizes the stage and says that the lesson will be prepared automatically after prerequisites.
+### Human task titles
+
+A ready card says what the learner will do, how long it may take, where the lesson, primary practice and assessment are, what to produce and how to finish.
+
+A future card begins with **Pré-requisitos desta etapa**, lists exactly the direct prerequisite titles and tells the learner to follow that list rather than card numbering. Never say “todas as etapas anteriores” when the graph branches.
 
 A task backend is not a repository inventory. Show one primary learner-facing resource per capability. When Quizlet or another external practice resource exists, show it instead of repeating the local fallback in the task. Keep local alternatives in the lesson. Do not link topic contracts, rubric YAML, state files or synchronization records from normal learner tasks.
 

@@ -2,6 +2,10 @@
 
 Run this checklist automatically inside initial generation and later materialization. Do not ask the owner for a separate generic review command.
 
+This pass reviews **curriculum architecture**: scope, dependency graph, topic contracts, effort and the consistency of the planned learning journey. It does not replace the independent review of **materialized teaching content**. After this checklist, run `instructions/36-review-course-content.md` for every materialized topic before approval.
+
+A valid graph can still contain a lesson that teaches the wrong subject, omits a promised concept or assesses something else. Curriculum review and course-content review are both required when the content-review contract is enabled.
+
 Review against approved intake, diagnostic evidence, generation instructions, source-quality guidance, learner-language guidance, visual-learning guidance, integration contracts and verified assessment evidence. Read `docs/beginner-first-pedagogy.md` for beginner or vocabulary-gap paths.
 
 ## Review checklist
@@ -35,6 +39,8 @@ Confirm that:
 25. assessment-informed adaptation changes examples, emphasis, sources, formats and practice without silently rewriting the curriculum structure;
 26. total effort remains consistent with availability without turning weekly capacity into fixed course structure;
 27. scope is explicitly introductory when it cannot satisfy the full long-term goal.
+
+Before handing materialized topics to the content reviewer, also confirm that each topic contract defines stable learning outcome IDs, required concepts and direct prerequisites. Topic numbering is an identifier and display aid; it is not evidence that the numerically previous topic is a prerequisite.
 
 ## Beginner progression and writing review
 
@@ -99,6 +105,10 @@ Confirm that:
 Reject a lesson when it could be replaced by a short checklist without losing teaching content, when major claims are not traceable to inspected sources, when references are a link dump, when media was added only to make the lesson look richer, or when a difficult concept lacks a bridge from intuition to technical detail.
 
 Reject learner-facing copy when it leads with PR/CI success, exposes internal classifications, mixes languages unnecessarily, makes the learner command repository mechanics or repeats system disclaimers in every artifact.
+
+## Course-content handoff
+
+For every materialized topic, hand the final authoring output to `instructions/36-review-course-content.md`. The independent pass must compare topic outcomes, required concepts, prerequisite graph, module, practice, assessment and task projection. It creates or refreshes `state/content-reviews/TOPIC-000.yml` for the exact content version. A missing, stale or blocked review prevents merge.
 
 ## Allowed diffs and merge
 

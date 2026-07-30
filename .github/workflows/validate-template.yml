@@ -54,6 +54,12 @@ jobs:
       - name: Test lifecycle next-action routing
         run: python scripts/test_lifecycle_next_action.py
 
+      - name: Test independent course-content review
+        run: python scripts/test_course_content_review.py
+
+      - name: Validate independent course-content review
+        run: python scripts/validate_course_content_review.py
+
       - name: Test selected integration resolution
         run: python scripts/test_integration_resolution.py
 
