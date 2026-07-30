@@ -154,11 +154,16 @@ p, li { font-size: clamp(20px, 2vw, 32px); line-height: 1.35; }
     min-height: 720px;
     max-height: 720px;
     margin: 0;
-    break-after: page;
-    page-break-after: always;
+    break-before: auto;
+    break-after: auto;
+    page-break-before: auto;
+    page-break-after: auto;
     box-shadow: none;
   }
-  .osp-slide:last-child { break-after: auto; page-break-after: auto; }
+  .osp-slide + .osp-slide {
+    break-before: page;
+    page-break-before: always;
+  }
   .osp-controls { display: none !important; }
 }
 
