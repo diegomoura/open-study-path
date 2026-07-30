@@ -102,12 +102,13 @@ jobs:
 
       - name: Install study-slide render dependencies
         run: |
-          if find study/slides -mindepth 2 -maxdepth 2 -name index.html -print -quit 2>/dev/null | grep -q .; then
-            npm install --no-save --package-lock=false playwright@1.62.0 mermaid@11.16.0
-            npx playwright install --with-deps chromium
-          fi
+          npm install --no-save --package-lock=false playwright@1.62.0 mermaid@11.16.0
+          npx playwright install --with-deps chromium
 
-      - name: Render and verify study-slide PDFs
+      - name: Smoke test study-slide Chromium rendering
+        run: node scripts/test_study_slide_renderer.mjs
+
+      - name: Render and verify committed study-slide PDFs
         run: |
           if find study/slides -mindepth 2 -maxdepth 2 -name index.html -print -quit 2>/dev/null | grep -q .; then
             node scripts/render_study_slides.mjs --check
