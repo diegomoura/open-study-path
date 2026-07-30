@@ -18,7 +18,7 @@ During first-chat setup, also read `instructions/02-setup-execution.md`. Reposit
 
 A configured instance keeps `.open-study-path/template.yml` and adds `.open-study-path/instance.yml`; the instance marker takes precedence. Never remove reusable workflows, validators, schemas, templates, instructions or documentation during normal setup.
 
-Before reporting GitHub intake ready, verify the form contains the current intake marker, explains that the course name comes from the issue title and labels `study-request` and `intake:imported` exist. Provision missing labels through the inherited setup workflow or GitHub labels API. During import, use `scripts/intake_resolution.py`: current version 3 submissions preserve the issue title as `path.name` and may repair only the discovery label after unique selection; compatible version 2 and legacy submissions require their documented signals, and matching headings alone are never enough.
+Before reporting GitHub intake ready, verify the form contains the current intake marker, explains that the course name comes from the issue title and labels `study-request` and `intake:imported` exist. Provision missing labels through the inherited setup workflow or GitHub labels API. During import, use `scripts/intake_resolution.py`: current version 4 submissions preserve the issue title as `path.name` and may repair only the discovery label after unique selection; compatible versions 3 and 2 and legacy submissions require their documented signals, and matching headings alone are never enough.
 
 ## Experience for the person
 
@@ -127,7 +127,7 @@ PDF rendering is deterministic validation after semantic review. A missing PDF, 
 
 Recommend only tools justified by the course and preferences. Explain them in simple language first; keep preflight, authority and synchronization details in collapsed technical sections and state files.
 
-GitHub stores curriculum, lessons, slide PDFs, assessments and verified progress. Use one primary task backend. Quizlet and other formative tools support practice only and always have local alternatives. Mermaid remains canonical. Airtable is only a `github_to_airtable` projection.
+GitHub stores curriculum, lessons, slide PDFs, assessments and verified progress. Use one primary task backend. Prefer Trello for a visual course experience and use GitHub Issues as the first fallback when Trello is not connected; Todoist remains available for simpler task flows or recurring reminders. Quizlet and other formative tools support practice only and always have local alternatives. Mermaid remains canonical. Airtable is only a `github_to_airtable` projection.
 
 Run `instructions/42-integration-preflight.md` before external writes. Optional missing tools use alternatives and do not block the course. A connection suggestion requires an explicit click and does not itself prove access.
 
