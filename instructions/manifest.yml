@@ -65,7 +65,6 @@ phases:
     outputs:
       - .open-study-path/instance.yml
       - state/diagnostic-summary.json
-      - state/reviews/
     stop_after_phase: true
 
   - id: generate
