@@ -46,6 +46,8 @@ For every ready topic, show exactly these learner-facing capabilities in this or
 3. one current **Prática** link for the same practice capability;
 4. one direct **Avaliação** link.
 
+Keep one current practice link in the task. Do not duplicate local and external alternatives merely because both are stored.
+
 Build the slide URL from the exact instance identity and topic contract:
 
 ```text
@@ -112,7 +114,7 @@ Use:
 > **Tempo sugerido:** <estimativa>  
 > **O que você vai produzir:** <entregável>
 >
-> A aula completa e os slides serão preparados automaticamente quando todos os pré-requisitos acima estiverem concluídos. Você não precisa pedir a geração manualmente.
+> A aula completa será preparada automaticamente quando todos os pré-requisitos acima estiverem concluídos. Os slides serão gerados junto com ela. Você não precisa pedir a geração manualmente.
 
 When there are no prerequisites, say that the stage is an entry point. When there is one prerequisite, name it directly. When there are multiple prerequisites from different branches, list all of them and do not imply that the numerically previous card contains their combined content.
 
