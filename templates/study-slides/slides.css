@@ -129,19 +129,30 @@ p, li { font-size: clamp(20px, 2vw, 32px); line-height: 1.35; }
 }
 .osp-controls button { padding: 8px 13px; border: 0; border-radius: 999px; background: var(--osp-surface-soft); color: var(--osp-text); cursor: pointer; }
 
-@page { size: 13.333333in 7.5in; margin: 0; }
+@page { size: 1280px 720px; margin: 0; }
 @media print {
-  html, body { width: 13.333333in; min-height: 7.5in; background: var(--osp-bg); print-color-adjust: exact; -webkit-print-color-adjust: exact; }
+  html, body {
+    width: 1280px;
+    min-width: 1280px;
+    max-width: 1280px;
+    min-height: 720px;
+    margin: 0;
+    background: var(--osp-bg);
+    print-color-adjust: exact;
+    -webkit-print-color-adjust: exact;
+  }
   body { overflow: visible; }
-  .osp-deck { min-height: 0; }
+  .osp-deck { width: 1280px; min-height: 0; margin: 0; }
   .osp-slide, .osp-slide.is-active {
     display: flex !important;
     flex-direction: column;
     justify-content: center;
-    width: 13.333333in;
-    height: 7.5in;
-    max-width: none;
-    max-height: none;
+    width: 1280px;
+    min-width: 1280px;
+    max-width: 1280px;
+    height: 720px;
+    min-height: 720px;
+    max-height: 720px;
     margin: 0;
     break-after: page;
     page-break-after: always;
