@@ -33,6 +33,18 @@ Uma resposta de plugin ou um resultado de busca não é uma fonte final. O módu
 
 Veja `docs/content-quality-and-sources.md`.
 
+## Revisão independente
+
+Tudo o que uma instância gera ou altera passa por um papel revisor antes de a operação ser considerada concluída.
+
+Há revisores especializados para configuração, intake, diagnóstico, currículo, publicação, avaliação, progresso, replanejamento e migração. A autoria e a revisão acontecem em passes separados, mesmo quando o mesmo runtime executa os dois.
+
+A revisão procura contradições entre o pedido, os artefatos produzidos, o estado persistido e as ferramentas externas. Cada aprovação registra os arquivos exatos revisados e suas versões em `state/reviews/`. Mudanças sem revisão, cobertura parcial, aprovação antiga ou achado bloqueante impedem o merge.
+
+A revisão de aulas continua mais profunda: cada resultado prometido precisa ser realmente ensinado e avaliado, com evidência versionada em `state/content-reviews/`.
+
+Veja `docs/review-framework.md`.
+
 ## Linguagem voltada para quem estuda
 
 O GitHub continua usando PRs, CI e arquivos de estado internamente, mas a conversa principal não precisa parecer um relatório de engenharia.
@@ -108,6 +120,8 @@ O mapa completo é criado desde o início. Em trilhas maiores, apenas as primeir
 - `study/assessments/` — rubricas;
 - `.github/ISSUE_TEMPLATE/` — formulários de entrada e avaliação;
 - `study/integrations.md` — ferramentas que podem ajudar;
+- `state/reviews/` — revisões independentes das operações;
+- `state/content-reviews/` — revisão semântica das aulas materializadas;
 - `state/` — registros técnicos de progresso e integrações.
 
 ## Aprendizagem visual
@@ -151,6 +165,7 @@ O agente localiza a submissão correta sem exigir o número da issue na situaç�
 - a aula ensina; não é uma lista de links;
 - as fontes são verificadas e explicadas;
 - exemplos e atividades são personalizados sem expor dados desnecessários;
+- toda operação gerada passa por revisão independente;
 - ferramentas opcionais nunca bloqueiam o caminho principal;
 - conteúdo e avaliações ficam versionados no GitHub;
 - detalhes técnicos ficam disponíveis sem ocupar a conversa principal;
