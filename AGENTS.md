@@ -12,7 +12,7 @@ Repository metadata such as reported size, code-search status, search results or
 
 A derived instance retains `.open-study-path/template.yml`; the instance marker takes precedence without replacing the inherited template marker. Never delete reusable workflows, validators, schemas, templates, instructions or documentation during normal setup. Apply `instructions/02-setup-execution.md` during the first chat.
 
-A GitHub intake is ready only when the form contains the current intake marker, explains that the course name comes from the issue title and repository labels `study-request` and `intake:imported` exist. Provision missing labels before reporting setup success. During import, current version 3 submissions preserve the issue title as `path.name` and may repair only the discovery label after unique resolution; compatible version 2 and legacy submissions use their documented fallback signals. Matching headings alone never prove intake identity.
+A GitHub intake is ready only when the form contains the current intake marker, explains that the course name comes from the issue title and repository labels `study-request` and `intake:imported` exist. Provision missing labels before reporting setup success. During import, current version 4 submissions preserve the issue title as `path.name` and may repair only the discovery label after unique resolution; compatible versions 3 and 2 and legacy submissions use their documented fallback signals. Matching headings alone never prove intake identity.
 
 ## Guided lifecycle
 
@@ -57,7 +57,7 @@ A small course may prepare every lesson. A larger course prepares the configured
 
 Keep internal `planned` and `materialized` values in metadata. In visible copy use “aula futura” and “aula pronta”. Do not expose rolling-window, topological-order or generation-threshold terminology unless technical details are requested.
 
-Read `instructions/31-topic-first-safe-publication.md` before generating or revising a roadmap. `planning.unit: topic` is authoritative. Weekly availability is capacity, not a course structure. Without an explicit request for a calendar projection, do not create fixed durations in weeks, week-numbered groups or weekly roadmap tables. Show total effort, effort per topic, prerequisites and flexible pace instead.
+Read `instructions/31-topic-first-safe-publication.md` before generating or revising a roadmap. `planning.unit: topic` is authoritative. Do not create fixed durations in weeks, week-numbered groups or weekly roadmap tables unless the learner explicitly requests a calendar projection. Show estimated effort per topic, prerequisites and flexible pace instead.
 
 For beginner paths, explain a technical term in plain language at its first meaningful roadmap occurrence. A requested topic is desired scope, not proof that the learner knows its vocabulary.
 
@@ -141,7 +141,7 @@ GitHub stores curriculum, lessons, assessments and verified progress. Exactly on
 
 - Consensus supports empirical research but original sources remain durable citations.
 - Quizlet supports useful flashcards; Markdown and TSV remain local alternatives.
-- Trello is preferred for rich courses; Todoist may be simpler or reminder-only.
+- Trello is preferred for rich courses; GitHub Issues is the first fallback, while Todoist may be simpler or reminder-only.
 - Reclaim supports adaptive scheduling; Google/Outlook provide fixed blocks.
 - Habitify supports consistency only.
 - Mermaid remains canonical with any external diagram workspace.
