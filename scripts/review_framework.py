@@ -184,7 +184,7 @@ def is_generated_artifact(path: str) -> bool:
     """Return whether an instance PR output requires review coverage."""
 
     normalized = normalize_path(path)
-    if normalized == INSTANCE_MARKER or normalized == "study.config.yml":
+    if normalized in {INSTANCE_MARKER, "study.config.yml", "README.md"}:
         return True
     if normalized.startswith(REVIEW_PATH_PREFIX) or normalized.startswith(CONTENT_REVIEW_PATH_PREFIX):
         return False
@@ -194,6 +194,85 @@ def is_generated_artifact(path: str) -> bool:
         return True
     if normalized.startswith(".github/ISSUE_TEMPLATE/assessment-topic-") and normalized.endswith(".yml"):
         return True
+    return False
+
+
+def phase_allows_artifact(phase: str, path: str) -> bool:
+    normalized = normalize_path(path)
+    if phase == "migration":
+        return is_generated_artifact(normalized)
+    if phase == "setup":
+        return normalized in {
+            INSTANCE_MARKER,
+            "study.config.yml",
+            "state/intake-summary.json",
+            "state/progress.json",
+            "state/integrations.json",
+            "study/roadmap.md",
+            "README.md",
+        }
+    if phase == "intake":
+        return normalized in {
+            INSTANCE_MARKER,
+            "study.config.yml",
+            "state/intake-summary.json",
+        }
+    if phase == "diagnostic":
+        return normalized in {
+            INSTANCE_MARKER,
+            "state/diagnostic-summary.json",
+        }
+    if phase == "curriculum":
+        return (
+            normalized in {INSTANCE_MARKER, "study.config.yml"}
+            or normalized.startswith("study/")
+            or (
+                normalized.startswith(".github/ISSUE_TEMPLATE/assessment-topic-")
+                and normalized.endswith(".yml")
+            )
+        )
+    if phase == "publication":
+        return (
+            normalized in {
+                "study.config.yml",
+                "study/integrations.md",
+                "state/integrations.json",
+            }
+            or normalized.startswith("study/modules/")
+        )
+    if phase == "assessment":
+        return (
+            normalized in {
+                "state/progress.json",
+                "state/integrations.json",
+                "study/roadmap.md",
+                "study/integrations.md",
+            }
+            or normalized.startswith("state/assessments/")
+            or normalized.startswith("study/topics/")
+            or normalized.startswith("study/modules/")
+            or normalized.startswith("study/flashcards/")
+            or normalized.startswith("study/assessments/")
+            or (
+                normalized.startswith(".github/ISSUE_TEMPLATE/assessment-topic-")
+                and normalized.endswith(".yml")
+            )
+        )
+    if phase == "progress":
+        return normalized in {"state/progress.json", "state/integrations.json"}
+    if phase == "replan":
+        return (
+            normalized in {
+                INSTANCE_MARKER,
+                "study.config.yml",
+                "state/progress.json",
+            }
+            or normalized.startswith("study/")
+            or (
+                normalized.startswith(".github/ISSUE_TEMPLATE/assessment-topic-")
+                and normalized.endswith(".yml")
+            )
+        )
     return False
 
 
@@ -306,6 +385,11 @@ def validate_review_document(
         seen.add(artifact_path)
         if is_review_path(artifact_path):
             errors.append(f"{relative_path} cannot review itself or another generic review artifact: {artifact_path}")
+            continue
+        if profile and not phase_allows_artifact(phase, artifact_path):
+            errors.append(
+                f"{relative_path} profile {phase} cannot approve out-of-scope artifact: {artifact_path}"
+            )
             continue
 
         target = root / artifact_path
