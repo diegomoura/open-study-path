@@ -22,6 +22,7 @@ mappings:
   accessibility_needs: learner.accessibility_needs
   reference_text_or_urls: references.text_or_urls
   reference_attachments: references.attachments
+  integration_experience: integration_preferences.experience
   already_uses: integration_preferences.already_uses
   willing_to_connect: integration_preferences.willing_to_connect
   integration_constraints: integration_preferences.notes
