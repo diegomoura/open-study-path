@@ -13,6 +13,7 @@ phases:
     execution_contract: instructions/02-setup-execution.md
     phase_review: instructions/04-review-generated-artifacts.md
     review_profile: setup
+    review_outputs: [state/reviews/]
     allowed_modes: [fork_unconfigured, instance]
     next_phase: configure_intake
     outputs:
@@ -21,7 +22,6 @@ phases:
       - state/intake-summary.json
       - state/progress.json
       - state/integrations.json
-      - state/reviews/
       - study/roadmap.md
 
   - id: configure_intake
@@ -29,19 +29,20 @@ phases:
     execution_contract: instructions/02-setup-execution.md
     phase_review: instructions/04-review-generated-artifacts.md
     review_profile: setup
+    review_outputs: [state/reviews/]
     allowed_modes: [instance]
     depends_on: [bootstrap_instance]
     next_phase: intake
     outputs:
       - .open-study-path/instance.yml
       - study.config.yml
-      - state/reviews/
     stop_after_phase: true
 
   - id: intake
     instruction: instructions/10-intake.md
     phase_review: instructions/04-review-generated-artifacts.md
     review_profile: intake
+    review_outputs: [state/reviews/]
     allowed_modes: [instance]
     depends_on: [configure_intake]
     next_phase: diagnostic
@@ -51,13 +52,13 @@ phases:
       - .open-study-path/instance.yml
       - study.config.yml
       - state/intake-summary.json
-      - state/reviews/
     stop_after_phase: true
 
   - id: diagnostic
     instruction: instructions/20-diagnostic.md
     phase_review: instructions/04-review-generated-artifacts.md
     review_profile: diagnostic
+    review_outputs: [state/reviews/]
     allowed_modes: [instance]
     depends_on: [intake]
     next_phase: generate
@@ -74,6 +75,7 @@ phases:
     internal_content_review: instructions/36-review-course-content.md
     phase_review: instructions/04-review-generated-artifacts.md
     review_profile: curriculum
+    review_outputs: [state/reviews/]
     allowed_modes: [instance]
     depends_on: [diagnostic]
     next_phase: publish
@@ -88,7 +90,6 @@ phases:
       - study/flashcards/
       - study/assessments/
       - state/content-reviews/
-      - state/reviews/
       - .github/ISSUE_TEMPLATE/assessment-topic-*.yml
     stop_after_phase: true
 
@@ -97,13 +98,13 @@ phases:
     internal_preflight: instructions/42-integration-preflight.md
     phase_review: instructions/04-review-generated-artifacts.md
     review_profile: publication
+    review_outputs: [state/reviews/]
     allowed_modes: [instance]
     depends_on: [generate]
     next_phase: evaluate
     outputs:
       - study.config.yml
       - state/integrations.json
-      - state/reviews/
     stop_after_phase: true
 
   - id: evaluate
@@ -112,6 +113,7 @@ phases:
     internal_content_review: instructions/36-review-course-content.md
     phase_review: instructions/04-review-generated-artifacts.md
     review_profile: assessment
+    review_outputs: [state/reviews/]
     allowed_modes: [instance]
     depends_on: [publish]
     next_phase: track
@@ -120,7 +122,6 @@ phases:
       - state/progress.json
       - state/integrations.json
       - state/content-reviews/
-      - state/reviews/
       - study/roadmap.md
       - study/integrations.md
       - study/topics/
@@ -134,18 +135,19 @@ phases:
     instruction: instructions/50-track-progress.md
     phase_review: instructions/04-review-generated-artifacts.md
     review_profile: progress
+    review_outputs: [state/reviews/]
     allowed_modes: [instance]
     depends_on: [publish]
     next_phase: replan
     outputs:
       - state/progress.json
       - state/integrations.json
-      - state/reviews/
 
   - id: replan
     instruction: instructions/60-replan.md
     phase_review: instructions/04-review-generated-artifacts.md
     review_profile: replan
+    review_outputs: [state/reviews/]
     allowed_modes: [instance]
     depends_on: [track]
     next_phase: track
@@ -156,4 +158,3 @@ phases:
       - study/integrations.md
       - study/topics/
       - state/progress.json
-      - state/reviews/
