@@ -63,6 +63,7 @@ For each learning outcome:
 - Roadmap, lesson, assessment and task use the same human title and capability.
 - A future task says **Pré-requisitos desta etapa** and lists direct prerequisites.
 - A future task says to follow the prerequisite list rather than the card number.
+- The review confirms that learner-facing navigation does not assume linear order.
 - Ready tasks are ready because dependencies are satisfied, not because their number is next.
 - No card says “etapas anteriores” when the dependency graph branches and that wording could imply a linear sequence.
 
