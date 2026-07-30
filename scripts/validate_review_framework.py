@@ -78,9 +78,11 @@ def validate_reusable_contract() -> None:
             fail(f"{phase_id} must reference the shared phase review instruction")
         if phase.get("review_profile") != profile:
             fail(f"{phase_id} must use review_profile: {profile}")
+        if phase.get("review_outputs") != ["state/reviews/"]:
+            fail(f"{phase_id} must declare state/reviews/ as dedicated review output")
         outputs = phase.get("outputs", [])
-        if phase_id != "diagnostic" and "state/reviews/" not in outputs:
-            fail(f"{phase_id} outputs must include state/reviews/")
+        if "state/reviews/" in outputs:
+            fail(f"{phase_id} must keep review evidence separate from phase outputs")
 
     review_template = load_yaml(REVIEW_TEMPLATE)
     if not isinstance(review_template, dict):
