@@ -5,14 +5,16 @@ from __future__ import annotations
 
 import os
 from pathlib import Path
+import subprocess
 import sys
 from typing import Any
 
 import yaml
 
-from review_framework import REVIEW_PROFILES, validate_current_pr
+from review_framework import REVIEW_PROFILES, changed_files, validate_changed_coverage
 
 ROOT = Path(__file__).resolve().parents[1]
+INSTANCE_MARKER = ".open-study-path/instance.yml"
 REVIEW_INSTRUCTION = "instructions/04-review-generated-artifacts.md"
 REVIEW_DOC = "docs/review-framework.md"
 REVIEW_TEMPLATE = "templates/review.yml"
@@ -44,6 +46,31 @@ def read(path: str) -> str:
 
 def load_yaml(path: str) -> Any:
     return yaml.safe_load(read(path))
+
+
+def review_enabled(document: Any) -> bool:
+    if not isinstance(document, dict):
+        return False
+    framework = document.get("review_framework")
+    return isinstance(framework, dict) and framework.get("enabled") is True
+
+
+def load_instance_from_base(base_sha: str | None) -> Any:
+    if not base_sha:
+        return None
+    completed = subprocess.run(
+        ["git", "show", f"{base_sha}:{INSTANCE_MARKER}"],
+        cwd=ROOT,
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+    if completed.returncode != 0:
+        return None
+    try:
+        return yaml.safe_load(completed.stdout)
+    except yaml.YAMLError as exc:
+        fail(f"could not parse base instance marker for review enforcement: {exc}")
 
 
 def validate_reusable_contract() -> None:
@@ -107,6 +134,7 @@ def validate_reusable_contract() -> None:
     for term in [
         "fetch-depth: 0",
         "REVIEW_BASE_SHA:",
+        "github.event.before",
         "python scripts/test_review_framework.py",
         "python scripts/validate_review_framework.py",
     ]:
@@ -130,16 +158,23 @@ def validate_reusable_contract() -> None:
 
 
 def validate_instance_diff() -> None:
-    marker = ROOT / ".open-study-path/instance.yml"
-    if not marker.is_file():
+    base_sha = os.getenv("REVIEW_BASE_SHA") or None
+    head_marker = ROOT / INSTANCE_MARKER
+    head_document = yaml.safe_load(head_marker.read_text(encoding="utf-8")) if head_marker.is_file() else None
+    base_document = load_instance_from_base(base_sha)
+
+    # A reviewed instance cannot disable the gate by deleting its marker. Legacy
+    # instances remain compatible until review_framework is explicitly enabled.
+    if not review_enabled(head_document) and not review_enabled(base_document):
         return
 
-    document = yaml.safe_load(marker.read_text(encoding="utf-8"))
-    framework = document.get("review_framework", {}) if isinstance(document, dict) else {}
-    if not isinstance(framework, dict) or framework.get("enabled") is not True:
-        return
-
-    result = validate_current_pr(ROOT, os.getenv("REVIEW_BASE_SHA") or None)
+    paths = changed_files(ROOT, base_sha)
+    result = validate_changed_coverage(
+        ROOT,
+        paths,
+        instance_mode=True,
+        base_sha=base_sha,
+    )
     if result.errors:
         for error in result.errors:
             print(f"REVIEW ERROR: {error}", file=sys.stderr)
