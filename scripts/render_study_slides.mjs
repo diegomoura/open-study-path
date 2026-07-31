@@ -255,7 +255,7 @@ function arraysEqual(left, right) {
 }
 
 function expectedPdfSubject(sourceDigest, snapshotDigest) {
-  return `open-study-path-source:${sourceDigest};snapshot:${snapshotDigest}`;
+  return `open-study-path-renderer:${RENDERER_ID};source:${sourceDigest};snapshot:${snapshotDigest}`;
 }
 
 async function currentArtifactsAreFresh(topicDir, expected) {
@@ -268,8 +268,6 @@ async function currentArtifactsAreFresh(topicDir, expected) {
       arraysEqual(meta?.diagnostics?.overflow_slides, []) &&
       arraysEqual(meta?.diagnostics?.external_requests, []);
     const provenanceIsCurrent =
-      info.producer === PDF_PRODUCER &&
-      info.creator === PDF_PRODUCER &&
       info.title === `${expected.topicId} study slides` &&
       info.subject === expectedPdfSubject(expected.sourceDigest, expected.renderedSnapshotSha256);
     return (
@@ -491,8 +489,6 @@ async function renderTopic({ browser, root, origin, topic, check }) {
       [currentMeta?.pdf?.producer, PDF_PRODUCER],
       [currentMeta?.pdf?.source_digest, meta.source_digest],
       [currentMeta?.pdf?.rendered_snapshot_sha256, meta.rendered_snapshot_sha256],
-      [currentInfo.producer, PDF_PRODUCER],
-      [currentInfo.creator, PDF_PRODUCER],
       [currentInfo.title, `${topic} study slides`],
       [currentInfo.subject, expectedPdfSubject(meta.source_digest, meta.rendered_snapshot_sha256)],
       [JSON.stringify(currentMeta?.diagnostics?.console_errors), "[]"],
