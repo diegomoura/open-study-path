@@ -1,8 +1,10 @@
 #!/usr/bin/env python3
-"""Validate first-chat setup discovery, metadata readiness and marker preservation."""
+"""Validate first-chat setup discovery, transport, metadata readiness and marker preservation."""
 
 from __future__ import annotations
 
+import copy
+import json
 import shutil
 import subprocess
 import sys
@@ -10,6 +12,7 @@ import tempfile
 from pathlib import Path
 
 import yaml
+from jsonschema import Draft202012Validator, FormatChecker
 
 ROOT = Path(__file__).resolve().parents[1]
 SETUP_EXECUTION = "instructions/02-setup-execution.md"
@@ -66,8 +69,49 @@ def materialize_minimal_instance(repo: Path) -> None:
     shutil.copy2(repo / "templates/roadmap.md", study_dir / "roadmap.md")
 
 
+def validate_intake_metadata_schema() -> None:
+    schema = json.loads(text("schemas/study-config.schema.json"))
+    validator = Draft202012Validator(schema, format_checker=FormatChecker())
+    config = yaml.safe_load(text("study.config.example.yml"))
+    config["intake"].update(
+        {
+            "provider": "github_issue",
+            "setup_status": "ready",
+            "form_id": "create-study-path",
+            "form_url": "https://github.com/example/course/issues/new?template=create-study-path.yml",
+            "created_by": "reused_existing",
+            "submission_strategy": "unique_verified_candidate",
+        }
+    )
+
+    valid_errors = list(validator.iter_errors(config))
+    if valid_errors:
+        details = "; ".join(error.message for error in valid_errors)
+        fail(f"canonical GitHub intake metadata must satisfy the schema: {details}")
+
+    obsolete_strategy = copy.deepcopy(config)
+    obsolete_strategy["intake"]["submission_strategy"] = "latest_approved"
+    if not list(validator.iter_errors(obsolete_strategy)):
+        fail("schema accepted obsolete newest-issue submission strategy")
+
+    false_creator = copy.deepcopy(config)
+    false_creator["intake"]["created_by"] = "instance_owner"
+    if not list(validator.iter_errors(false_creator)):
+        fail("schema accepted instance_owner for the inherited GitHub Issue Form")
+
+    strategy_enum = schema["properties"]["intake"]["properties"]["submission_strategy"]["enum"]
+    if "unique_verified_candidate" not in strategy_enum:
+        fail("schema must expose unique_verified_candidate")
+    if "latest_approved" in strategy_enum:
+        fail("schema must not expose latest_approved")
+
+
 def validate_contracts() -> None:
     require(SETUP_EXECUTION, [
+        "Connector-first repository access",
+        "do not test `gh` availability",
+        "do not inspect environment variables for GitHub tokens",
+        "do not run `git clone`",
         "Repository metadata",
         ".open-study-path/template.yml",
         "Do not reconstruct the repository",
@@ -109,6 +153,9 @@ def validate_contracts() -> None:
         "Do not infer absence from repository size",
         CURRENT_INTAKE_MARKER,
         "scripts/ensure_repository_labels.py",
+        "created_by: reused_existing",
+        "submission_strategy: unique_verified_candidate",
+        "Never select the newest issue",
         "Do not edit, recreate or replace it",
         "failing, pending, cancelled, missing or unreadable",
     ])
@@ -122,6 +169,8 @@ def validate_contracts() -> None:
         "must remain present",
         "takes precedence",
     ])
+
+    validate_intake_metadata_schema()
 
     manifest = yaml.safe_load(text("instructions/manifest.yml"))
     phases = {
@@ -186,7 +235,7 @@ def validate_instance_regression() -> None:
 def main() -> None:
     validate_contracts()
     validate_instance_regression()
-    print("Safe repository discovery, intake metadata readiness and marker preservation passed.")
+    print("Connector-first setup, deterministic intake metadata and marker preservation passed.")
 
 
 if __name__ == "__main__":
