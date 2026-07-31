@@ -70,6 +70,7 @@ phases:
 
   - id: generate
     instruction: instructions/30-generate-path.md
+    proposal_instruction: instructions/28-propose-path.md
     execution_contract: instructions/32-generation-execution.md
     internal_review: instructions/35-review-curriculum.md
     internal_content_review: instructions/36-review-course-content.md
