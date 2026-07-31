@@ -1,12 +1,12 @@
 # Propose and approve the learning path architecture
 
-Use this phase after intake and diagnostic are complete and before detailed curriculum generation.
+Use this suboperation after intake and diagnostic are complete and before detailed curriculum generation.
 
-The proposal phase creates the complete learner-facing roadmap architecture only. It does not materialize detailed lessons, slides, assessments, flashcards or external tasks.
+The proposal creates the complete learner-facing roadmap architecture only. It does not materialize detailed lessons, slides, assessments, flashcards or external tasks.
 
 ## Request interpretation
 
-Treat these requests as equivalent to this phase:
+Treat these requests as equivalent to this suboperation:
 
 - `Gere uma proposta de trilha com base no intake e no diagnóstico. Abra um pull request e não publique tarefas ainda.`
 - `Proponha minha trilha de estudos.`
@@ -41,7 +41,7 @@ Create one coherent proposal containing only:
 - `.open-study-path/instance.yml` with the proposal state;
 - one current curriculum review under `state/reviews/`.
 
-Do not create `study/topics/`, modules, slide sources, PDFs, rubrics, assessment forms, flashcards or integration projections during this phase.
+Do not create `study/topics/`, modules, slide sources, PDFs, rubrics, assessment forms, flashcards or integration projections during this suboperation.
 
 ## Proposal quality
 
@@ -96,4 +96,4 @@ Use this as the next copyable command:
 
 `Crie minha trilha de estudos.`
 
-That next phase creates every topic contract and the configured initial window of complete lessons, slides, assessments and local practice before publication.
+That next suboperation creates every topic contract and the configured initial window of complete lessons, slides, assessments and local practice before publication.
