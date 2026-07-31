@@ -5,78 +5,143 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="open-study-path:topic-id" content="TOPIC-000">
   <meta name="open-study-path:content-version" content="1">
+  <meta name="open-study-path:slide-theme" content="canonical-v2">
   <title>Replace me — slides da aula</title>
   <link rel="stylesheet" href="slides.css">
 </head>
 <body>
   <main class="osp-deck" aria-label="Slides da aula Replace me">
-    <section class="osp-slide osp-slide--title" data-outcome-ids="LO-1">
-      <div class="osp-kicker">Open Study Path · TOPIC-000</div>
-      <h1>Replace me</h1>
-      <p class="osp-lead">Resuma em uma frase a capacidade que a pessoa desenvolverá nesta aula.</p>
-      <div class="osp-callout">Ao final, você conseguirá aplicar a ideia central em uma situação nova.</div>
-    </section>
-
-    <section class="osp-slide" data-outcome-ids="LO-1">
-      <div class="osp-kicker">Mapa da aula</div>
-      <h2>Da intuição à aplicação</h2>
-      <div class="osp-grid osp-grid--3">
-        <article class="osp-card"><strong>1</strong><span>O que é</span><p>Definição em linguagem simples.</p></article>
-        <article class="osp-card"><strong>2</strong><span>Como funciona</span><p>Relações ou mecanismo essenciais.</p></article>
-        <article class="osp-card"><strong>3</strong><span>Como usar</span><p>Decisão, exemplo ou prática.</p></article>
+    <section class="osp-slide osp-slide--title" data-slide-role="title" data-outcome-ids="LO-1">
+      <div class="osp-eyebrow"><span class="osp-chip">Open Study Path</span><span>TOPIC-000 · 60 min</span></div>
+      <div class="osp-title-layout">
+        <div>
+          <div class="osp-kicker">Fundamento para aplicar</div>
+          <h1>Replace me</h1>
+          <p class="osp-lead">Resuma em uma frase a capacidade que a pessoa desenvolverá e a decisão que ficará mais clara.</p>
+        </div>
+        <aside class="osp-outcome-card">
+          <span>Ao final</span>
+          <strong>Você conseguirá aplicar a ideia central em uma situação nova.</strong>
+        </aside>
       </div>
     </section>
 
-    <section class="osp-slide" data-outcome-ids="LO-1">
+    <section class="osp-slide" data-slide-role="map" data-outcome-ids="LO-1">
+      <div class="osp-kicker">Mapa da aula</div>
+      <h2>Da intuição à decisão</h2>
+      <div class="osp-grid osp-grid--3">
+        <article class="osp-card osp-card--number"><strong>01</strong><h3>Entender</h3><p>Definição e contraste essenciais.</p></article>
+        <article class="osp-card osp-card--number"><strong>02</strong><h3>Visualizar</h3><p>Mecanismo, fluxo ou arquitetura.</p></article>
+        <article class="osp-card osp-card--number"><strong>03</strong><h3>Aplicar</h3><p>Exemplo, limite e prática.</p></article>
+      </div>
+    </section>
+
+    <section class="osp-slide" data-slide-role="concept" data-outcome-ids="LO-1" data-lesson-section="Conteúdo essencial">
+      <div class="osp-kicker">Conceito central</div>
+      <h2>Separe os objetos antes de raciocinar</h2>
+      <div class="osp-compare osp-compare--3">
+        <article class="osp-card"><span class="osp-label">Objeto A</span><h3>O que é</h3><p>Definição curta com responsabilidade explícita.</p></article>
+        <article class="osp-card"><span class="osp-label">Objeto B</span><h3>O que faz</h3><p>Mecanismo ou transformação principal.</p></article>
+        <article class="osp-card"><span class="osp-label">Limite</span><h3>O que não garante</h3><p>Qualificação que muda a decisão.</p></article>
+      </div>
+    </section>
+
+    <section class="osp-slide" data-slide-role="diagram" data-outcome-ids="LO-1" data-lesson-section="Mapa visual">
       <div class="osp-kicker">Modelo visual</div>
       <h2>O fluxo principal</h2>
       <div class="osp-diagram mermaid">
 flowchart LR
-    A[Entrada ou contexto] --> B{Decisão ou transformação}
-    B --> C[Resultado principal]
-    B --> D[Limite ou alternativa]
+    A[Entrada ou contexto] --> B[Aplicação ou processo]
+    B --> C[Transformação principal]
+    C --> B
+    B --> D{Validação}
+    D -->|aprovado| E[Resultado ou efeito]
+    D -->|revisar| F[Correção ou intervenção]
       </div>
-      <p class="osp-caption">Explique em uma frase o que observar no diagrama e qual limite ele não mostra.</p>
+      <p class="osp-caption"><strong>Observe:</strong> destaque a relação principal e diga explicitamente o limite que o diagrama não resolve sozinho.</p>
     </section>
 
-    <section class="osp-slide" data-outcome-ids="LO-1">
+    <section class="osp-slide" data-slide-role="example" data-outcome-ids="LO-1" data-lesson-section="Exemplos trabalhados">
       <div class="osp-kicker">Exemplo trabalhado</div>
-      <h2>Da situação à verificação</h2>
+      <h2>Da situação à evidência</h2>
+      <div class="osp-case">
+        <div class="osp-case__context"><span class="osp-label">Situação</span><h3>Um caso reconhecível</h3><p>Apresente o contexto, o objetivo e o risco real.</p></div>
+        <div class="osp-case__flow">
+          <div><span>1</span><strong>Entrada</strong><p>O que chega ao sistema.</p></div>
+          <div><span>2</span><strong>Decisão</strong><p>O raciocínio ou controle central.</p></div>
+          <div><span>3</span><strong>Verificação</strong><p>Como confirmar o resultado.</p></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="osp-slide" data-slide-role="example" data-outcome-ids="LO-1" data-lesson-section="Exemplos trabalhados">
+      <div class="osp-kicker">Segundo exemplo</div>
+      <h2>O mesmo conceito, outra decisão</h2>
       <div class="osp-steps">
-        <div><strong>Situação</strong><p>Apresente um caso reconhecível.</p></div>
-        <div><strong>Decisão</strong><p>Mostre o raciocínio central.</p></div>
-        <div><strong>Consequência</strong><p>Explique o resultado e como verificar.</p></div>
+        <article><span class="osp-step">01</span><h3>Proposta</h3><p>O componente sugere ou transforma.</p></article>
+        <article><span class="osp-step">02</span><h3>Controle</h3><p>A aplicação valida regras e autoridade.</p></article>
+        <article><span class="osp-step">03</span><h3>Efeito</h3><p>Somente o fluxo autorizado produz consequência.</p></article>
       </div>
+      <p class="osp-note">Use o segundo exemplo para mostrar transferência, não para repetir a mesma frase.</p>
     </section>
 
-    <section class="osp-slide" data-outcome-ids="LO-1">
+    <section class="osp-slide" data-slide-role="misconception" data-outcome-ids="LO-1" data-lesson-section="Erros comuns e como corrigir">
       <div class="osp-kicker">Erro comum</div>
-      <h2>Não confunda os conceitos</h2>
+      <h2>Parece correto, mas muda a decisão</h2>
       <div class="osp-compare">
-        <article class="osp-card osp-card--warning"><h3>Parece correto</h3><p>Descreva a interpretação provável, mas incompleta.</p></article>
-        <article class="osp-card osp-card--success"><h3>Raciocínio melhor</h3><p>Mostre a correção e o critério para decidir.</p></article>
+        <article class="osp-card osp-card--warning"><span class="osp-label">Atalho perigoso</span><h3>Interpretação provável</h3><p>Mostre a conclusão intuitiva, porém incompleta.</p></article>
+        <article class="osp-card osp-card--success"><span class="osp-label">Critério melhor</span><h3>Raciocínio corrigido</h3><p>Explique o teste ou evidência que deve substituir o atalho.</p></article>
       </div>
     </section>
 
-    <section class="osp-slide osp-slide--closing" data-outcome-ids="LO-1">
+    <section class="osp-slide" data-slide-role="application" data-outcome-ids="LO-1" data-lesson-section="Prática guiada">
+      <div class="osp-kicker">Sua vez</div>
+      <h2>Aplique antes de avançar</h2>
+      <div class="osp-challenge">
+        <div>
+          <span class="osp-label">Desafio de 3 minutos</span>
+          <h3>Classifique, decida e justifique</h3>
+          <p>Apresente uma situação curta que exija usar o modelo mental da aula.</p>
+        </div>
+        <ul class="osp-checklist">
+          <li>Nomeie os componentes.</li>
+          <li>Explique a responsabilidade.</li>
+          <li>Indique a evidência ou limite.</li>
+        </ul>
+      </div>
+    </section>
+
+    <section class="osp-slide" data-slide-role="recap" data-outcome-ids="LO-1" data-lesson-section="Confira sem consultar">
+      <div class="osp-kicker">Recuperação ativa</div>
+      <h2>Explique sem consultar</h2>
+      <div class="osp-prompt-grid">
+        <article><span>01</span><p>Defina a ideia central com suas palavras.</p></article>
+        <article><span>02</span><p>Explique o diagrama e seu limite.</p></article>
+        <article><span>03</span><p>Aplique o critério a um caso novo.</p></article>
+      </div>
+    </section>
+
+    <section class="osp-slide osp-slide--closing" data-slide-role="summary" data-outcome-ids="LO-1">
       <div class="osp-kicker">Síntese</div>
       <h2>O que levar desta aula</h2>
-      <ul class="osp-takeaways">
-        <li>Uma ideia central em linguagem própria.</li>
-        <li>Um modelo visual que ajuda a raciocinar.</li>
-        <li>Um limite ou erro que muda a decisão.</li>
-      </ul>
-      <nav class="osp-resources" aria-label="Recursos da aula">
-        <a href="https://github.com/OWNER/REPOSITORY/blob/HEAD/study/modules/TOPIC-000.md">Aula completa</a>
-        <a href="https://github.com/OWNER/REPOSITORY/blob/HEAD/study/flashcards/TOPIC-000.md">Prática</a>
-        <a href="https://github.com/OWNER/REPOSITORY/issues/new?template=assessment-topic-000.yml">Avaliação</a>
-      </nav>
+      <div class="osp-summary-layout">
+        <ul class="osp-takeaways">
+          <li>Uma ideia central em linguagem própria.</li>
+          <li>Um modelo visual que organiza o raciocínio.</li>
+          <li>Um limite que muda a decisão.</li>
+        </ul>
+        <nav class="osp-resources" aria-label="Recursos da aula">
+          <a href="https://github.com/OWNER/REPOSITORY/blob/HEAD/study/modules/TOPIC-000.md">Aula completa</a>
+          <a href="https://github.com/OWNER/REPOSITORY/blob/HEAD/study/flashcards/TOPIC-000.md">Prática</a>
+          <a href="https://github.com/OWNER/REPOSITORY/issues/new?template=assessment-topic-000.yml">Avaliação</a>
+        </nav>
+      </div>
     </section>
   </main>
 
   <div class="osp-controls" aria-hidden="true">
     <button type="button" data-action="previous">Anterior</button>
-    <span><span data-current-slide>1</span>/<span data-total-slides>1</span></span>
+    <span><span data-current-slide>1</span>/<span data-total-slides>10</span></span>
     <button type="button" data-action="next">Próximo</button>
   </div>
 

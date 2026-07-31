@@ -1,6 +1,6 @@
 # Study slides and PDF delivery
 
-Open Study Path creates a concise visual presentation for every materialized topic. The presentation is derived from the reviewed lesson and is delivered to the learner only as a PDF. HTML, CSS and JavaScript are build sources kept in the repository for reproducible rendering; they are not learner-facing navigation targets.
+Open Study Path creates a concise visual presentation for every materialized topic. The deck is derived from the reviewed lesson, uses the canonical visual system and is delivered to the learner as a PDF. HTML, CSS and JavaScript remain internal reproducible build sources.
 
 ## Artifact contract
 
@@ -27,62 +27,100 @@ The module contains one visible **Slides da aula** link to the PDF. Task project
 
 Neither the module nor an external task links to `index.html`, `slides.css`, `slides.js`, metadata or review evidence.
 
-## Authoring boundary
+## Pedagogical quality bar
 
-Slides are created only after the complete lesson, practice and assessment have passed the course-content review. They summarize that approved content; they do not perform new research, introduce unsupported claims or become a second lesson.
+Slides are not a six-page checklist or a collection of headings. They must turn the reviewed lesson into a useful visual narrative.
 
-Every approved learning outcome must appear in at least one slide through `data-outcome-ids`. The deck should preserve the lesson's conceptual sequence while reducing prose. Prefer six to eighteen focused slides, one main idea per slide and no more than 120 words on a slide.
+A normal 45–90 minute topic uses **8 to 18 slides**. The deck must contain these narrative roles through `data-slide-role`:
 
-Use diagrams when they clarify structure, sequence, state, architecture, components, dependencies or decisions. Mermaid source remains text in the HTML and is rendered as SVG before PDF creation. Split a crowded diagram into focused slides instead of shrinking it until it becomes unreadable.
+- `title`: useful outcome and orientation;
+- `map`: visible route through the lesson;
+- `concept`: definition, contrast or model;
+- `diagram`: one focused Mermaid model with an explanatory caption;
+- `example`: at least one worked example derived from the lesson;
+- `misconception`: a plausible error contrasted with a better criterion;
+- `application`: a short learner decision, prompt or guided challenge;
+- `recap`: active retrieval when it adds value;
+- `summary`: concise takeaways and current learner links.
 
-Generated raster illustrations are outside the initial contract. Do not create an image of the complete slide. Inline SVG icons and Mermaid-rendered SVG are allowed.
+The required minimum roles are title, map, diagram, example, misconception, application and summary. A deck may have several concept or example slides. The first slide is `title`, the last is `summary`, and examples appear before the learner application.
+
+Slides with roles `concept`, `diagram`, `example`, `misconception`, `application` or `recap` use `data-lesson-section` to identify the exact reviewed lesson section they summarize. This is traceability, not visible technical copy.
 
 ## Visual system
 
-The default presentation uses:
+All generated topics use the current canonical assets from `templates/study-slides/slides.css` and `slides.js` unchanged. Topic-specific authorship belongs in semantic HTML, not in a newly invented reduced stylesheet.
 
-- a 16:9 page;
-- a dark background;
-- high-contrast text;
-- large typography;
-- restrained accent colors;
-- semantic headings and lists;
-- keyboard navigation for build inspection;
-- deterministic one-page rendering for each slide.
+The canonical system provides multiple composition patterns, including:
 
-The source uses system fonts only. Rendering must not depend on a CDN, remote font, public repository, GitHub Pages, RawGitHack or any external slide service.
+- title plus outcome panel;
+- three-part maps and concept cards;
+- comparisons;
+- Mermaid diagrams with captions;
+- worked cases;
+- step sequences;
+- misconception corrections;
+- learner challenges and checklists;
+- active-retrieval prompts;
+- closing resources.
+
+A deck must use at least five distinct canonical layout types. Avoid repeating the same card grid across the whole presentation. One main idea per slide remains the rule, but visual economy must not remove the explanatory example, qualification or application that makes the slide useful.
+
+Use system fonts only. Generated raster illustrations and complete-slide images remain outside the current contract. Mermaid-rendered SVG and inline semantic SVG are allowed.
+
+## Authoring boundary
+
+Slides are created only after the complete lesson, practice and assessment pass course-content review. They summarize approved content and do not perform new research or introduce unsupported claims.
+
+Every approved learning outcome must appear in one or more `data-outcome-ids`. The corresponding slide must genuinely teach or represent the outcome. An identifier on unrelated content is invalid.
+
+Keep each slide below 120 words. Non-title slides must still carry explanatory value; a heading plus a slogan is not enough. Use diagrams when they clarify structure, sequence, state, architecture, dependencies or decisions. Every Mermaid slide includes a short interpretation that tells the learner what to observe and what the diagram does not prove.
 
 ## Independent slide review
 
-After slide authoring, run `instructions/37-review-study-slides.md` as a separate reviewer role. The review compares the deck with the approved topic contract and lesson, verifies outcome coverage, summary fidelity, Mermaid usefulness, visual hierarchy, accessibility and learner links, then records evidence under `state/slide-reviews/`.
+After slide authoring, run `instructions/37-review-study-slides.md` as a separate reviewer role. The review compares the deck with the approved topic contract and lesson and verifies:
 
-The slide reviewer reviews the HTML source and rendered browser state. PDF validation is deterministic rather than editorial: it confirms that rendering completed, page count matches slide count, the file is a valid non-empty PDF, metadata matches the current sources and no overflow or Mermaid error was observed.
+- lesson fidelity;
+- outcome coverage;
+- complete narrative arc;
+- worked-example quality;
+- summary quality;
+- visual variety;
+- visual hierarchy;
+- Mermaid usefulness;
+- accessibility;
+- link consistency.
 
-## Rendering
+The reviewer inspects the final browser-rendered deck, not only the source or metadata. A mechanically complete but visibly empty deck cannot be approved.
+
+## Rendering and PDF provenance
 
 Use `scripts/render_study_slides.mjs` with pinned Playwright, Mermaid and pdf-lib versions. The renderer:
 
 1. serves the repository on a local-only HTTP server;
 2. blocks external network requests;
 3. waits for fonts and Mermaid;
-4. checks browser console errors and slide overflow;
-5. renders each slide in isolation as one 16:9 PDF page with backgrounds enabled;
-6. merges those pages locally into the final PDF, avoiding browser pagination drift;
-7. verifies the merged page count;
-8. writes source hashes, renderer versions and diagnostics to `slides.meta.json`.
+4. checks console errors and slide overflow;
+5. snapshots the fully rendered HTML state;
+6. renders each slide in isolation as one 16:9 PDF page;
+7. merges pages with pdf-lib;
+8. embeds the renderer identity, current source digest and rendered-snapshot digest into the PDF metadata;
+9. writes matching provenance to `slides.meta.json`.
 
-Normal generation writes the PDF into the topic directory. `--check` renders to an internal diagnostic directory and verifies that the committed PDF and metadata are current. When a runtime cannot render locally, the inherited GitHub Actions job creates the same internal artifact; the agent adds the resulting PDF and metadata to the existing draft pull request before final review. The learner never performs this step.
+The committed PDF must be the PDF produced by the current HTML renderer. A sidecar JSON that merely describes another PDF is invalid. Validation rejects missing renderer provenance, stale source or rendered-state digests, ReportLab substitutes, page-count drift, missing backgrounds, overflow, Mermaid errors and unexpectedly small PDFs.
+
+`--check` performs a fresh Chromium render and verifies that the committed PDF metadata is bound to the exact current source and rendered browser state.
 
 ## Direct PDF link
 
-Use an authenticated GitHub raw route that follows the repository's default branch without publishing the repository:
+Use an authenticated GitHub raw route that follows the repository's default branch:
 
 ```text
 https://github.com/OWNER/REPOSITORY/raw/HEAD/study/slides/TOPIC-000/slides.pdf
 ```
 
-This URL remains on `github.com`, preserves private-repository access control and opens the PDF response directly when the viewer has repository access. Never store a temporary signed `raw.githubusercontent.com` URL, token or query credential.
+Never store a temporary signed raw URL, token or query credential. Do not use GitHub Pages, external slide services or manual browser printing.
 
 ## Versioning and idempotency
 
-Slides use the topic's exact `content_version`. Changing the lesson or slide sources invalidates `slides.meta.json`, the PDF and the slide review. Re-running the renderer without source changes must not require a new pedagogical review, but a changed lesson or deck requires a new independent slide review and a newly rendered PDF in the same curriculum or materialization pull request.
+Slides use the topic's exact `content_version`. Changing the lesson or slide sources invalidates `slides.meta.json`, the PDF and the slide review. A changed deck requires a new independent slide review and a newly rendered PDF in the same curriculum or materialization pull request.

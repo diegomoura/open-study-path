@@ -15,6 +15,9 @@ const MERMAID_VERSION = require("mermaid/package.json").version;
 const PDF_LIB_VERSION = require("pdf-lib/package.json").version;
 const SOURCE_FILES = ["index.html", "slides.css", "slides.js"];
 const DIAGNOSTIC_ROOT = ".open-study-path/rendered-slides";
+const RENDERER_ID = "open-study-path-html-v2";
+const PDF_PRODUCER = "Open Study Path HTML slide renderer v2";
+const FIXED_PDF_DATE = new Date("2000-01-01T00:00:00.000Z");
 const PRINT_OVERRIDE = `
 @page { size: 1280px 720px; margin: 0; }
 html, body {
@@ -25,7 +28,7 @@ html, body {
   margin: 0 !important;
   padding: 0 !important;
   overflow: visible !important;
-  background: #080a0f !important;
+  background: #070910 !important;
   print-color-adjust: exact !important;
   -webkit-print-color-adjust: exact !important;
 }
@@ -149,7 +152,8 @@ async function readMetaTags(page) {
   return page.evaluate(() => {
     const topic = document.querySelector('meta[name="open-study-path:topic-id"]')?.content || "";
     const rawVersion = document.querySelector('meta[name="open-study-path:content-version"]')?.content || "";
-    return { topicId: topic, contentVersion: Number(rawVersion) };
+    const theme = document.querySelector('meta[name="open-study-path:slide-theme"]')?.content || "";
+    return { topicId: topic, contentVersion: Number(rawVersion), theme };
   });
 }
 
@@ -206,9 +210,32 @@ async function snapshotDeck(page) {
   });
 }
 
-async function pdfPageCount(buffer) {
+function normalizeRenderedHtml(value) {
+  return value
+    .replace(/\s+id="[^"]*"/g, "")
+    .replace(/url\(#[^)]+\)/g, "url(#normalized)")
+    .replace(/\s+(?:aria-labelledby|aria-describedby)="[^"]*"/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function renderedSnapshotHash(snapshot) {
+  const normalized = {
+    styles: snapshot.styles.replace(/\s+/g, " ").trim(),
+    slides: snapshot.slides.map(normalizeRenderedHtml),
+  };
+  return sha256(Buffer.from(JSON.stringify(normalized), "utf8"));
+}
+
+async function inspectPdf(buffer) {
   const document = await PDFDocument.load(buffer, { ignoreEncryption: true });
-  return document.getPageCount();
+  return {
+    pages: document.getPageCount(),
+    producer: document.getProducer() || "",
+    creator: document.getCreator() || "",
+    title: document.getTitle() || "",
+    subject: document.getSubject() || "",
+  };
 }
 
 async function sourceMetadata(root, topic) {
@@ -227,18 +254,27 @@ function arraysEqual(left, right) {
   return JSON.stringify(left) === JSON.stringify(right);
 }
 
+function expectedPdfSubject(sourceDigest, snapshotDigest) {
+  return `open-study-path-renderer:${RENDERER_ID};source:${sourceDigest};snapshot:${snapshotDigest}`;
+}
+
 async function currentArtifactsAreFresh(topicDir, expected) {
   try {
     const meta = JSON.parse(await fs.readFile(path.join(topicDir, "slides.meta.json"), "utf8"));
     const pdf = await fs.readFile(path.join(topicDir, "slides.pdf"));
+    const info = await inspectPdf(pdf);
     const diagnosticsAreClean =
       arraysEqual(meta?.diagnostics?.console_errors, []) &&
       arraysEqual(meta?.diagnostics?.overflow_slides, []) &&
       arraysEqual(meta?.diagnostics?.external_requests, []);
+    const provenanceIsCurrent =
+      info.title === `${expected.topicId} study slides` &&
+      info.subject === expectedPdfSubject(expected.sourceDigest, expected.renderedSnapshotSha256);
     return (
-      meta.contract_version === 1 &&
+      meta.contract_version === 2 &&
       meta.topic_id === expected.topicId &&
       meta.content_version === expected.contentVersion &&
+      meta?.renderer?.id === RENDERER_ID &&
       meta?.renderer?.playwright === PLAYWRIGHT_VERSION &&
       meta?.renderer?.mermaid === MERMAID_VERSION &&
       meta?.renderer?.pdf_lib === PDF_LIB_VERSION &&
@@ -246,11 +282,16 @@ async function currentArtifactsAreFresh(topicDir, expected) {
       meta.mermaid_count === expected.mermaidCount &&
       arraysEqual(meta.outcome_ids, expected.outcomeIds) &&
       meta.source_digest === expected.sourceDigest &&
+      meta.rendered_snapshot_sha256 === expected.renderedSnapshotSha256 &&
       JSON.stringify(meta.source_sha256) === JSON.stringify(expected.sourceSha256) &&
       meta?.pdf?.pages === expected.slideCount &&
-      meta?.pdf?.pages === await pdfPageCount(pdf) &&
+      meta?.pdf?.pages === info.pages &&
       meta?.pdf?.bytes === pdf.length &&
       meta?.pdf?.sha256 === sha256(pdf) &&
+      meta?.pdf?.producer === PDF_PRODUCER &&
+      meta?.pdf?.source_digest === expected.sourceDigest &&
+      meta?.pdf?.rendered_snapshot_sha256 === expected.renderedSnapshotSha256 &&
+      provenanceIsCurrent &&
       diagnosticsAreClean
     );
   } catch {
@@ -283,7 +324,7 @@ async function renderSinglePage(printPage, styles, slideHtml, slideIndex) {
   return pdf;
 }
 
-async function renderDeckPdf(browser, snapshot) {
+async function renderDeckPdf(browser, snapshot, provenance) {
   const printPage = await browser.newPage({ viewport: { width: 1280, height: 720 }, deviceScaleFactor: 1 });
   await printPage.emulateMedia({ media: "print" });
   const merged = await PDFDocument.create();
@@ -296,6 +337,13 @@ async function renderDeckPdf(browser, snapshot) {
   } finally {
     await printPage.close();
   }
+  merged.setProducer(PDF_PRODUCER);
+  merged.setCreator(PDF_PRODUCER);
+  merged.setTitle(`${provenance.topic} study slides`);
+  merged.setSubject(expectedPdfSubject(provenance.sourceDigest, provenance.renderedSnapshotSha256));
+  merged.setKeywords(["open-study-path", RENDERER_ID, provenance.topic, provenance.sourceDigest, provenance.renderedSnapshotSha256]);
+  merged.setCreationDate(FIXED_PDF_DATE);
+  merged.setModificationDate(FIXED_PDF_DATE);
   const bytes = await merged.save({ useObjectStreams: false });
   return Buffer.from(bytes);
 }
@@ -328,6 +376,7 @@ async function renderTopic({ browser, root, origin, topic, check }) {
   if (!Number.isInteger(tags.contentVersion) || tags.contentVersion <= 0) {
     throw new Error(`${topic}: invalid content version metadata`);
   }
+  if (tags.theme !== "canonical-v2") throw new Error(`${topic}: slide theme must be canonical-v2`);
   const browserDiagnostics = await diagnostics(page);
   if (browserDiagnostics.runtimeError) throw new Error(`${topic}: ${browserDiagnostics.runtimeError}`);
   if (browserDiagnostics.unrenderedMermaid.length) {
@@ -346,6 +395,7 @@ async function renderTopic({ browser, root, origin, topic, check }) {
   }
 
   const source = await sourceMetadata(root, topic);
+  const snapshotDigest = renderedSnapshotHash(snapshot);
   const expected = {
     topicId: topic,
     contentVersion: tags.contentVersion,
@@ -354,23 +404,29 @@ async function renderTopic({ browser, root, origin, topic, check }) {
     outcomeIds: browserDiagnostics.outcomeIds,
     sourceSha256: source.sourceSha256,
     sourceDigest: source.sourceDigest,
+    renderedSnapshotSha256: snapshotDigest,
   };
 
   if (!check && (await currentArtifactsAreFresh(topicDir, expected))) {
     return { topic, status: "unchanged", output: topicDir };
   }
 
-  const pdfBuffer = await renderDeckPdf(browser, snapshot);
-  const pageCount = await pdfPageCount(pdfBuffer);
-  if (pageCount !== browserDiagnostics.slideCount) {
-    throw new Error(`${topic}: rendered PDF has ${pageCount} pages for ${browserDiagnostics.slideCount} slides`);
+  const pdfBuffer = await renderDeckPdf(browser, snapshot, {
+    topic,
+    sourceDigest: source.sourceDigest,
+    renderedSnapshotSha256: snapshotDigest,
+  });
+  const pdfInfo = await inspectPdf(pdfBuffer);
+  if (pdfInfo.pages !== browserDiagnostics.slideCount) {
+    throw new Error(`${topic}: rendered PDF has ${pdfInfo.pages} pages for ${browserDiagnostics.slideCount} slides`);
   }
   const meta = {
-    contract_version: 1,
+    contract_version: 2,
     topic_id: topic,
     content_version: tags.contentVersion,
     generated_at: new Date().toISOString(),
     renderer: {
+      id: RENDERER_ID,
       playwright: PLAYWRIGHT_VERSION,
       mermaid: MERMAID_VERSION,
       pdf_lib: PDF_LIB_VERSION,
@@ -381,7 +437,15 @@ async function renderTopic({ browser, root, origin, topic, check }) {
     outcome_ids: browserDiagnostics.outcomeIds,
     source_sha256: source.sourceSha256,
     source_digest: source.sourceDigest,
-    pdf: { pages: pageCount, bytes: pdfBuffer.length, sha256: sha256(pdfBuffer) },
+    rendered_snapshot_sha256: snapshotDigest,
+    pdf: {
+      pages: pdfInfo.pages,
+      bytes: pdfBuffer.length,
+      sha256: sha256(pdfBuffer),
+      producer: PDF_PRODUCER,
+      source_digest: source.sourceDigest,
+      rendered_snapshot_sha256: snapshotDigest,
+    },
     diagnostics: { console_errors: consoleErrors, overflow_slides: [], external_requests: externalRequests },
   };
 
@@ -402,11 +466,12 @@ async function renderTopic({ browser, root, origin, topic, check }) {
   try {
     const currentMeta = JSON.parse(await fs.readFile(committedMeta, "utf8"));
     const currentPdf = await fs.readFile(committedPdf);
-    const currentPages = await pdfPageCount(currentPdf);
+    const currentInfo = await inspectPdf(currentPdf);
     const comparable = [
-      [currentMeta.contract_version, 1],
+      [currentMeta.contract_version, 2],
       [currentMeta.topic_id, topic],
       [currentMeta.content_version, meta.content_version],
+      [currentMeta?.renderer?.id, RENDERER_ID],
       [currentMeta?.renderer?.playwright, PLAYWRIGHT_VERSION],
       [currentMeta?.renderer?.mermaid, MERMAID_VERSION],
       [currentMeta?.renderer?.pdf_lib, PDF_LIB_VERSION],
@@ -416,10 +481,16 @@ async function renderTopic({ browser, root, origin, topic, check }) {
       [JSON.stringify(currentMeta.outcome_ids), JSON.stringify(meta.outcome_ids)],
       [JSON.stringify(currentMeta.source_sha256), JSON.stringify(meta.source_sha256)],
       [currentMeta.source_digest, meta.source_digest],
-      [currentMeta?.pdf?.pages, currentPages],
+      [currentMeta.rendered_snapshot_sha256, meta.rendered_snapshot_sha256],
+      [currentMeta?.pdf?.pages, currentInfo.pages],
       [currentMeta?.pdf?.pages, meta.slide_count],
       [currentMeta?.pdf?.bytes, currentPdf.length],
       [currentMeta?.pdf?.sha256, sha256(currentPdf)],
+      [currentMeta?.pdf?.producer, PDF_PRODUCER],
+      [currentMeta?.pdf?.source_digest, meta.source_digest],
+      [currentMeta?.pdf?.rendered_snapshot_sha256, meta.rendered_snapshot_sha256],
+      [currentInfo.title, `${topic} study slides`],
+      [currentInfo.subject, expectedPdfSubject(meta.source_digest, meta.rendered_snapshot_sha256)],
       [JSON.stringify(currentMeta?.diagnostics?.console_errors), "[]"],
       [JSON.stringify(currentMeta?.diagnostics?.overflow_slides), "[]"],
       [JSON.stringify(currentMeta?.diagnostics?.external_requests), "[]"],
@@ -429,7 +500,7 @@ async function renderTopic({ browser, root, origin, topic, check }) {
     mismatch = true;
   }
   if (mismatch) {
-    throw new Error(`${topic}: committed PDF or metadata is missing or stale; rendered output is in ${path.relative(root, diagnosticDir)}`);
+    throw new Error(`${topic}: committed PDF or metadata is missing, stale, or not produced from the current rendered HTML; rendered output is in ${path.relative(root, diagnosticDir)}`);
   }
   return { topic, status: "checked", output: diagnosticDir };
 }
