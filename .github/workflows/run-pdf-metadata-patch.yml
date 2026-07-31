@@ -1,0 +1,31 @@
+name: Run PDF metadata patch
+
+on:
+  push:
+    branches:
+      - agent/parse-slide-pdf-metadata
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    if: ${{ !contains(github.event.head_commit.message, '[pdf-metadata-patched]') }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout patch branch
+        uses: actions/checkout@v4
+        with:
+          ref: agent/parse-slide-pdf-metadata
+          fetch-depth: 0
+
+      - name: Apply parser-backed validation
+        run: python scripts/patch_pdf_metadata_validation.py
+
+      - name: Commit reusable fix
+        run: |
+          git config user.name "open-study-path-bot"
+          git config user.email "open-study-path-bot@users.noreply.github.com"
+          git add .github/workflows/validate-template.yml scripts/study_slides.py scripts/test_study_slides.py
+          git commit -m "fix: parse embedded PDF provenance structurally [pdf-metadata-patched]"
+          git push origin HEAD:agent/parse-slide-pdf-metadata
