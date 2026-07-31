@@ -28,15 +28,18 @@ Do not foreground PR numbers, CI, commit hashes, branches, changed files, valida
 
 ## Resolve the next action from persisted state
 
-Before composing the final response, read `.open-study-path/instance.yml` and `state/integrations.json` and apply `scripts/lifecycle_next_action.py`. Persisted lifecycle state, not the wording of a previously suggested command, determines the next phase.
+Before composing the final response, read `.open-study-path/instance.yml` and `state/integrations.json` and apply `scripts/lifecycle_next_action.py`. Persisted lifecycle state, not the wording of a previously suggested command, determines the next operation.
 
-An agent-authored phrase such as `sem publicar tarefas ainda` deliberately defers publication for one operation; it is not a learner decision to skip publication permanently. The agent owns that deferral and must surface the deferred publication as the next action after generation.
+An agent-authored phrase such as `sem publicar tarefas ainda` deliberately defers publication for one operation; it is not a learner decision to skip publication permanently. The agent owns that deferral and must surface the deferred publication as the next action after detailed curriculum generation.
 
 The normal routing invariant is:
 
-- curriculum not generated → `generate`;
+- diagnostic complete and curriculum proposal not approved → proposal suboperation inside `generate`;
+- curriculum proposal approved but detailed curriculum not generated → detailed generation inside `generate`;
 - curriculum generated and publication not completed → `publish`;
 - publication completed successfully → `evaluate`.
+
+The proposal and detailed generation share the lifecycle phase `generate`, but they have different persisted states and different commands. Never repeat the proposal command after `curriculum_proposed` and `curriculum_approved` are true. Never skip directly from an approved proposal to publication while `curriculum_generated` is false.
 
 Publication is complete only when `state/integrations.json.sync.status` is `success`, `succeeded` or `completed` and `last_success_at` is present. Missing, `not_started`, pending, partial, blocked or failed publication state cannot enable evaluation.
 
@@ -47,6 +50,8 @@ When publication is pending, do not present an assessment submission or evaluati
 Operational review still occurs internally. Record review and merge status in the PR and repository history. Do not require a fixed PR-status sentence in the learner-facing response.
 
 When a genuine unresolved decision exists, link the exact PR or comment and say plainly what decision is needed. Never ask the owner to review an entire PR merely because one exists.
+
+A command containing `Abra um pull request` identifies the audit mechanism, not a request to leave the pull request open. Under `agent_review_then_merge`, review, correct, validate, mark ready and merge automatically unless the learner explicitly says `não faça merge`, `deixe o PR aberto` or `espere minha revisão`, or a concrete material decision remains unresolved.
 
 ## Natural commands
 
@@ -70,7 +75,19 @@ When diagnostic chaining was authorized, start the bounded diagnostic and ask th
 
 Use:
 
+`Gere uma proposta de trilha com base no intake e no diagnóstico. Abra um pull request e não publique tarefas ainda.`
+
+This command creates, independently reviews, validates and merges the roadmap proposal. `Não publique tarefas ainda` restricts only the later publication operation. It does not request human PR review or block merge.
+
+### After approved curriculum proposal
+
+State that the roadmap architecture is approved and that detailed lessons and external tasks have not been created yet. Link the roadmap when useful.
+
+Use:
+
 `Crie minha trilha de estudos.`
+
+This command creates every topic contract, the contextual integration plan and the configured initial window of complete lessons, slides, assessments and local practice. It still does not publish external tasks.
 
 ### After curriculum generation
 
