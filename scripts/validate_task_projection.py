@@ -34,6 +34,13 @@ OPERATION_ID = re.compile(r"^[a-z0-9][a-z0-9._-]{2,127}$")
 TOPIC_ID = re.compile(r"^TOPIC-[0-9]{3,}$")
 
 
+def display_path(path: Path) -> str:
+    try:
+        return str(path.relative_to(ROOT))
+    except ValueError:
+        return str(path)
+
+
 def fail(message: str) -> None:
     print(f"ERROR: {message}", file=sys.stderr)
 
@@ -42,10 +49,10 @@ def load_json(path: Path) -> Any:
     try:
         return json.loads(path.read_text(encoding="utf-8"))
     except FileNotFoundError:
-        raise ValueError(f"missing file: {path.relative_to(ROOT)}")
+        raise ValueError(f"missing file: {display_path(path)}")
     except json.JSONDecodeError as exc:
         raise ValueError(
-            f"invalid JSON in {path.relative_to(ROOT)}: {exc.msg} at line {exc.lineno}"
+            f"invalid JSON in {display_path(path)}: {exc.msg} at line {exc.lineno}"
         ) from exc
 
 
@@ -57,7 +64,7 @@ def validate_contract() -> list[str]:
 
     for path in (instruction, manifest, schema):
         if not path.exists():
-            errors.append(f"missing contract artifact: {path.relative_to(ROOT)}")
+            errors.append(f"missing contract artifact: {display_path(path)}")
 
     if instruction.exists():
         text = instruction.read_text(encoding="utf-8")
@@ -109,24 +116,25 @@ def validate_contract() -> list[str]:
 
 def validate_operation(path: Path) -> list[str]:
     errors: list[str] = []
+    label = display_path(path)
     try:
         data = load_json(path)
     except ValueError as exc:
         return [str(exc)]
 
     if not isinstance(data, dict):
-        return [f"{path.relative_to(ROOT)} must contain one JSON object"]
+        return [f"{label} must contain one JSON object"]
 
     operation_id = data.get("operation_id")
     if not isinstance(operation_id, str) or not OPERATION_ID.fullmatch(operation_id):
-        errors.append(f"{path.relative_to(ROOT)} has invalid operation_id")
+        errors.append(f"{label} has invalid operation_id")
 
     provider = data.get("provider")
     if provider not in SUPPORTED_PROVIDERS:
-        errors.append(f"{path.relative_to(ROOT)} has unsupported provider {provider!r}")
+        errors.append(f"{label} has unsupported provider {provider!r}")
 
     if data.get("mode") not in {"active_window", "full_curriculum"}:
-        errors.append(f"{path.relative_to(ROOT)} has invalid mode")
+        errors.append(f"{label} has invalid mode")
 
     if data.get("status") not in {
         "not_started",
@@ -136,24 +144,24 @@ def validate_operation(path: Path) -> list[str]:
         "failed",
         "success",
     }:
-        errors.append(f"{path.relative_to(ROOT)} has invalid status")
+        errors.append(f"{label} has invalid status")
 
     topics = data.get("topics")
     if not isinstance(topics, list) or any(
         not isinstance(topic, str) or not TOPIC_ID.fullmatch(topic) for topic in topics
     ):
-        errors.append(f"{path.relative_to(ROOT)} has invalid topics")
+        errors.append(f"{label} has invalid topics")
     elif len(topics) != len(set(topics)):
-        errors.append(f"{path.relative_to(ROOT)} contains duplicate topics")
+        errors.append(f"{label} contains duplicate topics")
 
     for field in ("attempt", "external_read_count", "external_write_count"):
         value = data.get(field)
         minimum = 1 if field == "attempt" else 0
         if not isinstance(value, int) or isinstance(value, bool) or value < minimum:
-            errors.append(f"{path.relative_to(ROOT)} has invalid {field}")
+            errors.append(f"{label} has invalid {field}")
 
     if data.get("status") == "success" and not data.get("completed_at"):
-        errors.append(f"{path.relative_to(ROOT)} success operation requires completed_at")
+        errors.append(f"{label} success operation requires completed_at")
 
     return errors
 
