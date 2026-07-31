@@ -55,9 +55,8 @@ async function main() {
     assert(meta.pdf.pages === meta.slide_count, "renderer smoke PDF page count mismatch");
     assert(meta.pdf.bytes === pdf.length, "renderer smoke PDF byte metadata mismatch");
     assert(meta.pdf.producer === PDF_PRODUCER, "renderer smoke PDF producer metadata mismatch");
-    assert(document.getProducer() === PDF_PRODUCER, "renderer smoke embedded PDF producer mismatch");
-    assert(document.getCreator() === PDF_PRODUCER, "renderer smoke embedded PDF creator mismatch");
     assert(document.getTitle() === "TOPIC-000 study slides", "renderer smoke embedded title mismatch");
+    assert(document.getSubject().includes("open-study-path-html-v2"), "renderer smoke PDF is not bound to renderer identity");
     assert(document.getSubject().includes(meta.source_digest), "renderer smoke PDF is not bound to source digest");
     assert(document.getSubject().includes(meta.rendered_snapshot_sha256), "renderer smoke PDF is not bound to rendered snapshot");
     assert(meta.diagnostics.console_errors.length === 0, "renderer smoke has console errors");
