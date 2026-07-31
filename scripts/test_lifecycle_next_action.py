@@ -6,6 +6,7 @@ from __future__ import annotations
 from lifecycle_next_action import (
     EVALUATE_COMMAND_TEMPLATE,
     GENERATE_COMMAND,
+    PROPOSE_COMMAND,
     PUBLISH_COMMAND,
     RESUME_PUBLISH_COMMAND,
     integration_resolution_complete,
@@ -14,8 +15,15 @@ from lifecycle_next_action import (
 )
 
 
-def instance(*, generated: bool) -> dict:
-    return {"status": {"curriculum_generated": generated}}
+def instance(*, diagnostic: bool = True, proposed: bool = True, approved: bool = True, generated: bool) -> dict:
+    return {
+        "status": {
+            "diagnostic_complete": diagnostic,
+            "curriculum_proposed": proposed,
+            "curriculum_approved": approved,
+            "curriculum_generated": generated,
+        }
+    }
 
 
 def integrations(
@@ -44,7 +52,18 @@ def integrations(
     return document
 
 
-def test_generation_precedes_publication() -> None:
+def test_diagnostic_routes_to_automatic_proposal() -> None:
+    action = resolve_next_action(
+        instance(proposed=False, approved=False, generated=False),
+        integrations(),
+    )
+    assert action.phase == "propose"
+    assert action.command == PROPOSE_COMMAND
+    assert "Abra um pull request" in action.command
+    assert "não publique tarefas ainda" in action.command
+
+
+def test_approved_proposal_routes_to_generation() -> None:
     action = resolve_next_action(instance(generated=False), integrations())
     assert action.phase == "generate"
     assert action.command == GENERATE_COMMAND
@@ -174,7 +193,8 @@ def test_evaluation_is_available_only_after_publication_and_resolution() -> None
 
 
 def main() -> None:
-    test_generation_precedes_publication()
+    test_diagnostic_routes_to_automatic_proposal()
+    test_approved_proposal_routes_to_generation()
     test_agent_authored_deferral_cannot_skip_publication()
     test_missing_integration_state_keeps_publication_pending()
     test_failed_or_unrecorded_partial_publication_restarts_safely()
