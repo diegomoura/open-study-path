@@ -12,14 +12,12 @@ from curriculum_state import validate_repository
 MANIFEST = """version: 1
 phases:
   - id: diagnostic
-    next_phase: propose
-  - id: propose
-    instruction: instructions/28-propose-path.md
-    review_profile: curriculum
-    merge_policy_path: workflow.curriculum_merge_policy
     next_phase: generate
   - id: generate
-    depends_on: [propose]
+    proposal_instruction: instructions/28-propose-path.md
+    review_profile: curriculum
+    merge_policy_path: workflow.curriculum_merge_policy
+    depends_on: [diagnostic]
 """
 
 PROPOSAL = """Abra um pull request
