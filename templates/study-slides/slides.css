@@ -44,6 +44,7 @@ a { color: var(--osp-accent); }
   box-shadow: var(--osp-shadow);
 }
 .osp-slide.is-active { display: flex; flex-direction: column; justify-content: center; }
+.osp-slide.osp-slide--measure { display: flex !important; position: fixed !important; left: -200vw !important; top: 0 !important; visibility: hidden !important; flex-direction: column; justify-content: center; }
 .osp-slide::before {
   content: "";
   position: absolute;
