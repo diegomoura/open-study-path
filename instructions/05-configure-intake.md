@@ -24,13 +24,21 @@ Do not silently select Jotform or create external resources without the owner's 
 
 4. Confirm the form does not prefill the native issue title and that its first visible instructions explain: use **Add a title** for the course name. GitHub requires that title before submission; the form must not ask for the name a second time.
 5. Verify repository labels `study-request` and `intake:imported` exist. Create only missing labels through the GitHub labels API or run **Prepare ChatGPT Project Instructions**, which invokes `scripts/ensure_repository_labels.py`. Read the labels again after provisioning.
-6. Configure the GitHub Issue Form as ready with deterministic submission lookup only after the marker, title guidance and both labels are verified.
-7. Build the direct URL:
+6. Configure the inherited GitHub Issue Form with these exact metadata values:
+
+   ```yaml
+   created_by: reused_existing
+   submission_strategy: unique_verified_candidate
+   ```
+
+   `reused_existing` records that setup reused the form inherited from the template; it does not claim that the instance owner created it during setup. `unique_verified_candidate` records the actual import rule: automatically import only when exactly one current, unimported and marker-valid issue remains after deterministic filtering. Never select the newest issue merely because it is newest. An explicitly supplied issue number may narrow a later lookup, but `explicit_issue` is not the default persisted strategy for this form.
+7. Mark the GitHub Issue Form as ready only after the marker, title guidance, both labels and the metadata above are verified.
+8. Build the direct URL:
 
    `https://github.com/OWNER/REPOSITORY/issues/new?template=create-study-path.yml`
 
-8. Return it as a direct clickable link with a human label such as **Preencher meu formulário**.
-9. Stop after setup and use the natural command:
+9. Return it as a direct clickable link with a human label such as **Preencher meu formulário**.
+10. Stop after setup and use the natural command:
 
    `Preenchi o formulário. Pode continuar.`
 
@@ -70,4 +78,4 @@ Validate the complete setup diff and required checks for the current head. Do no
 
 Complete with `instructions/phase-completion.md`. Return the selected form or configuration path and make the next human action unmistakable.
 
-<!-- Contract markers: direct clickable link; explicit_issue; explicit issue number remains accepted; Do not require the owner to copy an issue number; Only the current marked form is supported. -->
+<!-- Contract markers: direct clickable link; unique_verified_candidate; explicit_issue; explicit issue number remains accepted; Do not require the owner to copy an issue number; Only the current marked form is supported. -->
