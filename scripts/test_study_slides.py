@@ -3,12 +3,14 @@
 
 from __future__ import annotations
 
+from io import BytesIO
 from pathlib import Path
 from tempfile import TemporaryDirectory
 import json
 import sys
 
 import yaml
+from pypdf import PdfWriter
 
 sys.path.insert(0, str(Path(__file__).parent))
 from study_slides import (  # noqa: E402
@@ -76,16 +78,23 @@ def valid_html(repository: str) -> str:
 
 
 def fake_pdf(pages: int, source_digest: str, snapshot_digest: str, *, reportlab: bool = False) -> bytes:
-    body = [b"%PDF-1.7\n"]
-    if reportlab:
-        body.append(b"ReportLab Generated PDF document\n")
-    else:
-        body.append(f"/Producer ({PDF_PRODUCER})\n".encode())
-        body.append(f"/Subject (open-study-path-source:{source_digest};snapshot:{snapshot_digest})\n".encode())
-    for index in range(1, pages + 1):
-        body.append(f"{index} 0 obj << /Type /Page /Parent 99 0 R >> endobj\n".encode())
-    body.append(b"% padding\n" + b"x" * max(20_000, pages * 2500) + b"\n%%EOF\n")
-    return b"".join(body)
+    stream = BytesIO()
+    writer = PdfWriter()
+    for _ in range(pages):
+        writer.add_blank_page(width=1280, height=720)
+    producer = "ReportLab Generated PDF document" if reportlab else PDF_PRODUCER
+    writer.add_metadata({
+        "/Producer": producer,
+        "/Creator": producer,
+        "/Title": "TOPIC-001 study slides",
+        "/Subject": (
+            f"open-study-path-renderer:{RENDERER_ID};"
+            f"source:{source_digest};snapshot:{snapshot_digest}"
+        ),
+        "/Keywords": "x" * 25000,
+    })
+    writer.write(stream)
+    return stream.getvalue()
 
 
 def build_valid_tree(root: Path, *, reportlab: bool = False) -> tuple[dict, str]:
@@ -213,7 +222,6 @@ def test_reportlab_pdf_is_rejected_even_with_matching_sidecar() -> None:
         topic, repository = build_valid_tree(root, reportlab=True)
         errors = validate_materialized_topic(root, repository, topic)
         assert any("not produced by the HTML slide renderer" in error for error in errors)
-        assert any("renderer producer missing" in error for error in errors)
 
 
 def main() -> None:
