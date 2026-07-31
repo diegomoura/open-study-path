@@ -7,9 +7,11 @@ import path from "node:path";
 import process from "node:process";
 import { promisify } from "node:util";
 import { fileURLToPath } from "node:url";
+import { PDFDocument } from "pdf-lib";
 
 const execFileAsync = promisify(execFile);
 const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
+const PDF_PRODUCER = "Open Study Path HTML slide renderer v2";
 
 function assert(condition, message) {
   if (!condition) throw new Error(message);
@@ -41,19 +43,27 @@ async function main() {
 
     const pdf = await readFile(path.join(topicDir, "slides.pdf"));
     const meta = JSON.parse(await readFile(path.join(topicDir, "slides.meta.json"), "utf8"));
+    const document = await PDFDocument.load(pdf, { ignoreEncryption: true });
     assert(pdf.subarray(0, 5).toString("ascii") === "%PDF-", "renderer smoke PDF header is invalid");
-    assert(pdf.length > 10_000, "renderer smoke PDF is unexpectedly small");
-    assert(meta.contract_version === 1, "renderer smoke metadata contract mismatch");
+    assert(pdf.length > 20_000, "renderer smoke PDF is unexpectedly small");
+    assert(meta.contract_version === 2, "renderer smoke metadata contract mismatch");
+    assert(meta.renderer.id === "open-study-path-html-v2", "renderer smoke renderer id mismatch");
     assert(meta.topic_id === "TOPIC-000", "renderer smoke topic mismatch");
     assert(meta.content_version === 1, "renderer smoke content version mismatch");
-    assert(meta.slide_count === 6, "renderer smoke slide count mismatch");
+    assert(meta.slide_count === 10, "renderer smoke slide count mismatch");
     assert(meta.mermaid_count >= 1, "renderer smoke Mermaid diagram was not recorded");
     assert(meta.pdf.pages === meta.slide_count, "renderer smoke PDF page count mismatch");
     assert(meta.pdf.bytes === pdf.length, "renderer smoke PDF byte metadata mismatch");
+    assert(meta.pdf.producer === PDF_PRODUCER, "renderer smoke PDF producer metadata mismatch");
+    assert(document.getProducer() === PDF_PRODUCER, "renderer smoke embedded PDF producer mismatch");
+    assert(document.getCreator() === PDF_PRODUCER, "renderer smoke embedded PDF creator mismatch");
+    assert(document.getTitle() === "TOPIC-000 study slides", "renderer smoke embedded title mismatch");
+    assert(document.getSubject().includes(meta.source_digest), "renderer smoke PDF is not bound to source digest");
+    assert(document.getSubject().includes(meta.rendered_snapshot_sha256), "renderer smoke PDF is not bound to rendered snapshot");
     assert(meta.diagnostics.console_errors.length === 0, "renderer smoke has console errors");
     assert(meta.diagnostics.overflow_slides.length === 0, "renderer smoke has slide overflow");
     assert(meta.diagnostics.external_requests.length === 0, "renderer smoke made external requests");
-    console.log("Study-slide Chromium and Mermaid rendering smoke test passed.");
+    console.log("Study-slide Chromium, Mermaid and PDF provenance smoke test passed.");
   } finally {
     await rm(root, { recursive: true, force: true });
   }
