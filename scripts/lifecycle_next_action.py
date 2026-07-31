@@ -6,6 +6,10 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any, Mapping
 
+PROPOSE_COMMAND = (
+    "Gere uma proposta de trilha com base no intake e no diagnóstico. "
+    "Abra um pull request e não publique tarefas ainda."
+)
 GENERATE_COMMAND = "Crie minha trilha de estudos."
 PUBLISH_COMMAND = "Organize minha trilha nas ferramentas que escolhemos."
 RESUME_PUBLISH_COMMAND = "Continue a organização da minha trilha nas ferramentas que escolhemos."
@@ -44,7 +48,6 @@ def integration_resolution_complete(integrations: Mapping[str, Any] | None) -> b
         status = str(resolution.get("status", "")).strip().lower()
         unresolved = resolution.get("unresolved_capabilities", [])
         return status == "resolved" and isinstance(unresolved, list) and not unresolved
-    # Backward compatibility for old states that never selected external capabilities.
     return not isinstance(selected, Mapping) or not selected
 
 
@@ -86,6 +89,13 @@ def resolve_next_action(
     """Return the only normal next phase and command allowed by persisted state."""
 
     status = _status(instance)
+
+    if status.get("diagnostic_complete") is True and status.get("curriculum_proposed") is not True:
+        return NextAction(
+            phase="propose",
+            command=PROPOSE_COMMAND,
+            reason="curriculum_not_proposed",
+        )
 
     if status.get("curriculum_generated") is not True:
         return NextAction(
