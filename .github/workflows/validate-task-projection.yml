@@ -1,0 +1,42 @@
+name: Validate task projection
+
+on:
+  pull_request:
+    paths:
+      - 'instructions/41-task-backend-projection.md'
+      - 'instructions/manifest.yml'
+      - 'schemas/publication-operation.schema.json'
+      - 'scripts/validate_task_projection.py'
+      - 'tests/test_validate_task_projection.py'
+      - 'state/operations/**'
+  push:
+    branches: [main]
+    paths:
+      - 'instructions/41-task-backend-projection.md'
+      - 'instructions/manifest.yml'
+      - 'schemas/publication-operation.schema.json'
+      - 'scripts/validate_task_projection.py'
+      - 'tests/test_validate_task_projection.py'
+      - 'state/operations/**'
+  workflow_dispatch:
+
+concurrency:
+  group: task-projection-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Validate projection contract and operation state
+        run: python scripts/validate_task_projection.py
+      - name: Run projection tests
+        run: python -m unittest tests/test_validate_task_projection.py
