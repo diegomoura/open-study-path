@@ -18,10 +18,11 @@ Do not silently select Jotform or create external resources without the owner's 
 
 1. Confirm `.github/ISSUE_TEMPLATE/create-study-path.yml` exists in the target repository. Do not infer absence from repository size or search metadata.
 2. Read the exact repository identity from `.open-study-path/instance.yml`.
-3. Confirm the form contains the current hidden identity marker:
+3. Confirm the form file contains the current hidden identity marker exactly once:
 
    `<!-- open-study-path:intake form_id=create-study-path version=4 -->`
 
+   The marker identifies the checked-in form contract. It lives inside a form `markdown` block and is not expected to appear in the body of a submitted issue.
 4. Confirm the form does not prefill the native issue title and that its first visible instructions explain: use **Add a title** for the course name. GitHub requires that title before submission; the form must not ask for the name a second time.
 5. Verify repository labels `study-request` and `intake:imported` exist. Create only missing labels through the GitHub labels API or run **Prepare ChatGPT Project Instructions**, which invokes `scripts/ensure_repository_labels.py`. Read the labels again after provisioning.
 6. Configure the inherited GitHub Issue Form with these exact metadata values:
@@ -31,8 +32,8 @@ Do not silently select Jotform or create external resources without the owner's 
    submission_strategy: unique_verified_candidate
    ```
 
-   `reused_existing` records that setup reused the form inherited from the template; it does not claim that the instance owner created it during setup. `unique_verified_candidate` records the actual import rule: automatically import only when exactly one current, unimported and marker-valid issue remains after deterministic filtering. Never select the newest issue merely because it is newest. An explicitly supplied issue number may narrow a later lookup, but `explicit_issue` is not the default persisted strategy for this form.
-7. Mark the GitHub Issue Form as ready only after the marker, title guidance, both labels and the metadata above are verified.
+   `reused_existing` records that setup reused the form inherited from the template; it does not claim that the instance owner created it during setup. `unique_verified_candidate` records the actual import rule: automatically import only when exactly one current, unimported and contract-valid rendered issue remains after deterministic filtering. Never select the newest issue merely because it is newest. An explicitly supplied issue number may narrow a later lookup, but `explicit_issue` is not the default persisted strategy for this form.
+7. Mark the GitHub Issue Form as ready only after the form marker, title guidance, both labels and the metadata above are verified.
 8. Build the direct URL:
 
    `https://github.com/OWNER/REPOSITORY/issues/new?template=create-study-path.yml`
@@ -44,9 +45,9 @@ Do not silently select Jotform or create external resources without the owner's 
 
 The form is inherited reusable infrastructure. Do not edit, recreate or replace it during normal instance setup. Configure only the instance marker and `study.config.yml` unless a verified template defect requires a separate canonical-template fix.
 
-Do not mark setup or intake ready when label existence, title guidance or the current marker cannot be verified. Do not create or submit an issue, import answers, run the diagnostic or generate curriculum during setup. Do not require an issue number.
+Do not mark setup or intake ready when label existence, title guidance or the current form marker cannot be verified. Do not create or submit an issue, import answers, run the diagnostic or generate curriculum during setup. Do not require an issue number.
 
-Only the current marked form is supported. An explicit issue number may narrow deterministic lookup when the owner supplies it or when multiple valid current candidates require disambiguation, but it never bypasses marker, heading, title or import-state checks.
+Only the current repository form contract is supported. The submitted issue is later identified from its automatic `study-request` label, expected rendered headings, required responses, checked consent, title and import state. Do not expect the form marker in the issue body and never ask the learner to add it manually. An explicit issue number may narrow deterministic lookup when the owner supplies it or when multiple valid candidates require disambiguation, but it never bypasses those submission checks.
 
 ## Jotform
 
@@ -78,4 +79,4 @@ Validate the complete setup diff and required checks for the current head. Do no
 
 Complete with `instructions/phase-completion.md`. Return the selected form or configuration path and make the next human action unmistakable.
 
-<!-- Contract markers: direct clickable link; unique_verified_candidate; explicit_issue; explicit issue number remains accepted; Do not require the owner to copy an issue number; Only the current marked form is supported. -->
+<!-- Contract markers: direct clickable link; unique_verified_candidate; explicit_issue; explicit issue number remains accepted; Do not require the owner to copy an issue number; current repository form contract; submitted issue does not contain the form marker; never ask the learner to edit technical markers. -->
