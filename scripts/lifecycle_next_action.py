@@ -92,7 +92,7 @@ def resolve_next_action(
 
     if status.get("diagnostic_complete") is True and status.get("curriculum_proposed") is not True:
         return NextAction(
-            phase="propose",
+            phase="generate",
             command=PROPOSE_COMMAND,
             reason="curriculum_not_proposed",
         )
