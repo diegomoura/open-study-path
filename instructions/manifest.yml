@@ -100,6 +100,7 @@ phases:
   - id: publish
     instruction: instructions/40-publish-tasks.md
     internal_preflight: instructions/42-integration-preflight.md
+    internal_task_projection: instructions/41-task-backend-projection.md
     phase_review: instructions/04-review-generated-artifacts.md
     review_profile: publication
     review_outputs: [state/reviews/]
@@ -109,11 +110,13 @@ phases:
     outputs:
       - study.config.yml
       - state/integrations.json
+      - state/operations/
     stop_after_phase: true
 
   - id: evaluate
     instruction: instructions/55-evaluate-topic.md
     internal_materialization: instructions/57-materialize-next-content.md
+    internal_task_projection: instructions/41-task-backend-projection.md
     internal_content_review: instructions/36-review-course-content.md
     internal_slide_review: instructions/37-review-study-slides.md
     phase_review: instructions/04-review-generated-artifacts.md
@@ -126,6 +129,7 @@ phases:
       - state/assessments/
       - state/progress.json
       - state/integrations.json
+      - state/operations/
       - state/content-reviews/
       - state/slide-reviews/
       - study/roadmap.md
@@ -140,6 +144,7 @@ phases:
 
   - id: track
     instruction: instructions/50-track-progress.md
+    internal_task_projection: instructions/41-task-backend-projection.md
     phase_review: instructions/04-review-generated-artifacts.md
     review_profile: progress
     review_outputs: [state/reviews/]
@@ -149,6 +154,7 @@ phases:
     outputs:
       - state/progress.json
       - state/integrations.json
+      - state/operations/
 
   - id: replan
     instruction: instructions/60-replan.md
