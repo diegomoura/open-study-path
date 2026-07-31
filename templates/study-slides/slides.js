@@ -62,7 +62,15 @@ async function renderMermaid() {
   });
 
   const diagrams = Array.from(document.querySelectorAll(".mermaid"));
-  if (diagrams.length) await mermaid.run({ nodes: diagrams });
+  for (const diagram of diagrams) {
+    const slide = diagram.closest(".osp-slide");
+    slide?.classList.add("osp-slide--measure");
+    try {
+      await mermaid.run({ nodes: [diagram] });
+    } finally {
+      slide?.classList.remove("osp-slide--measure");
+    }
+  }
 }
 
 async function initialize() {
