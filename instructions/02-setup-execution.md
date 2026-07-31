@@ -2,6 +2,20 @@
 
 Apply this contract during `bootstrap_instance` and `configure_intake`. It governs repository discovery, allowed changes, validation and merge behavior for the first chat.
 
+## Connector-first repository access
+
+When the connected GitHub app or connector is available and exposes the required operation, use it as the primary and exclusive repository transport for reads, writes, branches, pull requests, labels and workflow inspection.
+
+During normal connected setup:
+
+- do not test `gh` availability or run `gh auth status`;
+- do not inspect environment variables for GitHub tokens or credentials;
+- do not run `git clone`, `git fetch`, `curl` or direct GitHub network requests merely to rediscover repository content or capabilities already exposed by the connector;
+- do not treat a missing CLI, blocked DNS or unavailable direct network access as a repository defect;
+- do not fall back from a working connector to a less capable transport.
+
+Local command execution is appropriate only for deterministic processing or validation of content already available in the workspace, or when the connector genuinely lacks a required operation. When a necessary fallback would require unavailable credentials or network access, stop with a precise blocker instead of probing secrets or repeatedly trying equivalent transports.
+
 ## Resolve repository state from files
 
 Repository metadata such as reported size, code-search status, an empty search result or an incomplete local checkout is not authoritative evidence that the repository is empty.

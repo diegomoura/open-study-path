@@ -100,7 +100,7 @@
         "form_spec_version": {"type": "integer", "minimum": 1},
         "created_by": {"enum": [null, "chatgpt_jotform_app", "reused_existing", "instance_owner"]},
         "issue_template": {"type": ["string", "null"]},
-        "submission_strategy": {"enum": ["latest_approved", "explicit_submission", "explicit_issue", "not_applicable"]},
+        "submission_strategy": {"enum": ["unique_verified_candidate", "explicit_submission", "explicit_issue", "not_applicable"]},
         "attachments_optional": {"const": true},
         "persist_raw_submission": {"const": false}
       }
@@ -340,7 +340,9 @@
         "properties": {
           "intake": {
             "properties": {
-              "issue_template": {"type": "string", "minLength": 1}
+              "issue_template": {"type": "string", "minLength": 1},
+              "created_by": {"const": "reused_existing"},
+              "submission_strategy": {"const": "unique_verified_candidate"}
             }
           }
         }
