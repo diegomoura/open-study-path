@@ -1,95 +1,97 @@
 # Independent study-slide review
 
-Run this review after the complete lesson, practice and assessment have passed `instructions/36-review-course-content.md` and after the HTML slide sources have been authored. It is a separate role from lesson authorship, course-content review and PDF rendering.
+Run this review after the complete lesson, practice and assessment pass `instructions/36-review-course-content.md` and after semantic slide HTML has been authored. It is a separate role from lesson authorship and PDF rendering.
 
 ## Role
 
-Act as the **study-slides reviewer**. Re-read the approved topic contract, the reviewed lesson, its Mermaid diagrams, the slide HTML/CSS/JavaScript and the learner-facing links. Do not trust the slide author's summary and do not approve because the deck looks polished.
+Act as the **study-slides reviewer**. Re-read the approved topic contract, the reviewed lesson, the browser-rendered deck and its learner-facing links. Do not approve because the required files exist or because every outcome ID appears somewhere.
 
 The reviewer answers:
 
-> Does this concise visual presentation faithfully represent the reviewed lesson and every promised outcome without introducing new claims, hiding important limits or becoming unreadable?
+> Does this presentation transform the reviewed lesson into a coherent, useful visual explanation with real examples, limits and learner application?
 
 ## Review sequence
 
-1. Confirm the lesson's current `content_version` already has an approved course-content review.
-2. Inspect the deck as HTML source and in the browser's final rendered state.
-3. Compare every slide with the lesson section or outcome it represents.
-4. Correct blocking findings in the slide sources.
-5. Record the final evidence in `state/slide-reviews/TOPIC-000.yml` using `templates/slide-review.yml`.
-6. Only after approval, render `slides.pdf` and run deterministic PDF validation.
-
-The PDF is not a second semantic review target. A failed render, page mismatch, missing background, overflow, Mermaid error or stale metadata is a technical blocker and must be corrected before merge.
+1. Confirm the lesson's current `content_version` has an approved course-content review.
+2. Confirm `slides.css` and `slides.js` are unchanged copies of the current canonical template.
+3. Inspect every slide in the final 1280×720 browser-rendered state.
+4. Trace concept, diagram, example, misconception and application slides to their `data-lesson-section`.
+5. Compare every outcome with the slide that genuinely represents it.
+6. Correct all blocking findings in the HTML.
+7. Record final evidence in `state/slide-reviews/TOPIC-000.yml` using `templates/slide-review.yml` version 2.
+8. Only after semantic approval, render `slides.pdf` and run deterministic provenance validation.
 
 ## Required dimensions
 
 ### 1. Lesson fidelity
 
 - The deck is derived from the reviewed lesson and topic contract.
-- It does not add facts, sources, recommendations or promises absent from the lesson.
-- It preserves important qualifications, limits and misconception corrections.
-- It summarizes rather than copying long paragraphs or replacing the complete lesson.
+- It preserves important qualifications and limits.
+- It does not add facts, sources or recommendations absent from the lesson.
+- `data-lesson-section` values point to real lesson sections.
 
 ### 2. Outcome coverage
 
-- Every approved learning outcome appears in one or more `data-outcome-ids` attributes.
-- The corresponding slide genuinely represents the outcome; a hidden identifier beside unrelated content is invalid.
-- The deck may combine related outcomes, but it must not silently omit one because the assessment still depends on it.
+- Every approved outcome appears in one or more `data-outcome-ids`.
+- Each marked slide genuinely represents that outcome.
+- Outcome coverage is not satisfied by an unrelated summary slide carrying every ID.
 
-### 3. Narrative and summary quality
+### 3. Narrative arc
 
-- The opening states the topic and useful result.
-- The sequence moves from orientation to core model, example or application, limits and synthesis.
+- The first slide states the useful result.
+- A map appears within the first three slides.
+- The sequence moves through concept, model, worked example, misconception, learner application and synthesis.
+- The final slide is a summary with current links.
+- The presentation does not stop at definitions.
+
+### 4. Worked-example quality
+
+- At least one example is worked through from situation to decision, consequence and verification.
+- Examples use specific details from the reviewed lesson.
+- A second example is preferred when it demonstrates transfer rather than repetition.
+- A title plus three vague labels is not a worked example.
+
+### 5. Summary quality
+
 - Each slide has one principal conceptual move.
-- Text is concise enough for presentation while retaining explanatory value.
-- The final slide points to the complete lesson, primary practice and assessment only when those links are current.
+- Non-title slides carry enough explanation to be useful.
+- The deck reduces prose without reducing the lesson to slogans.
+- The closing takeaways preserve the most decision-relevant ideas.
 
-### 4. Visual hierarchy and accessibility
+### 6. Visual variety
 
-- Every slide has a semantic `h1` or `h2` heading.
-- Text has strong contrast and remains readable at the 16:9 size.
+- The deck uses at least five canonical composition patterns.
+- The same card grid is not repeated throughout the presentation.
+- Layout choice follows the concept: flow for process, compare for distinction, steps for sequence, case for example and challenge for application.
+- Empty space supports hierarchy rather than revealing missing content.
+
+### 7. Visual hierarchy and accessibility
+
+- Every slide has a semantic `h1` or `h2`.
+- Text has strong contrast and remains readable at 16:9.
 - Information is not encoded by color alone.
-- Lists, code, labels and diagrams are not crowded or clipped.
-- Decorative elements do not compete with the main explanation.
-- Generated raster slide images are absent. Inline SVG icons are decorative or labelled appropriately.
+- Lists, labels and diagrams are not clipped or crowded.
+- Generated raster slide images are absent.
 
-### 5. Mermaid quality
+### 8. Mermaid quality
 
-- At least one useful Mermaid diagram is present for each deck under the current contract.
-- Diagrams are chosen for the concept: flow, sequence, state, architecture, components, dependencies, class or data relationships as appropriate.
-- A diagram is focused enough to read on a slide and is accompanied by a short interpretation.
-- Complex lesson diagrams are simplified or split without changing their meaning.
-- Mermaid source uses the strict security configuration and renders without errors.
+- At least one useful Mermaid diagram is present.
+- The diagram is focused and readable.
+- It is followed by an `osp-caption` interpretation explaining what to observe and one relevant limit.
+- A decorative or unexplained diagram fails review.
 
-### 6. Link consistency
+### 9. Link consistency
 
-- The deck may link to the complete lesson, practice and assessment.
-- No learner-facing content links to the HTML source, CSS, JavaScript, metadata or review evidence.
-- The module and task use the direct PDF route under `https://github.com/OWNER/REPOSITORY/raw/HEAD/.../slides.pdf`.
-- Links use the exact instance repository and current topic.
+- The final slide may link to the complete lesson, primary practice and assessment.
+- Learner-facing content never links to HTML, CSS, JavaScript, metadata or review evidence.
+- The module and tasks use the direct PDF route under `https://github.com/OWNER/REPOSITORY/raw/HEAD/.../slides.pdf`.
 
 ## Durable review evidence
 
-The review artifact records:
+The review artifact records version 2, exact topic and content version, reviewer role, lesson hash, aggregate slide-source hash, outcomes reviewed, all required checks and findings.
 
-- exact topic and `content_version`;
-- reviewer role and independent-pass mode;
-- current lesson SHA-256;
-- current aggregate slide-source SHA-256;
-- exact learning outcomes reviewed;
-- required checks;
-- blocking and non-blocking findings.
+Approve only when every check is `passed`, every outcome is reviewed and no blocking finding remains. A deck that technically renders but is visibly thin must receive a blocking finding under `narrative_arc`, `worked_example_quality`, `summary_quality` or `visual_variety`.
 
-Approve only when every required check is `passed`, every topic outcome is listed, both source hashes are current and `blocking_findings` is empty. A changed lesson, HTML, CSS or JavaScript invalidates the approval.
+## PDF boundary
 
-## Merge boundary
-
-A materialized topic cannot merge when study slides are enabled and any of these is missing or stale:
-
-- HTML/CSS/JavaScript slide sources;
-- approved slide review;
-- rendered PDF;
-- current render metadata;
-- deterministic slide validation.
-
-The slide PDF, metadata and review belong to the same curriculum or materialization pull request as the lesson version they represent. Do not publish an external task until its PDF link points to the approved current version.
+The PDF is deterministic delivery evidence after semantic review. It must contain embedded Open Study Path renderer provenance bound to the current source digest and rendered-browser snapshot digest. Missing provenance, a ReportLab substitute, stale metadata, page mismatch, overflow or Mermaid error blocks merge.
