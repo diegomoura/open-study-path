@@ -97,9 +97,6 @@ jobs:
       - name: Test study-slide contract
         run: python scripts/test_study_slides.py
 
-      - name: Validate study-slide contract
-        run: python scripts/validate_study_slides.py
-
       - name: Install study-slide render dependencies
         run: |
           npm install --no-save --package-lock=false playwright@1.62.0 mermaid@11.16.0 pdf-lib@1.17.1
@@ -115,6 +112,19 @@ jobs:
           else
             echo "No materialized study-slide sources found."
           fi
+
+      - name: Upload study-slide render diagnostics
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: study-slide-render-output
+          path: .open-study-path/rendered-slides/
+          if-no-files-found: ignore
+          retention-days: 3
+
+      - name: Validate study-slide contract
+        if: success()
+        run: python scripts/validate_study_slides.py
 
       - name: Test selected integration resolution
         run: python scripts/test_integration_resolution.py
@@ -151,15 +161,6 @@ jobs:
 
       - name: Test curriculum placeholder detection
         run: python scripts/test_curriculum_placeholder_detection.py
-
-      - name: Upload study-slide render diagnostics
-        if: failure()
-        uses: actions/upload-artifact@v4
-        with:
-          name: study-slide-render-output
-          path: .open-study-path/rendered-slides/
-          if-no-files-found: ignore
-          retention-days: 3
 
       - name: Upload guided validation diagnostics
         if: failure()
