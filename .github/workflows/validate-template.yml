@@ -134,6 +134,9 @@ jobs:
       - name: Test practice-link synchronization
         run: python scripts/test_practice_link_sync.py
 
+      - name: Test generation terminal-state resolution
+        run: python scripts/test_generation_terminal_state.py
+
       - name: Validate efficient generation contract
         run: python scripts/validate_generation_efficiency.py
 

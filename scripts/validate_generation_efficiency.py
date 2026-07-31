@@ -11,6 +11,8 @@ import yaml
 
 ROOT = Path(__file__).resolve().parents[1]
 EXECUTION_CONTRACT = "instructions/32-generation-execution.md"
+TERMINAL_RESOLVER = "scripts/generation_terminal_state.py"
+TERMINAL_TESTS = "scripts/test_generation_terminal_state.py"
 
 
 def fail(message: str) -> None:
@@ -38,12 +40,20 @@ def load_yaml(path: str) -> Any:
 
 def main() -> None:
     require(EXECUTION_CONTRACT, [
+        "Connector-first execution",
+        "Do not attempt `gh`, `git clone`, `curl`",
+        "Do not use fixed `sleep` loops",
         "Assemble the complete allowed phase diff before opening the pull request",
         "Every intermediate and final commit",
         "GitHub Actions is the final confirmation",
+        "A failed locator, fingerprint, schema, path, placeholder, render, integration-plan or review-coverage check is internal correction work",
+        "Batch every failure of the same deterministic class",
         "Do not add instrumentation commits",
         "`.github/workflows/`",
         "scripts/validate_curriculum_safe.py",
+        TERMINAL_RESOLVER,
+        "Final current-head read-back",
+        "Never say that the trail is generated while the pull request is open or draft",
         "Terminal condition",
         "do not perform further research",
         "Do not attach or list them as primary learner artifacts",
@@ -60,6 +70,7 @@ def main() -> None:
         "Internal review, correction, CI, safe merge",
         "Do not lead successful responses",
         "Never store credentials",
+        EXECUTION_CONTRACT,
     ])
     require("instructions/phase-completion.md", [
         "Finish validation, review, correction, safe merge",
@@ -70,6 +81,9 @@ def main() -> None:
         "O que não deve aparecer por padrão após sucesso",
         "hash de commit ou merge",
     ])
+
+    for path in [TERMINAL_RESOLVER, TERMINAL_TESTS]:
+        text(path)
 
     manifest = load_yaml("instructions/manifest.yml")
     phases = {
@@ -82,6 +96,7 @@ def main() -> None:
 
     workflow = text(".github/workflows/validate-template.yml")
     for command in [
+        "python scripts/test_generation_terminal_state.py",
         "python scripts/validate_generation_efficiency.py",
         "python scripts/validate_learning_experience.py",
         "python scripts/test_curriculum_placeholder_detection.py",
@@ -92,7 +107,7 @@ def main() -> None:
     if "python scripts/validate_curriculum.py" in workflow:
         fail("workflow must use structural placeholder detection through the safe validator")
 
-    print("Efficient generation and human-facing completion contracts passed.")
+    print("Efficient generation and stable completion contracts passed.")
 
 
 if __name__ == "__main__":
