@@ -1,3 +1,4 @@
+/* open-study-path:study-slides-runtime version=2 */
 import mermaid from "/node_modules/mermaid/dist/mermaid.esm.min.mjs";
 
 const slides = Array.from(document.querySelectorAll(".osp-slide"));
@@ -46,18 +47,18 @@ async function renderMermaid() {
     theme: "dark",
     fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif",
     themeVariables: {
-      background: "#080a0f",
-      primaryColor: "#162133",
-      primaryTextColor: "#f6f7fb",
-      primaryBorderColor: "#38bdf8",
-      lineColor: "#aeb7c7",
-      secondaryColor: "#191f2c",
-      tertiaryColor: "#0d111a",
-      noteBkgColor: "#191f2c",
-      noteTextColor: "#f6f7fb",
-      noteBorderColor: "#7dd3fc"
+      background: "#070910",
+      primaryColor: "#14243a",
+      primaryTextColor: "#f7f9fc",
+      primaryBorderColor: "#73d8ff",
+      lineColor: "#73d8ff",
+      secondaryColor: "#182335",
+      tertiaryColor: "#0d1320",
+      noteBkgColor: "#182335",
+      noteTextColor: "#f7f9fc",
+      noteBorderColor: "#73d8ff"
     },
-    flowchart: { htmlLabels: false, curve: "basis" }
+    flowchart: { htmlLabels: false, curve: "basis", nodeSpacing: 38, rankSpacing: 54 }
   });
 
   const diagrams = Array.from(document.querySelectorAll(".mermaid"));
