@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Validate marker-first intake discovery and course-title semantics."""
+"""Validate repository-contract intake discovery and course-title semantics."""
 
 from __future__ import annotations
 
@@ -47,7 +47,9 @@ def main() -> None:
         "study-request",
         "intake:imported",
         "Do not require an issue number",
-        "Only the current marked form is supported",
+        "current repository form contract",
+        "submitted issue does not contain the form marker",
+        "never ask the learner to edit technical markers",
     ])
     require("instructions/10-intake.md", [
         "scripts/intake_resolution.py",
@@ -57,7 +59,6 @@ def main() -> None:
         "`path.name`",
         "Do not rewrite the issue title",
         "Matching headings alone",
-        "unsupported",
         "exactly one valid candidate",
         "When none remain",
         "more than one remains",
@@ -67,6 +68,9 @@ def main() -> None:
         "path.learning_request",
         "path.subject",
         "instructions/20-diagnostic.md",
+        "required checked consent",
+        "technical marker belongs to the repository form",
+        "never ask the learner to edit a marker",
     ])
     require("instructions/phase-completion.md", [
         "Return the direct intake link",
@@ -79,11 +83,14 @@ def main() -> None:
         "course name comes from the issue title",
         "Ask for an issue number only when multiple valid candidates remain",
         "Internal review, correction, CI, safe merge",
+        "form marker identifies the checked-in form contract",
+        "Never ask the learner to edit an issue to add a technical marker",
     ])
     require("AGENTS.md", [
         "course name comes from the issue title",
-        "Only the current marked intake form is accepted",
+        "current repository form contract",
         "Matching headings alone",
+        "Never ask the learner to edit an issue to add a technical marker",
     ])
 
     issue_form = load_yaml(".github/ISSUE_TEMPLATE/create-study-path.yml")
@@ -100,10 +107,40 @@ def main() -> None:
         if block.get("type") == "markdown"
     )
     if markdown.count(CURRENT_MARKER) != 1:
-        fail("intake Issue Form must contain exactly one current hidden marker")
+        fail("intake Issue Form must contain exactly one current hidden form marker")
     for term in ["Add a title", "nome do curso", "Esse campo é obrigatório"]:
         if term not in markdown:
             fail(f"intake title guidance is missing: {term}")
+
+    resolver = text("scripts/intake_resolution.py")
+    for forbidden in [
+        "missing_current_marker",
+        "unsupported_or_ambiguous_marker",
+        "INTAKE_MARKER_RE",
+        "ANY_MARKER_RE",
+    ]:
+        if forbidden in resolver:
+            fail(f"rendered issue resolution must not depend on body marker logic: {forbidden}")
+    for required in [
+        "missing_discovery_label",
+        "missing_checked_consent",
+        "missing_required_response",
+        "current_form_contract",
+        "unexpected_author",
+    ]:
+        if required not in resolver:
+            fail(f"rendered issue resolution is missing identity check: {required}")
+
+    regression = text("scripts/test_intake_resolution.py")
+    for term in [
+        "markdown-only form marker is intentionally absent",
+        "missing_discovery_label",
+        "missing_checked_consent",
+        "unexpected_author",
+        "current_form_contract",
+    ]:
+        if term not in regression:
+            fail(f"rendered intake regression is missing: {term}")
 
     mapping = load_yaml("intake/field-mapping.yml")
     github_issue = mapping.get("github_issue", {})
@@ -149,7 +186,7 @@ def main() -> None:
     if intake.get("stop_after_phase") is not True:
         fail("intake must stop by default when chaining was not requested")
 
-    print("Marker-first intake resolution and course-title semantics passed.")
+    print("Repository-contract intake resolution and course-title semantics passed.")
 
 
 if __name__ == "__main__":
