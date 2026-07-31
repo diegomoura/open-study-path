@@ -128,9 +128,10 @@ def validate_contracts() -> None:
         SETUP_EXECUTION,
         "Repository metadata",
         "retains `.open-study-path/template.yml`",
-        "current intake marker",
+        "current repository form contract marker",
         "study-request",
         "intake:imported",
+        "Never ask the learner to edit an issue to add a technical marker",
         "CI is red or unknown",
     ])
     require("templates/chatgpt-project-instructions.md", [
@@ -138,8 +139,10 @@ def validate_contracts() -> None:
         "Repository size",
         "keeps `.open-study-path/template.yml`",
         "current intake marker",
+        "form marker identifies the checked-in form contract",
         "study-request",
         "intake:imported",
+        "Never ask the learner to edit an issue to add a technical marker",
         "CI is red or unknown",
     ])
     require("instructions/00-bootstrap.md", [
@@ -156,6 +159,7 @@ def validate_contracts() -> None:
         "created_by: reused_existing",
         "submission_strategy: unique_verified_candidate",
         "Never select the newest issue",
+        "submitted issue does not contain the form marker",
         "Do not edit, recreate or replace it",
         "failing, pending, cancelled, missing or unreadable",
     ])

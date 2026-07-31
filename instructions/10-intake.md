@@ -18,30 +18,45 @@ The natural command `Preenchi o formulário. Pode continuar.` approves importing
 
 Search only the instance repository. Apply the algorithm in `scripts/intake_resolution.py`; do not replace it with similarity or newest-issue heuristics.
 
-A valid candidate must satisfy all of these identity and state checks:
+### Form contract and submission identity
+
+The supported form version comes from the checked-in repository contract, not from a hidden comment in the rendered issue:
+
+- `.github/ISSUE_TEMPLATE/create-study-path.yml` must contain exactly one current form marker: `<!-- open-study-path:intake form_id=create-study-path version=4 -->`;
+- `study.config.yml` and `intake/field-mapping.yml` must identify the same current form specification and version;
+- the marker belongs to a form `markdown` block used for repository validation; GitHub does not include that block in the submitted issue body.
+
+Never require, search for or repair this marker in a learner's issue body. Never ask the learner to edit an issue to insert a technical marker. A manually inserted marker is not proof of form origin and does not replace any submission check.
+
+A valid rendered issue candidate must satisfy all of these identity and state checks:
 
 - it is an issue, not a pull request;
-- its body contains exactly one supported marker: `<!-- open-study-path:intake form_id=create-study-path version=4 -->`;
+- it has the `study-request` label configured by the current Issue Form;
 - its body contains the expected field headings from `.github/ISSUE_TEMPLATE/create-study-path.yml`;
+- every currently required form field has a non-empty rendered response;
+- the consent section contains its required checked checkbox;
 - its issue title contains a non-empty course name;
+- when the expected instance owner or approved submitter is known, its author matches that allowed identity;
 - it is not already identified by `state/intake-summary.json.source_reference`;
 - it does not have the `intake:imported` label.
 
 Treat the trimmed issue title as the synthetic field `issue_title` and map it to `path.name` through `intake/field-mapping.yml`. Preserve the learner's title as the course name. Do not add a prefix or generic suffix. Do not rewrite the issue title during import.
 
-For a uniquely resolved candidate, the `study-request` label is a repairable consistency signal. Add it when missing only after unique selection.
+The `study-request` label is part of submission identity and must already be present. Do not add it to an arbitrary issue to make that issue importable. Missing repository label definitions are repaired during setup, not during candidate classification.
 
-Only the current marked form is supported. Reject a missing, duplicated, malformed, differently versioned or differently identified marker. Matching headings alone, a unique recent issue or similar answers never establish identity. An explicit issue number narrows the search but does not bypass current marker, heading, title or import-state checks.
+Only the current repository form contract is supported. Reject missing expected headings, missing required responses, unchecked consent, missing discovery label, unexpected author when author constraints are known, empty title or imported state. Matching headings alone, a unique recent issue or similar answers never establish identity. An explicit issue number narrows the search but does not bypass label, structure, required-response, consent, author, title or import-state checks.
 
 ### Selection and import
 
 When the form was reported as submitted:
 
-1. classify candidates using the current marker and state rules above;
-2. import automatically when exactly one valid candidate remains;
-3. When none remain, return the direct form link and explain that no verifiable submission was found yet;
-4. when more than one remains, list candidate number, title and creation time and ask the owner to choose;
-5. never select an arbitrary newest repository issue.
+1. verify the current form marker and version in the repository form and configuration;
+2. classify rendered issues using label, structure, required responses, consent, author when known, title and import-state rules;
+3. import automatically when exactly one valid candidate remains;
+4. when none remain, return the direct form link only when there truly is no matching submission;
+5. when a candidate exists but a repository contract inconsistency prevents verification, report the internal blocker and correct the template or instance contract; do not ask the learner to add technical metadata to the issue;
+6. when more than one remains, list candidate number, title and creation time and ask the owner to choose;
+7. never select an arbitrary newest repository issue.
 
 After import, persist the exact source reference, apply `intake:imported` and retain `study-request` for auditability. Treat attachments as optional and do not copy them into the repository by default.
 
@@ -91,4 +106,4 @@ The explicit chained command remains accepted:
 
 If no unique candidate exists or a real decision is required, stop and surface only the action that resolves it.
 
-<!-- Contract markers: expected field headings; exactly one valid candidate; When none remain; more than one remains; state/intake-summary.json.source_reference; intake:imported; immediately invoke `instructions/20-diagnostic.md`; auto_when_unambiguous; repairable consistency signals; unsupported. -->
+<!-- Contract markers: expected field headings; exactly one valid candidate; When none remain; more than one remains; state/intake-summary.json.source_reference; intake:imported; immediately invoke `instructions/20-diagnostic.md`; auto_when_unambiguous; rendered Issue Form; required checked consent; technical marker belongs to the repository form; never ask the learner to edit a marker. -->

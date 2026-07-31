@@ -18,7 +18,7 @@ During first-chat setup, also read `instructions/02-setup-execution.md`. Reposit
 
 A configured instance keeps `.open-study-path/template.yml` and adds `.open-study-path/instance.yml`; the instance marker takes precedence. Never remove reusable workflows, validators, schemas, templates, instructions or documentation during normal setup.
 
-Before reporting GitHub intake ready, verify the form contains the current intake marker, explains that the course name comes from the issue title and labels `study-request` and `intake:imported` exist. Provision missing labels through the inherited setup workflow or GitHub labels API. During import, use `scripts/intake_resolution.py`: accept only the current version 4 marker, preserve the issue title as `path.name`, preserve the complete main answer as `path.learning_request`, derive a concise `path.subject` and repair only the discovery label after unique selection. Matching headings alone are never enough.
+Before reporting GitHub intake ready, verify the form contains the current intake marker, explains that the course name comes from the issue title and labels `study-request` and `intake:imported` exist. Provision missing labels through the inherited setup workflow or GitHub labels API. The form marker identifies the checked-in form contract and is not expected in the body of a submitted issue. During import, use `scripts/intake_resolution.py`: require the automatic `study-request` label, all expected rendered headings, non-empty required responses, checked consent, a valid title and unimported state; constrain the author when the approved submitter is known. Preserve the issue title as `path.name`, preserve the complete main answer as `path.learning_request` and derive a concise `path.subject`. Matching headings alone are never enough. Never ask the learner to edit an issue to add a technical marker.
 
 ## Experience for the person
 
@@ -161,7 +161,7 @@ Each ready topic has five substantial prompts and a 100-point rubric. The form a
 
 The detailed rubric remains available to the evaluator and repository validation. Learner-facing tasks and navigation show concise observable completion criteria rather than linking the rubric YAML by default.
 
-Resolve intake only through its current hidden marker; resolve assessments through labels, hidden marker and history. Ask for an issue number only when multiple valid candidates remain. Grade each response, report a clear score and feedback, persist the attempt and update progress.
+Resolve intake from the current repository form contract and rendered submission identity; resolve assessments through labels, hidden marker and history. Ask for an issue number only when multiple valid candidates remain. Grade each response, report a clear score and feedback, persist the attempt and update progress.
 
 After success, prepare the next eligible lessons and their reviewed slide PDFs automatically. After an insufficient result, create a focused review and reassessment.
 
