@@ -9,6 +9,10 @@ from tempfile import TemporaryDirectory
 from curriculum_state import validate_repository
 
 
+PROPOSAL_COMMAND = (
+    "Gere uma proposta de trilha com base no intake e no diagnóstico. "
+    "Abra um pull request e não publique tarefas ainda."
+)
 MANIFEST = """version: 1
 phases:
   - id: diagnostic
@@ -20,11 +24,23 @@ phases:
     depends_on: [diagnostic]
 """
 
-PROPOSAL = """Abra um pull request
+PROPOSAL = f"""{PROPOSAL_COMMAND}
 This wording does not create an implicit learner-approval gate.
-Não publique tarefas ainda
 curriculum_approved: true
 agent_review_then_merge
+Crie minha trilha de estudos.
+"""
+
+DIAGNOSTIC = f"""{PROPOSAL_COMMAND}
+This wording is authored by the system itself.
+It does not ask the learner to review the pull request.
+It restricts only the later publication operation.
+"""
+
+COMPLETION = f"""{PROPOSAL_COMMAND}
+### After approved curriculum proposal
+A command containing `Abra um pull request` identifies the audit mechanism.
+curriculum proposal approved but detailed curriculum not generated
 Crie minha trilha de estudos.
 """
 
@@ -55,6 +71,8 @@ status:
 def base_repository(root: Path) -> None:
     write(root, "instructions/manifest.yml", MANIFEST)
     write(root, "instructions/28-propose-path.md", PROPOSAL)
+    write(root, "instructions/20-diagnostic.md", DIAGNOSTIC)
+    write(root, "instructions/phase-completion.md", COMPLETION)
 
 
 def test_unreviewed_proposal_state_is_rejected() -> None:
@@ -98,11 +116,21 @@ def test_generated_curriculum_requires_contracts_and_plan() -> None:
         assert any("requires study/integrations.md" in error for error in errors), errors
 
 
+def test_missing_completion_guidance_is_rejected() -> None:
+    with TemporaryDirectory() as temporary:
+        root = Path(temporary)
+        base_repository(root)
+        write(root, "instructions/phase-completion.md", "Crie minha trilha de estudos.\n")
+        errors = validate_repository(root)
+        assert any("phase-completion.md is missing proposal guidance term" in error for error in errors), errors
+
+
 def main() -> None:
     test_unreviewed_proposal_state_is_rejected()
     test_reviewed_proposal_without_topics_is_valid()
     test_topics_cannot_be_left_in_partial_generation()
     test_generated_curriculum_requires_contracts_and_plan()
+    test_missing_completion_guidance_is_rejected()
     print("Curriculum proposal state regressions passed.")
 
 

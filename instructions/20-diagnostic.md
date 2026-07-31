@@ -111,6 +111,8 @@ Do not attempt to formally approve a PR authored by the same account. Verificati
 
 Follow `instructions/phase-completion.md`. By default, report only the starting depth, artifact link, merge state and next command. Do not list all competencies and gaps in chat unless the owner asks for an audit.
 
-Guide the owner to generation with:
+Guide the owner to the roadmap-proposal suboperation with:
 
 `Gere uma proposta de trilha com base no intake e no diagnóstico. Abra um pull request e não publique tarefas ainda.`
+
+This wording is authored by the system itself. It authorizes the normal proposal workflow: create a draft as a temporary work area, run the independent curriculum review, correct findings, validate, mark ready and merge under `agent_review_then_merge`. It does not ask the learner to review the pull request and does not request that it remain open. `Não publique tarefas ainda` restricts only the later publication operation.

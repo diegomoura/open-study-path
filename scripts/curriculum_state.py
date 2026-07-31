@@ -13,6 +13,10 @@ PLACEHOLDER_TERMS = (
     "First capability",
     "TOPIC-000",
 )
+PROPOSAL_COMMAND = (
+    "Gere uma proposta de trilha com base no intake e no diagnóstico. "
+    "Abra um pull request e não publique tarefas ainda."
+)
 
 
 def _mapping(value: Any) -> Mapping[str, Any]:
@@ -23,10 +27,22 @@ def load_yaml(path: Path) -> Any:
     return yaml.safe_load(path.read_text(encoding="utf-8"))
 
 
+def require_terms(path: Path, terms: tuple[str, ...], errors: list[str]) -> None:
+    if not path.is_file():
+        errors.append(f"missing proposal guidance file: {path}")
+        return
+    text = path.read_text(encoding="utf-8")
+    for term in terms:
+        if term not in text:
+            errors.append(f"{path.name} is missing proposal guidance term: {term}")
+
+
 def validate_repository(root: Path) -> tuple[str, ...]:
     errors: list[str] = []
     manifest_path = root / "instructions" / "manifest.yml"
     proposal_instruction = root / "instructions" / "28-propose-path.md"
+    diagnostic_instruction = root / "instructions" / "20-diagnostic.md"
+    phase_completion = root / "instructions" / "phase-completion.md"
 
     if not manifest_path.is_file():
         return ("missing instructions/manifest.yml",)
@@ -50,20 +66,38 @@ def validate_repository(root: Path) -> tuple[str, ...]:
     if generate.get("depends_on") != ["diagnostic"]:
         errors.append("generate phase must depend on diagnostic")
 
-    if not proposal_instruction.is_file():
-        errors.append("missing instructions/28-propose-path.md")
-    else:
-        text = proposal_instruction.read_text(encoding="utf-8")
-        for term in [
-            "Abra um pull request",
+    require_terms(
+        proposal_instruction,
+        (
+            PROPOSAL_COMMAND,
             "does not create an implicit learner-approval gate",
-            "Não publique tarefas ainda",
             "curriculum_approved: true",
             "agent_review_then_merge",
             "Crie minha trilha de estudos.",
-        ]:
-            if term not in text:
-                errors.append(f"proposal instruction is missing contract term: {term}")
+        ),
+        errors,
+    )
+    require_terms(
+        diagnostic_instruction,
+        (
+            PROPOSAL_COMMAND,
+            "authored by the system itself",
+            "does not ask the learner to review the pull request",
+            "restricts only the later publication operation",
+        ),
+        errors,
+    )
+    require_terms(
+        phase_completion,
+        (
+            PROPOSAL_COMMAND,
+            "### After approved curriculum proposal",
+            "A command containing `Abra um pull request` identifies the audit mechanism",
+            "curriculum proposal approved but detailed curriculum not generated",
+            "Crie minha trilha de estudos.",
+        ),
+        errors,
+    )
 
     instance_path = root / ".open-study-path" / "instance.yml"
     if not instance_path.is_file():
