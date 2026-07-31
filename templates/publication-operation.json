@@ -1,0 +1,19 @@
+{
+  "operation_id": "publication-v1",
+  "operation_type": "publication",
+  "provider": "github_issues",
+  "mode": "active_window",
+  "status": "not_started",
+  "current_batch": null,
+  "topics": [],
+  "attempt": 1,
+  "external_read_count": 0,
+  "external_write_count": 0,
+  "last_checkpoint": null,
+  "last_error": null,
+  "branch": null,
+  "pull_request": null,
+  "started_at": "1970-01-01T00:00:00Z",
+  "updated_at": "1970-01-01T00:00:00Z",
+  "completed_at": null
+}

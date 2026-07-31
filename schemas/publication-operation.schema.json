@@ -1,0 +1,43 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://open-study-path.dev/schemas/publication-operation.schema.json",
+  "title": "Open Study Path task projection operation",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "operation_id",
+    "operation_type",
+    "provider",
+    "mode",
+    "status",
+    "topics",
+    "attempt",
+    "external_read_count",
+    "external_write_count",
+    "started_at",
+    "updated_at"
+  ],
+  "properties": {
+    "operation_id": {"type": "string", "pattern": "^[a-z0-9][a-z0-9._-]{2,127}$"},
+    "operation_type": {"enum": ["publication", "assessment_projection", "reconciliation"]},
+    "provider": {"enum": ["trello", "todoist", "github_issues", "clickup", "notion", "markdown"]},
+    "mode": {"enum": ["active_window", "full_curriculum"]},
+    "status": {"enum": ["not_started", "in_progress", "partial", "blocked", "failed", "success"]},
+    "current_batch": {"type": ["string", "null"]},
+    "topics": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {"type": "string", "pattern": "^TOPIC-[0-9]{3,}$"}
+    },
+    "attempt": {"type": "integer", "minimum": 1},
+    "external_read_count": {"type": "integer", "minimum": 0},
+    "external_write_count": {"type": "integer", "minimum": 0},
+    "last_checkpoint": {"type": ["string", "null"]},
+    "last_error": {"type": ["string", "null"], "maxLength": 500},
+    "branch": {"type": ["string", "null"]},
+    "pull_request": {"type": ["integer", "null"], "minimum": 1},
+    "started_at": {"type": "string", "format": "date-time"},
+    "updated_at": {"type": "string", "format": "date-time"},
+    "completed_at": {"type": ["string", "null"], "format": "date-time"}
+  }
+}
