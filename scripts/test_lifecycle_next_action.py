@@ -57,7 +57,7 @@ def test_diagnostic_routes_to_automatic_proposal() -> None:
         instance(proposed=False, approved=False, generated=False),
         integrations(),
     )
-    assert action.phase == "propose"
+    assert action.phase == "generate"
     assert action.command == PROPOSE_COMMAND
     assert "Abra um pull request" in action.command
     assert "não publique tarefas ainda" in action.command
