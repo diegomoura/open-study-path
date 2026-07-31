@@ -36,22 +36,19 @@ def validate_repository(root: Path) -> tuple[str, ...]:
         for phase in manifest.get("phases", [])
         if isinstance(phase, dict) and phase.get("id")
     }
-    propose = _mapping(phases.get("propose"))
     generate = _mapping(phases.get("generate"))
     diagnostic = _mapping(phases.get("diagnostic"))
 
-    if diagnostic.get("next_phase") != "propose":
-        errors.append("diagnostic must route to propose")
-    if propose.get("instruction") != "instructions/28-propose-path.md":
-        errors.append("propose phase must reference instructions/28-propose-path.md")
-    if propose.get("review_profile") != "curriculum":
-        errors.append("propose phase must use the curriculum review profile")
-    if propose.get("merge_policy_path") != "workflow.curriculum_merge_policy":
-        errors.append("propose phase must use workflow.curriculum_merge_policy")
-    if propose.get("next_phase") != "generate":
-        errors.append("propose phase must route to generate")
-    if generate.get("depends_on") != ["propose"]:
-        errors.append("generate phase must depend on propose")
+    if diagnostic.get("next_phase") != "generate":
+        errors.append("diagnostic must route to generate")
+    if generate.get("proposal_instruction") != "instructions/28-propose-path.md":
+        errors.append("generate phase must reference instructions/28-propose-path.md")
+    if generate.get("review_profile") != "curriculum":
+        errors.append("generate phase must use the curriculum review profile")
+    if generate.get("merge_policy_path") != "workflow.curriculum_merge_policy":
+        errors.append("generate phase must use workflow.curriculum_merge_policy")
+    if generate.get("depends_on") != ["diagnostic"]:
+        errors.append("generate phase must depend on diagnostic")
 
     if not proposal_instruction.is_file():
         errors.append("missing instructions/28-propose-path.md")
