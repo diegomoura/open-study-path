@@ -61,11 +61,26 @@ phases:
     review_outputs: [state/reviews/]
     allowed_modes: [instance]
     depends_on: [intake]
-    next_phase: generate
+    next_phase: propose
     merge_policy_path: workflow.diagnostic_merge_policy
     outputs:
       - .open-study-path/instance.yml
       - state/diagnostic-summary.json
+    stop_after_phase: true
+
+  - id: propose
+    instruction: instructions/28-propose-path.md
+    internal_review: instructions/35-review-curriculum.md
+    phase_review: instructions/04-review-generated-artifacts.md
+    review_profile: curriculum
+    review_outputs: [state/reviews/]
+    allowed_modes: [instance]
+    depends_on: [diagnostic]
+    next_phase: generate
+    merge_policy_path: workflow.curriculum_merge_policy
+    outputs:
+      - .open-study-path/instance.yml
+      - study/roadmap.md
     stop_after_phase: true
 
   - id: generate
@@ -78,7 +93,7 @@ phases:
     review_profile: curriculum
     review_outputs: [state/reviews/]
     allowed_modes: [instance]
-    depends_on: [diagnostic]
+    depends_on: [propose]
     next_phase: publish
     merge_policy_path: workflow.curriculum_merge_policy
     outputs:
