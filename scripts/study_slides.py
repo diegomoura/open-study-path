@@ -12,6 +12,7 @@ import re
 from typing import Any, Mapping
 
 import yaml
+from pypdf import PdfReader
 
 OUTCOME_ID = re.compile(r"^LO-[1-9][0-9]*$")
 TOPIC_ID = re.compile(r"^TOPIC-[0-9]{3,}$")
@@ -250,6 +251,20 @@ def pdf_info(path: Path) -> tuple[int, int, str, bytes, list[str]]:
     if len(data) < max(4096, pages * 2048):
         errors.append(f"{path} is unexpectedly small for {pages} rendered slides")
     return pages, len(data), sha256(data).hexdigest(), data, errors
+
+
+def pdf_metadata(path: Path) -> tuple[dict[str, str], list[str]]:
+    try:
+        reader = PdfReader(str(path))
+        metadata = reader.metadata or {}
+        return {
+            "producer": _text(metadata.get("/Producer")),
+            "creator": _text(metadata.get("/Creator")),
+            "title": _text(metadata.get("/Title")),
+            "subject": _text(metadata.get("/Subject")),
+        }, []
+    except Exception as exc:
+        return {}, [f"{path} PDF metadata cannot be read: {exc}"]
 
 
 def _validate_assets(root: Path, topic_id: str, source_paths: list[Path]) -> list[str]:
@@ -499,15 +514,19 @@ def validate_materialized_topic(root: Path, repository: str, topic: Mapping[str,
         errors.append(f"{topic_id} PDF source provenance mismatch")
     if _text(pdf_meta.get("rendered_snapshot_sha256")) != snapshot_digest:
         errors.append(f"{topic_id} PDF rendered-snapshot provenance mismatch")
-    for marker, label in [
-        (PDF_PRODUCER.encode("ascii"), "renderer producer"),
-        (source_digest.encode("ascii"), "source digest"),
-        (snapshot_digest.encode("ascii"), "rendered snapshot digest"),
-    ]:
-        if marker and marker not in pdf_data:
-            errors.append(f"{topic_id} committed PDF is not bound to current HTML ({label} missing)")
-    if b"ReportLab Generated PDF" in pdf_data:
-        errors.append(f"{topic_id} committed PDF was not produced by the HTML slide renderer")
+    embedded, embedded_errors = pdf_metadata(pdf_path)
+    errors.extend(embedded_errors)
+    expected_subject = (
+        f"open-study-path-renderer:{RENDERER_ID};"
+        f"source:{source_digest};snapshot:{snapshot_digest}"
+    )
+    if embedded:
+        if embedded.get("title") != f"{topic_id} study slides":
+            errors.append(f"{topic_id} committed PDF title provenance mismatch")
+        if embedded.get("subject") != expected_subject:
+            errors.append(f"{topic_id} committed PDF source or rendered-snapshot provenance mismatch")
+        if "reportlab" in embedded.get("producer", "").lower():
+            errors.append(f"{topic_id} committed PDF was not produced by the HTML slide renderer")
 
     diagnostics = _mapping(meta.get("diagnostics"))
     if diagnostics.get("console_errors") != []:
