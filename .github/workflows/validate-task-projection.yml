@@ -7,7 +7,9 @@ on:
       - 'instructions/manifest.yml'
       - 'schemas/publication-operation.schema.json'
       - 'scripts/validate_task_projection.py'
+      - 'scripts/pedagogical_content_hash.py'
       - 'tests/test_validate_task_projection.py'
+      - 'tests/test_pedagogical_content_hash.py'
       - 'state/operations/**'
   push:
     branches: [main]
@@ -16,7 +18,9 @@ on:
       - 'instructions/manifest.yml'
       - 'schemas/publication-operation.schema.json'
       - 'scripts/validate_task_projection.py'
+      - 'scripts/pedagogical_content_hash.py'
       - 'tests/test_validate_task_projection.py'
+      - 'tests/test_pedagogical_content_hash.py'
       - 'state/operations/**'
   workflow_dispatch:
 
@@ -38,5 +42,9 @@ jobs:
           python-version: '3.12'
       - name: Validate projection contract and operation state
         run: python scripts/validate_task_projection.py
-      - name: Run projection tests
-        run: python -m unittest tests/test_validate_task_projection.py
+      - name: Run projection and hash tests
+        run: |
+          set -o pipefail
+          python -m unittest \
+            tests/test_validate_task_projection.py \
+            tests/test_pedagogical_content_hash.py 2>&1 | tee task-projection-tests.log
