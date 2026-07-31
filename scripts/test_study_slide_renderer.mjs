@@ -17,6 +17,16 @@ function assert(condition, message) {
   if (!condition) throw new Error(message);
 }
 
+async function runRenderer(renderer, root) {
+  const { stdout, stderr } = await execFileAsync(
+    process.execPath,
+    [renderer, "--root", root, "--topic", "TOPIC-000"],
+    { cwd: REPO_ROOT, timeout: 60_000, maxBuffer: 4 * 1024 * 1024 },
+  );
+  if (stdout) process.stdout.write(stdout);
+  if (stderr) process.stderr.write(stderr);
+}
+
 async function main() {
   const root = await mkdtemp(path.join(tmpdir(), "open-study-path-slides-"));
   try {
@@ -33,16 +43,12 @@ async function main() {
     await symlink(path.join(REPO_ROOT, "node_modules"), path.join(root, "node_modules"), "dir");
 
     const renderer = path.join(REPO_ROOT, "scripts", "render_study_slides.mjs");
-    const { stdout, stderr } = await execFileAsync(
-      process.execPath,
-      [renderer, "--root", root, "--topic", "TOPIC-000"],
-      { cwd: REPO_ROOT, timeout: 60_000, maxBuffer: 4 * 1024 * 1024 },
-    );
-    if (stdout) process.stdout.write(stdout);
-    if (stderr) process.stderr.write(stderr);
+    await runRenderer(renderer, root);
 
-    const pdf = await readFile(path.join(topicDir, "slides.pdf"));
-    const meta = JSON.parse(await readFile(path.join(topicDir, "slides.meta.json"), "utf8"));
+    const pdfPath = path.join(topicDir, "slides.pdf");
+    const metaPath = path.join(topicDir, "slides.meta.json");
+    const pdf = await readFile(pdfPath);
+    const meta = JSON.parse(await readFile(metaPath, "utf8"));
     const document = await PDFDocument.load(pdf, { ignoreEncryption: true });
     assert(pdf.subarray(0, 5).toString("ascii") === "%PDF-", "renderer smoke PDF header is invalid");
     assert(pdf.length > 20_000, "renderer smoke PDF is unexpectedly small");
@@ -62,7 +68,19 @@ async function main() {
     assert(meta.diagnostics.console_errors.length === 0, "renderer smoke has console errors");
     assert(meta.diagnostics.overflow_slides.length === 0, "renderer smoke has slide overflow");
     assert(meta.diagnostics.external_requests.length === 0, "renderer smoke made external requests");
-    console.log("Study-slide Chromium, Mermaid and PDF provenance smoke test passed.");
+
+    await rm(pdfPath, { force: true });
+    await rm(metaPath, { force: true });
+    await runRenderer(renderer, root);
+    const secondPdf = await readFile(pdfPath);
+    const secondMeta = JSON.parse(await readFile(metaPath, "utf8"));
+    assert(
+      secondMeta.rendered_snapshot_sha256 === meta.rendered_snapshot_sha256,
+      "renderer smoke Mermaid snapshot changed between identical renders",
+    );
+    assert(secondMeta.pdf.sha256 === meta.pdf.sha256, "renderer smoke PDF hash changed between identical renders");
+    assert(secondPdf.equals(pdf), "renderer smoke PDF bytes changed between identical renders");
+    console.log("Study-slide Chromium, Mermaid and deterministic PDF provenance smoke test passed.");
   } finally {
     await rm(root, { recursive: true, force: true });
   }

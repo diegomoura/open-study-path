@@ -4,6 +4,9 @@ import mermaid from "/node_modules/mermaid/dist/mermaid.esm.min.mjs";
 const slides = Array.from(document.querySelectorAll(".osp-slide"));
 const currentLabel = document.querySelector("[data-current-slide]");
 const totalLabel = document.querySelector("[data-total-slides]");
+const topicId = document.querySelector('meta[name="open-study-path:topic-id"]')?.content || "unknown-topic";
+const contentVersion = document.querySelector('meta[name="open-study-path:content-version"]')?.content || "0";
+const mermaidSeed = `open-study-path:${topicId}:v${contentVersion}`;
 let current = 0;
 
 function showSlide(index) {
@@ -44,6 +47,8 @@ async function renderMermaid() {
   mermaid.initialize({
     startOnLoad: false,
     securityLevel: "strict",
+    deterministicIds: true,
+    deterministicIDSeed: mermaidSeed,
     theme: "dark",
     fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif",
     themeVariables: {
