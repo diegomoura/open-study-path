@@ -106,7 +106,6 @@ body:
         - label: Exercícios práticos
         - label: Projetos
         - label: Discussões e perguntas
-        - label: Flashcards
 
   - type: dropdown
     id: theory_practice_balance
@@ -171,7 +170,6 @@ body:
         - label: Google Calendar — horários fixos de estudo
         - label: Outlook Calendar — agenda Microsoft
         - label: Reclaim — agenda que reorganiza blocos de foco
-        - label: Quizlet — flashcards interativos
         - label: Consensus — busca de estudos e artigos científicos
         - label: Habitify — acompanhamento de hábitos
         - label: Whimsical — mapas e diagramas interativos
@@ -187,7 +185,6 @@ body:
       options:
         - label: Ferramenta de tarefas, como Trello ou Todoist
         - label: Agenda, como Reclaim, Google ou Outlook
-        - label: Flashcards, como Quizlet
         - label: Pesquisa acadêmica, como Consensus
         - label: Hábitos, como Habitify
         - label: Diagramas externos, como Whimsical
@@ -216,26 +213,26 @@ body:
       required: true
 
   - type: dropdown
-    id: todoist_reminders
+    id: study_routine_mode
     attributes:
-      label: Gostaria de considerar lembretes recorrentes no Todoist?
-      description: Opcional. O agente só recomendará essa integração quando ela trouxer benefício concreto.
+      label: Como você prefere encaixar os estudos na sua rotina?
+      description: Essa escolha define se faz sentido reservar horários na agenda ou usar lembretes flexíveis. Nenhum evento ou lembrete será criado sem informações suficientes.
       options:
-        - Deixar o agente recomendar
-        - Sim
-        - Não
-      default: 0
+        - Sem lembretes por enquanto
+        - Blocos com horário fixo na agenda
+        - Tarefas recorrentes com horário flexível
+        - Quero descrever minha própria rotina
+        - Deixar para decidir depois
+      default: 4
+    validations:
+      required: true
 
-  - type: dropdown
-    id: email_summaries
+  - type: textarea
+    id: study_routine_details
     attributes:
-      label: Gostaria de receber algum resumo por e-mail?
-      description: Opcional. O chat continuará mostrando as informações principais.
-      options:
-        - Não
-        - Gmail
-        - Outlook
-      default: 0
+      label: Quando você gostaria de estudar?
+      description: Opcional. Informe dias, horários, duração, antecedência do aviso e fuso horário quando isso for importante.
+      placeholder: Exemplo: segunda, quarta e sexta, das 19h às 19h45, com aviso 15 minutos antes, horário de Brasília.
 
   - type: textarea
     id: additional_notes
