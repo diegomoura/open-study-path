@@ -127,7 +127,6 @@ phases:
       - study/topics/
       - study/modules/
       - study/slides/
-      - study/flashcards/
       - study/assessments/
       - state/content-reviews/
       - state/slide-reviews/
@@ -177,7 +176,6 @@ phases:
       - study/topics/
       - study/modules/
       - study/slides/
-      - study/flashcards/
       - study/assessments/
       - .github/ISSUE_TEMPLATE/assessment-topic-*.yml
     stop_after_phase: true
