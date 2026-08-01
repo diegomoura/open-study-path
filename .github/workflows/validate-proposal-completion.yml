@@ -3,6 +3,21 @@ name: Validate proposal completion
 on:
   pull_request:
     paths:
+      - ".open-study-path/instance.yml"
+      - "study/roadmap.md"
+      - "instructions/03-await-ci-and-merge.md"
+      - "instructions/28-propose-path.md"
+      - "instructions/phase-completion.md"
+      - "instructions/manifest.yml"
+      - "scripts/ci_completion_state.py"
+      - "scripts/test_ci_completion_state.py"
+      - "scripts/test_proposal_completion_wait.py"
+      - ".github/workflows/validate-proposal-completion.yml"
+  push:
+    branches: [main]
+    paths:
+      - ".open-study-path/instance.yml"
+      - "study/roadmap.md"
       - "instructions/03-await-ci-and-merge.md"
       - "instructions/28-propose-path.md"
       - "instructions/phase-completion.md"
@@ -15,6 +30,9 @@ on:
 concurrency:
   group: validate-proposal-completion-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
+
+permissions:
+  contents: read
 
 jobs:
   validate:
