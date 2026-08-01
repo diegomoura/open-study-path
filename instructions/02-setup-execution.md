@@ -14,118 +14,58 @@ During normal connected setup:
 - do not treat a missing CLI, blocked DNS or unavailable direct network access as a repository defect;
 - do not fall back from a working connector to a less capable transport.
 
-Local command execution is appropriate only for deterministic processing or validation of content already available in the workspace, or when the connector genuinely lacks a required operation. When a necessary fallback would require unavailable credentials or network access, stop with a precise blocker instead of probing secrets or repeatedly trying equivalent transports.
-
 ## Resolve repository state from files
 
-Repository metadata such as reported size, code-search status, an empty search result or an incomplete local checkout is not authoritative evidence that the repository is empty.
+Repository metadata such as reported size, code-search status, an empty search result or an incomplete local checkout is not authoritative evidence that the repository is empty. Read repository sentinels directly, including `.open-study-path/template.yml`, `.open-study-path/instance.yml`, `AGENTS.md`, `instructions/manifest.yml` and `.github/ISSUE_TEMPLATE/create-study-path.yml`. Do not reconstruct the repository when inherited files exist.
 
-Before creating or copying anything, read these paths directly from the target repository when available:
-
-- `.open-study-path/template.yml`;
-- `.open-study-path/instance.yml`;
-- `AGENTS.md`;
-- `instructions/manifest.yml`;
-- `.github/ISSUE_TEMPLATE/create-study-path.yml`.
-
-Classify the repository only from those sentinels:
-
-- template-derived and unconfigured: template marker exists and instance marker does not;
-- configured instance: both template and instance markers exist;
-- unsupported or incomplete: the expected sentinels cannot be read consistently.
-
-If metadata says the repository is empty but template sentinels exist, trust the files and continue from the existing template. Do not reconstruct the repository from the canonical template.
-
-## Preserve inherited infrastructure
-
-An instance keeps `.open-study-path/template.yml`. The instance marker takes precedence when determining mode; it does not replace or delete the inherited template marker.
-
-During setup, never delete, rename, recreate or modify reusable infrastructure merely to convert repository mode. Preserve:
-
-- `.github/workflows/`;
-- `AGENTS.md`;
-- `docs/`;
-- `instructions/`;
-- `intake/`;
-- `schemas/`;
-- `scripts/`;
-- `templates/`;
-- `study.config.example.yml`;
-- `.open-study-path/template.yml`.
-
-Use the templates already present in the target repository. Consult the canonical repository only to diagnose a missing or corrupted reusable asset, and do not copy a replacement without surfacing that repository defect.
+A configured instance retains `.open-study-path/template.yml`; the instance marker takes precedence without replacing inherited infrastructure.
 
 ## Verify intake repository metadata
-
-File sentinels determine repository mode, but a GitHub Issue Form is ready only when its repository metadata also exists.
 
 When `github_issue` is selected:
 
 - verify the form contains `<!-- open-study-path:intake form_id=create-study-path version=4 -->`;
-- verify repository labels `study-request` and `intake:imported` exist;
-- create only missing labels through the GitHub labels API or run the inherited **Prepare ChatGPT Project Instructions** workflow, which executes `scripts/ensure_repository_labels.py`;
-- read the labels again after provisioning;
-- do not set intake or setup status to ready while the marker or either label is absent or unverifiable.
+- require repository labels `study-request` and `intake:imported` before importing a real submission;
+- provision missing labels through the GitHub labels API when available, or through the inherited **Prepare ChatGPT Project Instructions** workflow, which runs `scripts/ensure_repository_labels.py` on the default-branch push;
+- never ask the learner to run that workflow manually;
+- never ask the learner to create, inspect or repair technical labels;
+- never ask the learner to edit an issue to add a technical marker.
 
-Label creation is repository metadata, not a file diff. It must still complete before the setup merge gate and success response.
+The checked-in form plus the inherited automatic provisioning workflow is sufficient for `intake_entrypoint_ready` during setup. A connector that cannot list or create repository labels is not, by itself, a setup blocker when all of the following are true:
+
+1. the current form marker is present;
+2. the workflow has `issues: write`;
+3. the workflow contains the step `Ensure intake labels` and invokes `scripts/ensure_repository_labels.py`;
+4. the workflow runs automatically on a push to the default branch;
+5. the label script is present and covered by `scripts/test_repository_labels.py`.
+
+In that case, record setup as ready, approve the setup review and merge normally. The merge push provisions labels automatically. Label existence remains a strict gate at intake candidate discovery and import: a real intake must not be selected or marked imported until the labels can be verified and the unique candidate is safely identified.
+
+If neither direct label operations nor a verified automatic provisioning path exists, leave setup blocked with a precise internal defect. Do not transfer the repair to the learner.
 
 ## Allowed setup diff
 
-The complete first-chat setup may change only:
-
-- `.open-study-path/instance.yml`;
-- `study.config.yml`;
-- `state/intake-summary.json`;
-- `state/progress.json`;
-- `state/integrations.json`;
-- `state/reviews/<setup-operation>.yml` for the independent setup review;
-- `study/roadmap.md`;
-- `README.md` for the learner-facing current state and next action;
-- `.gitkeep` when it is no longer needed.
-
-Configuring the existing GitHub Issue Form normally changes only `.open-study-path/instance.yml`, `study.config.yml` and the setup review artifact. Do not edit the form just to make setup appear complete.
-
-Reject and correct the proposal before review when any other path changes.
+The complete first-chat setup may change only `.open-study-path/instance.yml`, `study.config.yml`, `state/intake-summary.json`, `state/progress.json`, `state/integrations.json`, `state/reviews/<setup-operation>.yml`, `study/roadmap.md`, `README.md` and obsolete `.gitkeep` files. Preserve reusable infrastructure.
 
 ## Build and review once
 
-1. Read all required source templates and contracts before the first write.
-2. Assemble the complete allowed diff on one setup branch.
-3. Prefer one coherent proposal commit; use later commits only for focused corrections.
-4. Compare the final head against the base branch and verify the allowlist above.
-5. Confirm that no intake response, diagnostic evidence or curriculum content was anticipated.
-6. Run `instructions/04-review-generated-artifacts.md` with the `setup` profile and cover every generated setup path with current SHA-256 fingerprints.
-
-Do not open a destructive or partial proposal and rely on later review to rediscover the repository mode.
+Assemble one coherent setup proposal, compare the final head against the base, run the setup reviewer, and repair deterministic findings before responding. The setup review must approve the generated diff and must not retain blocking findings that are recoverable by the inherited workflow.
 
 ## Validation and merge gate
 
-Run the complete repository validation locally when command execution is available. Then open or update the setup pull request and inspect the required checks for the current unchanged head.
-
-A setup pull request may be merged only when all of these are true:
+A setup pull request may be merged when:
 
 - the final diff is within the setup allowlist;
-- `.open-study-path/template.yml` is still present;
-- `.open-study-path/instance.yml` identifies the exact target repository;
-- the GitHub Issue Form exists when `github_issue` is selected;
-- the current intake marker is present in that form;
-- labels `study-request` and `intake:imported` exist in the target repository;
-- an approved setup review covers the generated diff and has no blocking findings;
-- every required check for the current head completed successfully;
-- no unresolved review item or owner decision remains.
+- both repository markers remain present;
+- the instance identifies the exact repository;
+- the GitHub Issue Form and current marker exist;
+- labels already exist **or** the verified default-branch automatic provisioning path above exists;
+- an approved setup review covers the diff with no blocking findings;
+- every required check for the current unchanged pull-request head succeeds;
+- no owner decision remains.
 
-A failing, pending, cancelled, missing or unreadable required check is not success. Fix the failure or leave the pull request open and report the blocker. Never merge first and assume a later push or default-branch run will validate the setup.
+A failing, pending, cancelled, missing or unreadable required check is not success. Fix deterministic failures in the same operation. Do not claim that the instance is configured while the PR remains open or validation is red or unknown.
 
 ## Bounded check observation
 
-Do not keep the person waiting through an unbounded sequence of workflow polls in one response. Read the current unchanged head, make only a small bounded number of status checks with increasing intervals, and stop the active wait when the workflow remains queued or running. Report that validation is still in progress without declaring setup complete.
-
-Create ongoing monitoring only after explicit opt-in. A monitor must handle every terminal outcome for the same PR head:
-
-- all required checks succeeded → report success and continue the merge policy;
-- any required check failed, was cancelled, became missing or unreadable → report the blocker immediately and identify the failing check;
-- checks still queued or running → remain silent and check again later.
-
-Never create a monitor that reports only success and silently ignores a terminal failure. Do not expose repeated polling steps as if they were meaningful progress for the learner.
-
-Do not claim that the instance is configured until the merge gate is satisfied.
+Observe checks only for a bounded period. Do not expose repeated polling as progress. If checks remain queued or running, report that validation is in progress without declaring success. Any optional monitor must handle success, failure, cancellation, missing checks and continued execution for the same head.
