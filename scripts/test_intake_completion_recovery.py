@@ -10,6 +10,8 @@ import yaml
 
 from review_framework import REVIEW_PROFILES, file_sha256, validate_changed_coverage
 
+CONTRACT = "instructions/11-intake-completion-recovery.md"
+
 
 def write(path: Path, content: str) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -47,11 +49,11 @@ def review_document(root: Path) -> dict:
 
 
 def main() -> None:
-    contract = Path("instructions/10-intake.md").read_text(encoding="utf-8")
+    contract = Path(CONTRACT).read_text(encoding="utf-8")
     required_terms = [
         "next_phase_consistency",
         "same pull request",
-        "deterministic repair",
+        "deterministic authoring defects",
         "validation is still running",
         "does not continue by itself",
         "Do not offer a passive wait as completion",
@@ -59,6 +61,11 @@ def main() -> None:
     for term in required_terms:
         if term not in contract:
             raise SystemExit(f"intake completion contract is missing: {term}")
+
+    manifest = yaml.safe_load(Path("instructions/manifest.yml").read_text(encoding="utf-8"))
+    intake = next(phase for phase in manifest["phases"] if phase["id"] == "intake")
+    if intake.get("execution_contract") != CONTRACT:
+        raise SystemExit("intake phase does not reference the completion recovery contract")
 
     with tempfile.TemporaryDirectory(prefix="open-study-path-intake-recovery-") as directory:
         root = Path(directory)
