@@ -176,9 +176,10 @@ def synchronized_module_text(
     body = module_path.read_text(encoding="utf-8")
     if PRACTICE_HEADING not in body:
         raise ValueError(f"missing section: {PRACTICE_HEADING}")
-    if OTHER_FORMATS_HEADING not in body:
-        raise ValueError(f"missing section: {OTHER_FORMATS_HEADING}")
-    if body.index(PRACTICE_HEADING) > body.index(OTHER_FORMATS_HEADING):
+    if (
+        OTHER_FORMATS_HEADING in body
+        and body.index(PRACTICE_HEADING) > body.index(OTHER_FORMATS_HEADING)
+    ):
         raise ValueError(
             f"{PRACTICE_HEADING} must remain separate and appear before {OTHER_FORMATS_HEADING}"
         )
