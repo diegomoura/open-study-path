@@ -121,6 +121,13 @@ def validate_contracts() -> None:
         "intake:imported",
         "scripts/ensure_repository_labels.py",
         "Allowed setup diff",
+        "Mandatory atomic publication",
+        "Create one feature branch before writing any generated setup artifact",
+        "Publish the complete setup in one commit",
+        "Never write generated setup artifacts directly to the default branch",
+        "Open exactly one setup pull request",
+        "Intermediate branch commits are implementation details",
+        "same unchanged complete head",
         "failing, pending, cancelled, missing or unreadable required check",
         "Do not claim that the instance is configured",
     ])
@@ -148,7 +155,10 @@ def validate_contracts() -> None:
     require("instructions/00-bootstrap.md", [
         SETUP_EXECUTION,
         "sentinel files",
+        "create one feature branch",
+        "Never write setup artifacts directly to the default branch",
         "Keep `.open-study-path/template.yml`",
+        "Open exactly one pull request",
         "merge gate",
     ])
     require("instructions/05-configure-intake.md", [
@@ -239,7 +249,7 @@ def validate_instance_regression() -> None:
 def main() -> None:
     validate_contracts()
     validate_instance_regression()
-    print("Connector-first setup, deterministic intake metadata and marker preservation passed.")
+    print("Connector-first atomic setup, deterministic intake metadata and marker preservation passed.")
 
 
 if __name__ == "__main__":

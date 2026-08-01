@@ -47,9 +47,26 @@ If neither direct label operations nor a verified automatic provisioning path ex
 
 The complete first-chat setup may change only `.open-study-path/instance.yml`, `study.config.yml`, `state/intake-summary.json`, `state/progress.json`, `state/integrations.json`, `state/reviews/<setup-operation>.yml`, `study/roadmap.md`, `README.md` and obsolete `.gitkeep` files. Preserve reusable infrastructure.
 
+## Mandatory atomic publication
+
+The setup is one logical operation and must be published as one coherent repository change.
+
+- Create one feature branch before writing any generated setup artifact.
+- Assemble every setup output and the approved setup review before publishing the branch head.
+- Publish the complete setup in one commit whenever the connector supports an atomic tree or multi-file commit operation.
+- When only per-file write operations are available, keep every intermediate commit exclusively on the feature branch, finish all files before opening the pull request, and never use an intermediate head as evidence of setup completion.
+- Never write generated setup artifacts directly to the default branch.
+- Never split bootstrap and intake configuration into independent default-branch commits.
+- Open exactly one setup pull request covering the complete diff. Do not open the pull request until the branch contains all required outputs and the review artifact.
+- If an automatic repository-identity workflow creates an earlier default-branch commit before setup begins, treat that commit as inherited preparation, not as part of the generated setup operation.
+
+Intermediate branch commits are implementation details. Do not inspect, wait for or report their checks as the setup result. Required-check resolution starts only after the complete pull request head exists.
+
 ## Build and review once
 
 Assemble one coherent setup proposal, compare the final head against the base, run the setup reviewer, and repair deterministic findings before responding. The setup review must approve the generated diff and must not retain blocking findings that are recoverable by the inherited workflow.
+
+Do not repeatedly publish one file at a time and then attempt to validate each partial state. The branch head used for review, required checks, merge and the learner-facing response must be the same unchanged complete head.
 
 ## Validation and merge gate
 
@@ -65,6 +82,8 @@ A setup pull request may be merged when:
 - no owner decision remains.
 
 A failing, pending, cancelled, missing or unreadable required check is not success. Fix deterministic failures in the same operation. Do not claim that the instance is configured while the PR remains open or validation is red or unknown.
+
+After the pull request is merged, verify that the default branch points to the merged setup result. Do not require a second full validation cycle solely because the merge commit has a different SHA when the required checks already succeeded for the unchanged reviewed head and repository policy accepted the merge.
 
 ## Bounded check observation
 
