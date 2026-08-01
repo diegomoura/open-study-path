@@ -1,0 +1,23 @@
+name: Validate proposal completion
+
+on:
+  pull_request:
+    paths:
+      - "instructions/03-await-ci-and-merge.md"
+      - "instructions/28-propose-path.md"
+      - "scripts/test_proposal_completion_wait.py"
+      - ".github/workflows/validate-proposal-completion.yml"
+
+concurrency:
+  group: validate-proposal-completion-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: python scripts/test_proposal_completion_wait.py
