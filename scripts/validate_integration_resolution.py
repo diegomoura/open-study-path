@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Validate consistency from intake choices through integration publication."""
+"""Validate consistency from intake choices through active integration publication."""
 
 from __future__ import annotations
 
@@ -9,7 +9,7 @@ import sys
 
 import yaml
 
-from integration_resolution import has_materialized_flashcards, validate_documents
+from integration_resolution import validate_documents
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -73,12 +73,7 @@ def validate_instance() -> None:
     config = load_yaml(config_path)
     state = load_json(state_path)
     plan = plan_path.read_text(encoding="utf-8") if plan_path.is_file() else ""
-    result = validate_documents(
-        config,
-        state,
-        plan,
-        decks_exist=has_materialized_flashcards(ROOT),
-    )
+    result = validate_documents(config, state, plan)
     if result.errors:
         fail(list(result.errors))
 
@@ -87,7 +82,7 @@ def main() -> None:
     validate_template_contract()
     if (ROOT / ".open-study-path" / "instance.yml").is_file():
         validate_instance()
-    print("Integration selection, disposition and publication resolution passed.")
+    print("Active integration selection and publication resolution passed.")
 
 
 if __name__ == "__main__":
