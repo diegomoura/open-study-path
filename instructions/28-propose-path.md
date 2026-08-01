@@ -86,6 +86,8 @@ Open the pull request as draft while authoring and reviewing. Under `workflow.cu
 - the pull request is mergeable;
 - no explicit no-merge request or unresolved material decision exists.
 
+Run `instructions/03-await-ci-and-merge.md` after the final reviewed push. Prefer auto-merge when available; otherwise keep polling the required checks for the unchanged head with bounded backoff. Do not end the learner interaction merely because CI is still running. When checks become green, mark the PR ready, merge it and verify the default branch in the same operation.
+
 Do not ask the learner to review the whole pull request merely because it exists. A human decision is required only for a concrete ambiguity that changes scope, prerequisites, effort or the intended final outcome.
 
 ## Completion
