@@ -27,8 +27,8 @@ mappings:
   willing_to_connect: integration_preferences.willing_to_connect
   integration_constraints: integration_preferences.notes
   task_manager: integrations.task_manager.provider
-  todoist_reminders: integrations.reminders.enabled
-  email_summaries: integrations.notifications.provider
+  study_routine_mode: integration_preferences.routine.mode
+  study_routine_details: integration_preferences.routine.details
   additional_notes: preferences.notes
 
 derived_fields:
@@ -74,27 +74,37 @@ provider_rules:
       integration_preferences.experience: minimal
       integration_preferences.account_connections: no_external_accounts
 
-  todoist_reminders:
-    auto:
-      integrations.reminders.provider: auto
-      integrations.reminders.enabled: auto
-    enabled:
-      integrations.reminders.provider: todoist
-      integrations.reminders.enabled: enabled
-    disabled:
+  study_routine_mode:
+    "sem lembretes por enquanto":
+      integration_preferences.routine.mode: none
       integrations.reminders.provider: none
       integrations.reminders.enabled: disabled
-
-  email_summaries:
-    none:
-      integrations.notifications.provider: chat
-      integrations.notifications.email_enabled: false
-    gmail:
-      integrations.notifications.provider: gmail
-      integrations.notifications.email_enabled: true
-    outlook_email:
-      integrations.notifications.provider: outlook_email
-      integrations.notifications.email_enabled: true
+      integrations.calendar.provider: none
+      integrations.calendar.enabled: disabled
+    "blocos com horário fixo na agenda":
+      integration_preferences.routine.mode: fixed_calendar
+      integrations.reminders.provider: calendar
+      integrations.reminders.enabled: enabled
+      integrations.calendar.provider: google_calendar
+      integrations.calendar.enabled: enabled
+    "tarefas recorrentes com horário flexível":
+      integration_preferences.routine.mode: flexible_reminders
+      integrations.reminders.provider: todoist
+      integrations.reminders.enabled: enabled
+      integrations.calendar.provider: none
+      integrations.calendar.enabled: disabled
+    "quero descrever minha própria rotina":
+      integration_preferences.routine.mode: custom
+      integrations.reminders.provider: auto
+      integrations.reminders.enabled: auto
+      integrations.calendar.provider: auto
+      integrations.calendar.enabled: auto
+    "deixar para decidir depois":
+      integration_preferences.routine.mode: decide_later
+      integrations.reminders.provider: none
+      integrations.reminders.enabled: disabled
+      integrations.calendar.provider: none
+      integrations.calendar.enabled: disabled
 
 normalization:
   trim_strings: true
