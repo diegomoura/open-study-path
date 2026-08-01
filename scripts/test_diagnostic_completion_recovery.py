@@ -27,8 +27,14 @@ def main() -> None:
         raise SystemExit("missing diagnostic recovery safeguards: " + ", ".join(missing))
 
     completion = Path("instructions/phase-completion.md").read_text(encoding="utf-8")
-    if "A successful phase response is allowed only after" not in completion:
-        raise SystemExit("shared completion contract lost the merge boundary")
+    shared_markers = [
+        "Finish validation, review, correction, safe merge",
+        "Do not merge and do not send a successful phase response",
+        "Persisted lifecycle state",
+    ]
+    missing_shared = [term for term in shared_markers if term not in completion]
+    if missing_shared:
+        raise SystemExit("shared completion contract lost safeguards: " + ", ".join(missing_shared))
 
     print("Diagnostic completion recovery regression passed.")
 
