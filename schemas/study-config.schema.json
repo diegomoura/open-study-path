@@ -96,7 +96,7 @@
         "setup_status": {"enum": ["unconfigured", "authorization_required", "ready", "error"]},
         "form_id": {"type": ["string", "null"]},
         "form_url": {"type": ["string", "null"], "format": "uri"},
-        "form_spec_id": {"type": "string", "const": "open-study-path-intake"},
+        "form_spec_id": {"const": "open-study-path-intake"},
         "form_spec_version": {"type": "integer", "minimum": 1},
         "created_by": {"enum": [null, "chatgpt_jotform_app", "reused_existing", "instance_owner"]},
         "issue_template": {"type": ["string", "null"]},
@@ -108,12 +108,21 @@
     "integration_preferences": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["experience", "account_connections", "already_uses", "willing_to_connect", "notes"],
+      "required": ["experience", "account_connections", "already_uses", "willing_to_connect", "routine", "notes"],
       "properties": {
         "experience": {"enum": ["minimal", "guided_recommendations", "enriched"]},
         "account_connections": {"enum": ["ask_per_provider", "no_external_accounts"]},
         "already_uses": {"type": "array", "items": {"type": "string"}, "uniqueItems": true},
         "willing_to_connect": {"type": "array", "items": {"type": "string"}, "uniqueItems": true},
+        "routine": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["mode", "details"],
+          "properties": {
+            "mode": {"enum": ["none", "fixed_calendar", "flexible_reminders", "custom", "decide_later"]},
+            "details": {"type": ["string", "null"]}
+          }
+        },
         "notes": {"type": ["string", "null"]}
       }
     },
@@ -123,7 +132,6 @@
       "required": [
         "source_of_truth",
         "research",
-        "formative_practice",
         "task_manager",
         "reminders",
         "calendar",
@@ -145,11 +153,7 @@
             "authority": {
               "type": "array",
               "items": {"enum": ["curriculum", "content", "assessment", "mastery", "progress"]},
-              "allOf": [
-                {"contains": {"const": "curriculum"}},
-                {"contains": {"const": "assessment"}},
-                {"contains": {"const": "mastery"}}
-              ],
+              "contains": {"const": "curriculum"},
               "uniqueItems": true
             }
           }
@@ -165,19 +169,6 @@
             "required": {"const": false},
             "activation": {"const": "topic_relevance"},
             "fallback": {"type": "array", "minItems": 1, "items": {"type": "string"}}
-          }
-        },
-        "formative_practice": {
-          "type": "object",
-          "additionalProperties": false,
-          "required": ["provider", "preferred", "alternatives", "enabled", "required", "affects_mastery"],
-          "properties": {
-            "provider": {"enum": ["auto", "quizlet", "ace_quiz_maker", "markdown_flashcards", "none"]},
-            "preferred": {"const": "quizlet"},
-            "alternatives": {"type": "array", "items": {"enum": ["ace_quiz_maker", "markdown_flashcards"]}, "uniqueItems": true},
-            "enabled": {"enum": ["auto", "enabled", "disabled"]},
-            "required": {"const": false},
-            "affects_mastery": {"const": false}
           }
         },
         "task_manager": {
@@ -209,9 +200,9 @@
           "additionalProperties": false,
           "required": ["provider", "preferred", "alternatives", "enabled", "required"],
           "properties": {
-            "provider": {"enum": ["auto", "none", "reclaim", "google_calendar", "outlook_calendar"]},
-            "preferred": {"const": "reclaim"},
-            "alternatives": {"type": "array", "items": {"enum": ["google_calendar", "outlook_calendar", "none"]}, "uniqueItems": true},
+            "provider": {"enum": ["auto", "none", "google_calendar", "outlook_calendar"]},
+            "preferred": {"const": "google_calendar"},
+            "alternatives": {"type": "array", "items": {"enum": ["outlook_calendar", "none"]}, "uniqueItems": true},
             "enabled": {"enum": ["auto", "enabled", "disabled"]},
             "required": {"const": false}
           }
@@ -282,8 +273,8 @@
           "additionalProperties": false,
           "required": ["provider", "email_enabled", "required"],
           "properties": {
-            "provider": {"enum": ["chat", "gmail", "outlook_email", "none"]},
-            "email_enabled": {"type": "boolean"},
+            "provider": {"enum": ["chat", "none"]},
+            "email_enabled": {"const": false},
             "required": {"const": false}
           }
         }
@@ -301,29 +292,6 @@
     }
   },
   "allOf": [
-    {
-      "if": {
-        "properties": {
-          "intake": {
-            "properties": {
-              "provider": {"const": "jotform"},
-              "setup_status": {"const": "ready"}
-            },
-            "required": ["provider", "setup_status"]
-          }
-        }
-      },
-      "then": {
-        "properties": {
-          "intake": {
-            "properties": {
-              "form_id": {"type": "string", "minLength": 1},
-              "form_url": {"type": "string", "format": "uri"}
-            }
-          }
-        }
-      }
-    },
     {
       "if": {
         "properties": {
@@ -363,52 +331,19 @@
         "properties": {
           "integrations": {
             "properties": {
-              "research": {
-                "properties": {
-                  "provider": {"enum": ["auto", "web", "none"]}
-                }
-              },
-              "formative_practice": {
-                "properties": {
-                  "provider": {"enum": ["auto", "markdown_flashcards", "none"]}
-                }
-              },
-              "task_manager": {
-                "properties": {
-                  "provider": {"enum": ["auto", "github_issues", "markdown"]}
-                }
-              },
-              "reminders": {
-                "properties": {
-                  "provider": {"enum": ["auto", "none"]}
-                }
-              },
+              "research": {"properties": {"provider": {"enum": ["auto", "web", "none"]}}},
+              "task_manager": {"properties": {"provider": {"enum": ["auto", "github_issues", "markdown"]}}},
+              "reminders": {"properties": {"provider": {"enum": ["auto", "none"]}}},
               "calendar": {
                 "properties": {
                   "provider": {"enum": ["auto", "none"]},
                   "enabled": {"enum": ["auto", "disabled"]}
                 }
               },
-              "habit_tracking": {
-                "properties": {
-                  "provider": {"enum": ["auto", "none"]}
-                }
-              },
-              "visual_workspace": {
-                "properties": {
-                  "external_provider": {"enum": ["auto", "none"]}
-                }
-              },
-              "artifact_workspace": {
-                "properties": {
-                  "provider": {"enum": ["auto", "none"]}
-                }
-              },
-              "analytics_projection": {
-                "properties": {
-                  "provider": {"enum": ["auto", "none"]}
-                }
-              },
+              "habit_tracking": {"properties": {"provider": {"enum": ["auto", "none"]}}},
+              "visual_workspace": {"properties": {"external_provider": {"enum": ["auto", "none"]}}},
+              "artifact_workspace": {"properties": {"provider": {"enum": ["auto", "none"]}}},
+              "analytics_projection": {"properties": {"provider": {"enum": ["auto", "none"]}}},
               "notifications": {
                 "properties": {
                   "provider": {"enum": ["chat", "none"]},
