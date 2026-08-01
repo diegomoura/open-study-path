@@ -5,6 +5,10 @@ on:
     paths:
       - "instructions/03-await-ci-and-merge.md"
       - "instructions/28-propose-path.md"
+      - "instructions/phase-completion.md"
+      - "instructions/manifest.yml"
+      - "scripts/ci_completion_state.py"
+      - "scripts/test_ci_completion_state.py"
       - "scripts/test_proposal_completion_wait.py"
       - ".github/workflows/validate-proposal-completion.yml"
 
@@ -20,4 +24,6 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
+      - run: python -m pip install --quiet --disable-pip-version-check pyyaml
+      - run: python scripts/test_ci_completion_state.py
       - run: python scripts/test_proposal_completion_wait.py
