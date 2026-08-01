@@ -57,6 +57,7 @@ phases:
 
   - id: diagnostic
     instruction: instructions/20-diagnostic.md
+    execution_contract: instructions/21-diagnostic-completion-recovery.md
     phase_review: instructions/04-review-generated-artifacts.md
     review_profile: diagnostic
     review_outputs: [state/reviews/]
