@@ -5,6 +5,8 @@ from __future__ import annotations
 
 import re
 
+from generated_instance_contract import CANONICAL_MODULE_HEADINGS, heading_order_errors
+
 TITLE_ACRONYM = re.compile(r"\b[A-Z][A-Z0-9]{1,7}s?\b")
 EXCLUDED_TITLE_ACRONYMS = {"TOPIC"}
 BEGINNER_LEVELS = {"none", "beginner", "iniciante"}
@@ -79,13 +81,23 @@ def validate_module_pedagogy(title: str, body: str, difficulty: str) -> list[str
         if not re.search(rf"\*\*{re.escape(acronym)}(?:s)?(?:\s|—|-|:)", vocabulary):
             errors.append(f"title acronym is not defined in beginner vocabulary: {acronym}")
 
-    content_position = body.find("## Conteúdo essencial")
-    foundation_position = body.find("## Começando do zero")
-    intuition_position = body.find("## Intuição antes dos detalhes")
-    if content_position >= 0:
-        if foundation_position < 0 or foundation_position > content_position:
-            errors.append("beginner foundation must appear before technical content")
-        if intuition_position < 0 or intuition_position > content_position:
-            errors.append("beginner intuition must appear before technical content")
+    # The canonical sequence is shared with the curriculum validator. Limit the
+    # check to the beginner foundation slice so optional later sections cannot
+    # create a second, contradictory vocabulary of headings.
+    first_principles = (
+        "## Começando do zero",
+        "## Intuição antes dos detalhes",
+        "## Recupere o que já sabe",
+        "## Conteúdo essencial",
+    )
+    for error in heading_order_errors(body, first_principles):
+        if "out of canonical order" in error:
+            errors.append("beginner foundation and intuition must appear before technical content")
+            break
+
+    # Keep the import live and explicit: a template change must update the same
+    # ordered contract consumed by both validators.
+    assert "## Começando do zero" in CANONICAL_MODULE_HEADINGS
+    assert "## Conteúdo essencial" in CANONICAL_MODULE_HEADINGS
 
     return errors

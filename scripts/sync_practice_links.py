@@ -13,11 +13,17 @@ from typing import Any
 
 import yaml
 
+from generated_instance_contract import (
+    OTHER_FORMATS_HEADING,
+    PRACTICE_END_MARKER,
+    PRACTICE_HEADING,
+    PRACTICE_START_MARKER,
+)
+
 ROOT = Path(__file__).resolve().parents[1]
 TOPICS = Path("study/topics")
-START_MARKER = "<!-- open-study-path:practice-links:start -->"
-END_MARKER = "<!-- open-study-path:practice-links:end -->"
-PRACTICE_HEADING = "## Pratique e revise"
+START_MARKER = PRACTICE_START_MARKER
+END_MARKER = PRACTICE_END_MARKER
 LINK_BULLET = re.compile(r"^- \[[^\n]+\]\([^\n]+\)\s*$")
 
 
@@ -168,6 +174,16 @@ def synchronized_module_text(
     state: dict[str, Any],
 ) -> str:
     body = module_path.read_text(encoding="utf-8")
+    if PRACTICE_HEADING not in body:
+        raise ValueError(f"missing section: {PRACTICE_HEADING}")
+    if (
+        OTHER_FORMATS_HEADING in body
+        and body.index(PRACTICE_HEADING) > body.index(OTHER_FORMATS_HEADING)
+    ):
+        raise ValueError(
+            f"{PRACTICE_HEADING} must remain separate and appear before {OTHER_FORMATS_HEADING}"
+        )
+
     quizlet = current_quizlet_resource(
         state, str(metadata.get("id")), metadata.get("content_version")
     )

@@ -11,6 +11,7 @@ from typing import Any
 
 import yaml
 
+from generated_instance_contract import is_specialized_review_path
 from review_framework import REVIEW_PROFILES, changed_files, validate_changed_coverage
 from review_framework_guard import instance_transition_errors, review_path_errors, review_phases
 
@@ -75,7 +76,7 @@ def load_instance_from_base(base_sha: str | None) -> Any:
 
 
 def validate_reusable_contract() -> None:
-    for path in [REVIEW_INSTRUCTION, REVIEW_DOC, REVIEW_TEMPLATE]:
+    for path in [REVIEW_INSTRUCTION, REVIEW_DOC, REVIEW_TEMPLATE, "scripts/generated_instance_contract.py"]:
         read(path)
 
     instance_template = load_yaml("templates/instance.yml")
@@ -184,9 +185,13 @@ def validate_instance_diff() -> None:
             print(f"REVIEW ERROR: {error}", file=sys.stderr)
         raise SystemExit(1)
 
+    # Content and slide reviews are already validated by their specialized
+    # contracts. Requiring a generic phase review to approve those review files
+    # creates a circular, impossible coverage requirement.
+    coverage_paths = tuple(path for path in paths if not is_specialized_review_path(path))
     result = validate_changed_coverage(
         ROOT,
-        paths,
+        coverage_paths,
         instance_mode=True,
         base_sha=base_sha,
     )
