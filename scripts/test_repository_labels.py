@@ -1,9 +1,13 @@
 #!/usr/bin/env python3
-"""Regression tests for intake-label provisioning."""
+"""Regression tests for intake-label provisioning and setup fallback behavior."""
 
 from __future__ import annotations
 
+from pathlib import Path
+
 from ensure_repository_labels import ApiError, REQUIRED_LABELS, ensure_repository_labels
+
+ROOT = Path(__file__).resolve().parents[1]
 
 
 class FakeApi:
@@ -27,6 +31,33 @@ class FakeApi:
             self.created.append(name)
             return payload
         raise AssertionError(f"unexpected method: {method}")
+
+
+def assert_setup_contract() -> None:
+    contract = (ROOT / "instructions/02-setup-execution.md").read_text(encoding="utf-8")
+    workflow = (ROOT / ".github/workflows/render-project-instructions.yml").read_text(encoding="utf-8")
+
+    required_contract_terms = [
+        "never ask the learner to run that workflow manually",
+        "is not, by itself, a setup blocker",
+        "sufficient for `intake_entrypoint_ready` during setup",
+        "The merge push provisions labels automatically",
+        "Label existence remains a strict gate at intake candidate discovery and import",
+        "Do not transfer the repair to the learner",
+    ]
+    for term in required_contract_terms:
+        if term not in contract:
+            raise SystemExit(f"setup contract lost automatic label-provisioning rule: {term}")
+
+    for term in [
+        "on:\n  push:",
+        "issues: write",
+        "Ensure intake labels",
+        "scripts/ensure_repository_labels.py",
+        "github.ref == format('refs/heads/{0}', github.event.repository.default_branch)",
+    ]:
+        if term not in workflow:
+            raise SystemExit(f"automatic provisioning workflow is incomplete: {term}")
 
 
 def main() -> None:
@@ -60,6 +91,7 @@ def main() -> None:
     else:
         raise SystemExit("non-404 API failure was swallowed")
 
+    assert_setup_contract()
     print("Repository label provisioning regressions passed.")
 
 
