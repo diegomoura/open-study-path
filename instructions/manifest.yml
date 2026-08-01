@@ -102,6 +102,7 @@ phases:
     instruction: instructions/30-generate-path.md
     proposal_instruction: instructions/28-propose-path.md
     execution_contract: instructions/32-generation-execution.md
+    finalization_contract: instructions/38-finalize-generated-bundle.md
     internal_review: instructions/35-review-curriculum.md
     internal_content_review: instructions/36-review-course-content.md
     internal_slide_review: instructions/37-review-study-slides.md
@@ -153,6 +154,7 @@ phases:
   - id: evaluate
     instruction: instructions/55-evaluate-topic.md
     internal_materialization: instructions/57-materialize-next-content.md
+    internal_bundle_finalization: instructions/38-finalize-generated-bundle.md
     internal_task_projection: instructions/41-task-backend-projection.md
     internal_content_review: instructions/36-review-course-content.md
     internal_slide_review: instructions/37-review-study-slides.md
