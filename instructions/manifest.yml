@@ -40,6 +40,7 @@ phases:
 
   - id: intake
     instruction: instructions/10-intake.md
+    execution_contract: instructions/11-intake-completion-recovery.md
     phase_review: instructions/04-review-generated-artifacts.md
     review_profile: intake
     review_outputs: [state/reviews/]
