@@ -17,8 +17,6 @@ module: study/modules/TOPIC-000.md
 slides: study/slides/TOPIC-000/index.html
 slides_pdf: study/slides/TOPIC-000/slides.pdf
 slides_review: state/slide-reviews/TOPIC-000.yml
-flashcards: null
-flashcards_study: null
 assessment: study/assessments/TOPIC-000.yml
 assessment_form: .github/ISSUE_TEMPLATE/assessment-topic-000.yml
 ---
@@ -61,13 +59,9 @@ Não mostre `materialized`, `planned`, “janela ativa” ou outros termos inter
 
 ## Prática
 
-Registre os recursos reais associados à etapa para que o agente possa gerar a projeção correta. O contrato pode apontar para o deck Markdown, TSV e conjunto externo atual, mas a ferramenta de tarefas deve mostrar somente um recurso principal de prática conforme `instructions/40-publish-tasks.md`.
+Defina prática guiada, prática independente e perguntas de recuperação ativa dentro da aula. A prática deve exigir explicação, aplicação, contraste, decisão ou produção; não crie decks, arquivos de importação ou uma integração externa apenas para repetir definições.
 
-Use linguagem equivalente a:
-
-> Os flashcards ajudam você a lembrar conceitos e identificar erros comuns. A avaliação ao final mostra se você consegue aplicar o conteúdo.
-
-Linke somente recursos reais, específicos da etapa e aprovados no plano de integrações.
+A ferramenta de tarefas mostra um único link de prática quando houver um exercício ou laboratório separado realmente útil. Caso contrário, o link **Aula** leva diretamente às atividades completas.
 
 ## O que você vai produzir
 
