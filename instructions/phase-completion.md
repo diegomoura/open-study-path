@@ -16,7 +16,7 @@ Do not send a transition message immediately before repository work. Complete th
 
 Resolve the current phase, suboperation and merge policy from `instructions/manifest.yml` and `.open-study-path/instance.yml`.
 
-When the resolved policy is listed under `automatic_completion.automatic_merge_policies`, run `instructions/03-await-ci-and-merge.md` and `scripts/ci_completion_state.py`.
+When the resolved policy is listed under `automatic_completion.automatic_merge_policies`, run `instructions/03-await-ci-and-merge.md` and `scripts/ci_completion_state.py`. This requirement applies to every lifecycle phase and suboperation.
 
 The automatic completion sequence must:
 
@@ -44,7 +44,7 @@ Do not append a provider inventory. Inactive, deferred, fallback-only, reserved 
 
 ## Resolve the next action from persisted state
 
-Before composing the final response, read `.open-study-path/instance.yml` and `state/integrations.json` and apply `scripts/lifecycle_next_action.py`.
+Persisted lifecycle state, not a previous conversational suggestion, determines the next operation. Before composing the final response, read `.open-study-path/instance.yml` and `state/integrations.json` and apply `scripts/lifecycle_next_action.py`.
 
 An agent-authored phrase such as `sem publicar tarefas ainda` deliberately defers publication for one operation; it is not a learner decision to skip publication permanently. The agent owns that deferral and must surface the deferred publication as the next action after detailed curriculum generation.
 
