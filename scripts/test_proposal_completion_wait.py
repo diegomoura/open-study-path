@@ -48,7 +48,7 @@ def main() -> None:
     ready_position = contract.index("Mark the pull request ready")
     auto_merge_position = contract.index("enable auto-merge only after")
     assert ready_position < auto_merge_position
-    assert "expected_head_sha as the atomic precondition" in contract
+    assert "`expected_head_sha` as the atomic precondition" in contract
     assert "Do not commit timing metrics" in contract
     assert "operation-specific checks" in contract
 
