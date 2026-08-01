@@ -71,14 +71,6 @@ integrations:
       - official_documentation
       - web_research
 
-  formative_practice:
-    provider: none
-    preferred: none
-    alternatives: []
-    enabled: disabled
-    required: false
-    affects_mastery: false
-
   task_manager:
     provider: auto
     preferred: trello
