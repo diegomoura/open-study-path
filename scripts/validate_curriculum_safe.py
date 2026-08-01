@@ -14,6 +14,12 @@ from typing import Any
 import yaml
 
 import validate_curriculum as validator
+from generated_instance_contract import (
+    CANONICAL_LOCATOR,
+    CANONICAL_MODULE_HEADINGS,
+    assessment_form_text,
+    heading_order_errors,
+)
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -50,25 +56,7 @@ TOPIC_HEADINGS = [
     "## Fontes principais",
 ]
 
-MODULE_HEADINGS = [
-    "## Antes de começar",
-    "## Sua sessão de estudo",
-    "## O que você vai aprender",
-    "## Recupere o que já sabe",
-    "## Conteúdo essencial",
-    "## Mapa visual",
-    "## Exemplos trabalhados",
-    "## Erros comuns e como corrigir",
-    "## Prática guiada",
-    "## Prática independente",
-    "## Pratique e revise",
-    "## Outras formas de aprender",
-    "## Confira sem consultar",
-    "## O que você vai produzir",
-    "## Avaliação",
-    "## Como este conteúdo foi construído",
-    "## Fontes e caminhos para aprofundar",
-]
+MODULE_HEADINGS = list(CANONICAL_MODULE_HEADINGS)
 
 
 def contains_template_placeholder(body: str) -> bool:
@@ -136,9 +124,10 @@ def check_module(topic_id: str, path: Path, config: dict[str, Any]) -> None:
     if minutes > config["granularity"]["split_topic_above_minutes"]:
         validator.fail(f"module {topic_id} exceeds split threshold: {minutes} minutes")
 
-    for heading in MODULE_HEADINGS:
-        if heading not in body:
-            validator.fail(f"module {topic_id} is missing heading: {heading}")
+    structure_errors = heading_order_errors(body)
+    if structure_errors:
+        validator.fail(f"module {topic_id} {structure_errors[0]}")
+
     words = re.findall(r"\b\w+\b", body, flags=re.UNICODE)
     if len(words) < 500:
         validator.fail(f"module {topic_id} is too short to be complete: {len(words)} words")
@@ -182,15 +171,17 @@ def check_issue_form(topic_id: str, path: Path) -> None:
     for question_id in ["q1", "q2", "q3", "q4", "q5", "confirmation"]:
         if question_id not in ids:
             validator.fail(f"assessment Issue Form {topic_id} is missing {question_id}")
-    serialized = path.read_text(encoding="utf-8")
-    if f"open-study-path:assessment topic_id={topic_id}" not in serialized:
+
+    semantic_body = assessment_form_text(form)
+    if f"open-study-path:assessment topic_id={topic_id}" not in semantic_body:
         validator.fail(f"assessment Issue Form {topic_id} is missing deterministic topic marker")
-    if isinstance(title, str) and f"Terminei {title}. Avalie minhas respostas." not in serialized:
+    if isinstance(title, str) and f"Terminei {title}. Avalie minhas respostas." not in semantic_body:
         validator.fail(f"assessment Issue Form {topic_id} is missing the natural return command")
 
 
 def main() -> None:
     validator.PLACEHOLDER_CONTENT = StructuralPlaceholderPattern()
+    validator.CANONICAL_LOCATOR = CANONICAL_LOCATOR
     validator.TOPIC_HEADINGS = TOPIC_HEADINGS
     validator.MODULE_HEADINGS = MODULE_HEADINGS
     validator.required_resource_lines = required_resource_lines
