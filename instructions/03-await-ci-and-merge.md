@@ -1,37 +1,85 @@
 # Await CI and finish the operation
 
-Use this internal contract whenever the current operation is configured to merge automatically after review.
+Use this internal contract whenever the resolved merge policy is `auto_when_unambiguous` or `agent_review_then_merge`. Execute the state transitions defined by `scripts/ci_completion_state.py`; do not improvise another order.
 
-## Preferred completion path
+## Resolve the completion contract
 
-1. Keep one unchanged pull-request head after the final deterministic repair.
-2. Enable auto-merge when the repository supports it and no learner decision is pending.
-3. When auto-merge is unavailable, poll the required checks for that exact head until they reach a terminal state.
-4. Mark the pull request ready and merge immediately after every required check succeeds.
-5. Read the default branch after merge before presenting the next command.
+Read `instructions/manifest.yml` and resolve:
 
-A draft pull request is only a temporary authoring area. Pending CI is not a learner-facing terminal state.
+1. the current phase and suboperation;
+2. the operation check sets declared for it;
+3. the exact workflow names in those check sets;
+4. the repository-required status checks from branch protection, when that API is available;
+5. the union of repository-required checks and operation-required checks.
+
+The manifest is authoritative for operation-specific checks. Branch protection adds requirements but never removes manifest requirements. Do not infer required checks merely from whichever workflows happened to start. A missing expected check is a blocker.
+
+## Required transition order
+
+After the final review and deterministic repair:
+
+1. Push one final head and capture it as `expected_head_sha`.
+2. Confirm there is no explicit no-merge request and no unresolved material decision.
+3. Mark the pull request ready for review. A draft pull request cannot be merged or configured for auto-merge.
+4. Detect whether the repository supports auto-merge.
+5. If supported, enable auto-merge only after the ready transition succeeds.
+6. Observe every required check for exactly `expected_head_sha`.
+7. If the head changes at any point, discard all prior observations and restart from step 1 with the new head.
+8. When every required check succeeds, merge using `expected_head_sha` as the atomic precondition. Even when auto-merge was enabled, re-read the pull request; if it has not merged yet and the connector permits an atomic manual merge, merge the exact validated head.
+9. Read the default branch and verify the persisted lifecycle state and expected artifacts before presenting the next command.
+
+Never merge without an expected-head precondition. If the merge is rejected because the head moved, restart validation instead of retrying blindly.
+
+## Executable state machine
+
+Build a fresh `CompletionContext` and apply `decide_next_action` from `scripts/ci_completion_state.py` after every GitHub read or mutation. Execute exactly one returned action, then rebuild the context from fresh data.
+
+The state machine can return:
+
+- `mark_ready`;
+- `enable_auto_merge`;
+- `wait`;
+- `retry_transient`;
+- `repair_deterministic_failure`;
+- `merge_expected_head`;
+- `verify_default_branch`;
+- `complete`;
+- an explicit blocking state.
+
+A successful `merge_expected_head` action must pass its returned `expected_head_sha` to the GitHub merge operation. `complete` is valid only after the default branch contains the expected persisted state, not merely because the pull request is closed.
 
 ## Bounded polling
 
-Do not use one long fixed sleep. Poll with bounded backoff, for example 10, 15, 20, 30 and then 45 seconds. Re-read the head SHA before every status check. If the head changed, restart the observation window for the new head.
+Do not use one long fixed sleep. Poll with bounded backoff: 10, 15, 20, 30 and then 45 seconds. Re-read the pull-request head before every status query.
 
-Use recent completed runs of the same required workflows to estimate the wait budget when timestamps are available. Prefer the median of the last 5 successful runs and allow at least twice that value, with these safe bounds:
+When workflow timestamps are available, calculate the observation budget in memory with `estimate_wait_budget_seconds`:
 
-- minimum observation budget: 3 minutes;
-- normal maximum observation budget: 15 minutes;
-- never wait indefinitely.
+- use at most the 5 most recent successful durations for the same required workflows;
+- use the larger of twice the median or 1.25 times p90;
+- minimum budget: 3 minutes;
+- maximum budget: 15 minutes;
+- default without samples: 10 minutes.
 
-Store only aggregate operational timing when a state artifact already exists for the operation: workflow name, sample count, median seconds, p90 seconds and observation timestamp. Do not store logs, tokens, runner identifiers or learner data. Timing history is advisory and must never override current check status.
+Do not commit timing metrics, update a state artifact or push another head merely to record wait estimates. Timing data is advisory, ephemeral and must never override current GitHub status. Do not store logs, tokens, runner identifiers or learner data.
 
-## Terminal outcomes
+## Check interpretation
 
-- `success`: mark ready, merge and verify the default branch.
-- `failure`: inspect the failing step; repair deterministic findings on the same branch and restart polling for the new head.
-- `cancelled` or `timed_out`: retry once when clearly transient; otherwise report an infrastructure blocker truthfully.
-- missing required check: treat as blocked, not successful.
-- observation budget exhausted while checks still run: do not claim that work will continue after the response. Prefer auto-merge if it was successfully enabled. Otherwise report that the operation remains incomplete and provide the exact PR only when the owner must intervene.
+Only observations attached to `expected_head_sha` count.
+
+- `success`: continue toward atomic merge.
+- `failure`: inspect the failing step; repair a deterministic finding on the same branch, create a new head and restart the full observation window.
+- `cancelled` or `timed_out`: retry once when clearly transient. A second transient failure is an infrastructure blocker.
+- `queued` or `in_progress`: wait within the bounded budget.
+- missing required check: block; never treat absence as success.
+- `skipped`, `neutral`, `action_required` or any unknown non-success conclusion: block unless the operation contract explicitly declares it acceptable.
+- merge conflict: block and report the concrete repository problem.
+
+A run cancelled by `concurrency` because a newer head exists must not satisfy the older head. Restart observation for the current head.
+
+## Budget exhaustion
+
+When the observation budget is exhausted, do not claim that work will continue invisibly. If auto-merge was successfully enabled, state only that the operation is still incomplete and do not provide the next lifecycle command. If auto-merge is unavailable, report the infrastructure blocker and exact PR only when owner intervention is genuinely required.
 
 ## Learner-facing rule
 
-Never end with language such as `a validação ainda está em execução` when the operation is expected to merge automatically and the agent can still observe the checks. Complete the wait-and-merge loop first. Do not provide the next lifecycle command until the merged state is confirmed on the default branch.
+Pending CI is not a successful learner-facing terminal state. Never end with language such as `a validação ainda está em execução` while the agent can continue observing. Do not provide the next lifecycle command until `complete` is reached and the merged state is confirmed on the default branch.

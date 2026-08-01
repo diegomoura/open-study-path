@@ -14,6 +14,24 @@ Verify every required check for the current unchanged pull-request head. If any 
 
 Do not send a transition message immediately before repository work. Complete the operation and send one final response.
 
+## Automatic completion for every phase
+
+Resolve the current phase, suboperation and merge policy from `instructions/manifest.yml` and `.open-study-path/instance.yml`.
+
+When the resolved policy is listed under `automatic_completion.automatic_merge_policies`, run `instructions/03-await-ci-and-merge.md` and `scripts/ci_completion_state.py`. This requirement applies to every lifecycle phase and suboperation, not only curriculum proposals.
+
+Resolve required checks from the operation's `completion_check_sets` plus repository branch-protection requirements when available. The manifest check sets remain authoritative when branch-protection details cannot be read.
+
+The automatic completion sequence must:
+
+1. capture the final reviewed head as `expected_head_sha`;
+2. mark the pull request ready before attempting auto-merge;
+3. observe only required checks attached to that exact head;
+4. merge with `expected_head_sha` as an atomic precondition;
+5. verify the persisted lifecycle state on the default branch.
+
+A changed head invalidates every earlier observation. A closed pull request alone does not prove phase completion. Do not release the next lifecycle command until the state machine returns `complete`.
+
 ## Learner-facing response
 
 A successful response should answer, in this order:

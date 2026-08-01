@@ -3,6 +3,8 @@ name: Validate diagnostic completion
 on:
   pull_request:
     paths:
+      - ".open-study-path/instance.yml"
+      - "state/diagnostic-summary.json"
       - "instructions/20-diagnostic.md"
       - "instructions/21-diagnostic-completion-recovery.md"
       - "instructions/manifest.yml"
@@ -12,6 +14,8 @@ on:
   push:
     branches: [main]
     paths:
+      - ".open-study-path/instance.yml"
+      - "state/diagnostic-summary.json"
       - "instructions/20-diagnostic.md"
       - "instructions/21-diagnostic-completion-recovery.md"
       - "instructions/manifest.yml"

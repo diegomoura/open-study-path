@@ -78,7 +78,7 @@ Never end an approved proposal with `curriculum_approved: false`.
 
 ## Pull request and merge
 
-Open the pull request as draft while authoring and reviewing. Under `workflow.curriculum_merge_policy: agent_review_then_merge`, mark it ready and merge after:
+Open the pull request as draft while authoring and reviewing. Under `workflow.curriculum_merge_policy: agent_review_then_merge`, complete the operation only when:
 
 - the proposal review is approved;
 - every changed generated artifact is covered by current fingerprints;
@@ -86,7 +86,16 @@ Open the pull request as draft while authoring and reviewing. Under `workflow.cu
 - the pull request is mergeable;
 - no explicit no-merge request or unresolved material decision exists.
 
-Run `instructions/03-await-ci-and-merge.md` after the final reviewed push. Prefer auto-merge when available; otherwise keep polling the required checks for the unchanged head with bounded backoff. Do not end the learner interaction merely because CI is still running. When checks become green, mark the PR ready, merge it and verify the default branch in the same operation.
+After the final reviewed push, run `instructions/03-await-ci-and-merge.md` and follow `scripts/ci_completion_state.py` exactly:
+
+1. capture the final head;
+2. mark the pull request ready;
+3. enable auto-merge when supported;
+4. observe the required checks for that exact head;
+5. merge with the validated head as the atomic precondition;
+6. verify the persisted proposal state on the default branch.
+
+Do not end the learner interaction merely because CI is still running. Do not provide the next command before the state machine reaches `complete`.
 
 Do not ask the learner to review the whole pull request merely because it exists. A human decision is required only for a concrete ambiguity that changes scope, prerequisites, effort or the intended final outcome.
 

@@ -3,6 +3,9 @@ name: Validate intake completion
 on:
   pull_request:
     paths:
+      - ".open-study-path/instance.yml"
+      - "study.config.yml"
+      - "state/intake-summary.json"
       - "instructions/10-intake.md"
       - "instructions/11-intake-completion-recovery.md"
       - "instructions/manifest.yml"
@@ -13,6 +16,9 @@ on:
     branches:
       - main
     paths:
+      - ".open-study-path/instance.yml"
+      - "study.config.yml"
+      - "state/intake-summary.json"
       - "instructions/10-intake.md"
       - "instructions/11-intake-completion-recovery.md"
       - "instructions/manifest.yml"
