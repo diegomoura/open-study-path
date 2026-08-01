@@ -1,61 +1,80 @@
 #!/usr/bin/env python3
-"""Behavioral regressions for selected integration resolution."""
+"""Behavioral regressions for active integration resolution."""
 
 from __future__ import annotations
 
 from integration_resolution import validate_documents
 
 
-PLAN = """
-# Ferramentas
+FIXED_PLAN = """
+# Ferramentas que podem ajudar nesta trilha
 
-### Quizlet
-- provider: quizlet
-- decision: recommended
-- preflight: optional_probe
-- return command: `Conectei o Quizlet. Crie meus flashcards.`
+- routine mode: fixed_calendar
 
-### Gmail
-- provider: gmail
+### Trello
+- provider: trello
 - decision: selected
-- preflight: optional_probe
+- preflight: required_for_selected_publication
 
-## Ferramentas que não foram escolhidas
+### Google Calendar
+- provider: google_calendar
+- decision: selected
+- preflight: optional_current_action
+"""
 
-Habitify não entra agora.
+FLEXIBLE_PLAN = """
+# Ferramentas que podem ajudar nesta trilha
+
+- routine mode: flexible_reminders
+
+### Trello
+- provider: trello
+- decision: selected
+- preflight: required_for_selected_publication
+
+### Todoist
+- provider: todoist
+- decision: selected
+- preflight: optional_current_action
 """
 
 NO_EXTERNAL_PLAN = """
-# Ferramentas
+# Ferramentas que podem ajudar nesta trilha
 
 - account_connections: no_external_accounts
+- routine mode: none
 
 ### GitHub Issues
 - provider: github_issues
 - decision: selected
 - preflight: required_for_selected_publication
 - connection-offer eligibility: not_enabled
-
-## Ferramentas que não foram escolhidas
-
-Aplicativos que exigem outras contas não serão sugeridos.
 """
 
 
-def config() -> dict:
+def config(mode: str = "fixed_calendar") -> dict:
+    fixed = mode == "fixed_calendar"
+    flexible = mode == "flexible_reminders"
     return {
         "integration_preferences": {
             "experience": "guided_recommendations",
             "account_connections": "ask_per_provider",
-            "already_uses": ["quizlet"],
-            "willing_to_connect": ["flashcards"],
+            "already_uses": [],
+            "willing_to_connect": [],
+            "routine": {"mode": mode, "details": "segunda às 19h, 45 minutos, America/Sao_Paulo"},
             "notes": None,
         },
         "integrations": {
             "task_manager": {"provider": "trello"},
-            "formative_practice": {"provider": "auto", "preferred": "quizlet"},
-            "calendar": {"provider": "google_calendar", "enabled": "enabled"},
-            "notifications": {"provider": "gmail", "email_enabled": True},
+            "reminders": {
+                "provider": "todoist" if flexible else "calendar" if fixed else "none",
+                "enabled": "enabled" if fixed or flexible else "disabled",
+            },
+            "calendar": {
+                "provider": "google_calendar" if fixed else "none",
+                "enabled": "enabled" if fixed else "disabled",
+            },
+            "notifications": {"provider": "chat", "email_enabled": False},
         },
     }
 
@@ -67,12 +86,13 @@ def untouched_config(task_provider: str = "auto") -> dict:
             "account_connections": "ask_per_provider",
             "already_uses": [],
             "willing_to_connect": [],
+            "routine": {"mode": "decide_later", "details": None},
             "notes": None,
         },
         "integrations": {
             "task_manager": {"provider": task_provider},
-            "formative_practice": {"provider": "auto", "preferred": "quizlet"},
-            "calendar": {"provider": "auto", "enabled": "auto"},
+            "reminders": {"provider": "none", "enabled": "disabled"},
+            "calendar": {"provider": "none", "enabled": "disabled"},
             "notifications": {"provider": "chat", "email_enabled": False},
         },
     }
@@ -96,25 +116,7 @@ def untouched_state() -> dict:
     }
 
 
-def no_external_config() -> dict:
-    return {
-        "integration_preferences": {
-            "experience": "minimal",
-            "account_connections": "no_external_accounts",
-            "already_uses": ["quizlet", "trello"],
-            "willing_to_connect": ["flashcards"],
-            "notes": None,
-        },
-        "integrations": {
-            "task_manager": {"provider": "github_issues"},
-            "formative_practice": {"provider": "auto", "preferred": "quizlet"},
-            "calendar": {"provider": "auto", "enabled": "auto"},
-            "notifications": {"provider": "chat", "email_enabled": False},
-        },
-    }
-
-
-def resolved_state() -> dict:
+def resolved_fixed_state() -> dict:
     return {
         "selected_capabilities": {
             "task_manager": {
@@ -122,38 +124,47 @@ def resolved_state() -> dict:
                 "status": "success",
                 "resolution_status": "resolved",
             },
-            "formative_practice": {
-                "provider": "markdown_flashcards",
-                "preferred_provider": "quizlet",
-                "status": "fallback_active",
-                "resolution_status": "resolved",
-                "connection_offer_status": "shown",
-            },
             "scheduling": {
                 "provider": "google_calendar",
-                "status": "not_activated",
-                "reason": "no_days_or_times_selected",
-                "learner_notice_status": "shown",
-                "resolution_status": "resolved",
-            },
-            "notifications": {
-                "provider": "gmail",
-                "status": "configured",
-                "delivery_policy": "on_request",
+                "status": "success",
                 "resolution_status": "resolved",
             },
         },
         "resolution": {
             "status": "resolved",
             "unresolved_capabilities": [],
-            "validated_at": "2026-07-29T23:00:00Z",
+            "validated_at": "2026-08-01T23:00:00Z",
         },
-        "resources": [{"provider": "trello"}],
+        "resources": [{"provider": "trello"}, {"provider": "google_calendar"}],
         "sync": {
             "status": "success",
-            "last_success_at": "2026-07-29T23:00:00Z",
+            "last_success_at": "2026-08-01T23:00:00Z",
         },
     }
+
+
+def resolved_flexible_state() -> dict:
+    state = resolved_fixed_state()
+    del state["selected_capabilities"]["scheduling"]
+    state["selected_capabilities"]["reminders"] = {
+        "provider": "todoist",
+        "status": "success",
+        "resolution_status": "resolved",
+    }
+    state["resources"] = [{"provider": "trello"}, {"provider": "todoist"}]
+    return state
+
+
+def no_external_config() -> dict:
+    selected = untouched_config("github_issues")
+    selected["integration_preferences"].update(
+        {
+            "experience": "minimal",
+            "account_connections": "no_external_accounts",
+            "routine": {"mode": "none", "details": None},
+        }
+    )
+    return selected
 
 
 def no_external_state() -> dict:
@@ -168,98 +179,113 @@ def no_external_state() -> dict:
         "resolution": {
             "status": "resolved",
             "unresolved_capabilities": [],
-            "validated_at": "2026-07-30T18:00:00Z",
+            "validated_at": "2026-08-01T23:00:00Z",
         },
-        "sync": {
-            "status": "success",
-            "last_success_at": "2026-07-30T18:00:00Z",
-        },
+        "sync": {"status": "success", "last_success_at": "2026-08-01T23:00:00Z"},
     }
 
 
-def assert_error(state: dict, fragment: str, plan: str = PLAN, selected_config: dict | None = None) -> None:
-    result = validate_documents(selected_config or config(), state, plan, decks_exist=True)
+def assert_error(state: dict, fragment: str, plan: str, selected_config: dict) -> None:
+    result = validate_documents(selected_config, state, plan)
     if not any(fragment in error for error in result.errors):
         raise AssertionError(f"missing error containing {fragment!r}: {result.errors}")
 
 
 def test_fresh_setup_may_remain_not_started() -> None:
-    result = validate_documents(untouched_config(), untouched_state(), "", decks_exist=False)
+    result = validate_documents(untouched_config(), untouched_state(), "")
     assert not result.errors, result.errors
     assert result.expected == ()
-    assert result.unresolved == ()
 
 
-def test_explicit_choice_may_wait_for_publication() -> None:
-    result = validate_documents(untouched_config("trello"), untouched_state(), "", decks_exist=False)
+def test_explicit_task_choice_may_wait_for_publication() -> None:
+    result = validate_documents(untouched_config("trello"), untouched_state(), "")
     assert not result.errors, result.errors
     assert result.expected == ("task_manager",)
-    assert result.unresolved == ()
 
 
 def test_not_started_is_rejected_after_publication_begins() -> None:
     state = untouched_state()
     state["sync"]["status"] = "in_progress"
-    state["sync"]["last_attempt_at"] = "2026-07-30T22:00:00Z"
-    result = validate_documents(untouched_config(), state, "", decks_exist=False)
-    if not any("cannot remain not_started" in error for error in result.errors):
-        raise AssertionError(result.errors)
+    state["sync"]["last_attempt_at"] = "2026-08-01T22:00:00Z"
+    result = validate_documents(untouched_config(), state, "")
+    assert any("cannot remain not_started" in error for error in result.errors), result.errors
 
 
-def test_fully_resolved_state_passes() -> None:
-    result = validate_documents(config(), resolved_state(), PLAN, decks_exist=True)
+def test_fixed_calendar_state_passes() -> None:
+    result = validate_documents(config("fixed_calendar"), resolved_fixed_state(), FIXED_PLAN)
     assert not result.errors, result.errors
-    assert result.unresolved == ()
+    assert result.expected == ("scheduling", "task_manager")
 
 
-def test_quizlet_cannot_be_silently_deferred() -> None:
-    state = resolved_state()
-    state["selected_capabilities"]["formative_practice"]["connection_offer_status"] = "deferred_until_explicit_request"
-    assert_error(state, "invalid connection_offer_status")
+def test_flexible_reminder_state_passes() -> None:
+    result = validate_documents(config("flexible_reminders"), resolved_flexible_state(), FLEXIBLE_PLAN)
+    assert not result.errors, result.errors
+    assert result.expected == ("reminders", "task_manager")
 
 
-def test_email_choice_cannot_disappear() -> None:
-    state = resolved_state()
-    del state["selected_capabilities"]["notifications"]
-    state["resolution"] = {
-        "status": "resolved",
-        "unresolved_capabilities": [],
-        "validated_at": "2026-07-29T23:00:00Z",
-    }
-    assert_error(state, "selected capability disappeared from publication state: notifications")
+def test_missing_routine_resource_blocks_success() -> None:
+    state = resolved_fixed_state()
+    del state["selected_capabilities"]["scheduling"]
+    assert_error(
+        state,
+        "selected capability disappeared from publication state: scheduling",
+        FIXED_PLAN,
+        config("fixed_calendar"),
+    )
 
 
-def test_email_without_cadence_blocks_success() -> None:
-    state = resolved_state()
-    notification = state["selected_capabilities"]["notifications"]
-    notification["status"] = "pending_configuration"
-    notification["resolution_status"] = "action_required"
-    notification.pop("delivery_policy")
-    state["resolution"] = {
-        "status": "action_required",
-        "unresolved_capabilities": ["notifications"],
-        "validated_at": "2026-07-29T23:00:00Z",
-    }
-    assert_error(state, "sync.status cannot be success")
-
-
-def test_plan_cannot_list_selected_gmail_as_unchosen() -> None:
-    broken_plan = PLAN.replace("Habitify não entra agora.", "Gmail não entra agora.")
-    assert_error(resolved_state(), "selected email provider is incorrectly listed as not chosen", broken_plan)
-
-
-def test_top_level_resolution_must_match_capabilities() -> None:
-    state = resolved_state()
-    state["selected_capabilities"]["notifications"] = {
-        "provider": "gmail",
+def test_pending_routine_details_block_success() -> None:
+    state = resolved_fixed_state()
+    state["selected_capabilities"]["scheduling"] = {
+        "provider": "google_calendar",
         "status": "pending_configuration",
         "resolution_status": "action_required",
     }
-    assert_error(state, "resolution.status must be action_required")
+    state["resolution"] = {
+        "status": "action_required",
+        "unresolved_capabilities": ["scheduling"],
+        "validated_at": "2026-08-01T23:00:00Z",
+    }
+    assert_error(state, "sync.status cannot be success", FIXED_PLAN, config("fixed_calendar"))
+
+
+def test_removed_flashcard_state_is_rejected() -> None:
+    state = resolved_fixed_state()
+    state["selected_capabilities"]["formative_practice"] = {
+        "provider": "quizlet",
+        "status": "success",
+        "resolution_status": "resolved",
+    }
+    assert_error(
+        state,
+        "removed or on-request capability must not be selected",
+        FIXED_PLAN,
+        config("fixed_calendar"),
+    )
+
+
+def test_email_is_not_selected_during_publication() -> None:
+    state = resolved_fixed_state()
+    state["selected_capabilities"]["notifications"] = {
+        "provider": "gmail",
+        "status": "configured",
+        "resolution_status": "resolved",
+    }
+    assert_error(
+        state,
+        "removed or on-request capability must not be selected",
+        FIXED_PLAN,
+        config("fixed_calendar"),
+    )
+
+
+def test_no_routine_mode_activates_no_scheduler() -> None:
+    result = validate_documents(untouched_config("trello"), resolved_fixed_state(), "")
+    assert result.expected == ("task_manager",)
 
 
 def test_no_external_accounts_uses_only_internal_capabilities() -> None:
-    result = validate_documents(no_external_config(), no_external_state(), NO_EXTERNAL_PLAN, decks_exist=True)
+    result = validate_documents(no_external_config(), no_external_state(), NO_EXTERNAL_PLAN)
     assert not result.errors, result.errors
     assert result.expected == ("task_manager",)
 
@@ -275,33 +301,30 @@ def test_no_external_accounts_rejects_explicit_external_provider() -> None:
     )
 
 
-def test_no_external_accounts_requires_plan_disposition() -> None:
-    assert_error(
-        no_external_state(),
-        "must record account_connections: no_external_accounts",
-        "# Ferramentas\n\nSomente GitHub.",
-        no_external_config(),
-    )
+def test_plan_rejects_removed_capabilities() -> None:
+    broken = FIXED_PLAN + "\nQuizlet e flashcards TSV\n"
+    assert_error(resolved_fixed_state(), "removed flashcard capabilities", broken, config())
 
 
 def main() -> None:
     tests = [
         test_fresh_setup_may_remain_not_started,
-        test_explicit_choice_may_wait_for_publication,
+        test_explicit_task_choice_may_wait_for_publication,
         test_not_started_is_rejected_after_publication_begins,
-        test_fully_resolved_state_passes,
-        test_quizlet_cannot_be_silently_deferred,
-        test_email_choice_cannot_disappear,
-        test_email_without_cadence_blocks_success,
-        test_plan_cannot_list_selected_gmail_as_unchosen,
-        test_top_level_resolution_must_match_capabilities,
+        test_fixed_calendar_state_passes,
+        test_flexible_reminder_state_passes,
+        test_missing_routine_resource_blocks_success,
+        test_pending_routine_details_block_success,
+        test_removed_flashcard_state_is_rejected,
+        test_email_is_not_selected_during_publication,
+        test_no_routine_mode_activates_no_scheduler,
         test_no_external_accounts_uses_only_internal_capabilities,
         test_no_external_accounts_rejects_explicit_external_provider,
-        test_no_external_accounts_requires_plan_disposition,
+        test_plan_rejects_removed_capabilities,
     ]
     for test in tests:
         test()
-    print(f"Selected integration resolution regressions passed ({len(tests)} cases).")
+    print(f"Active integration resolution regressions passed ({len(tests)} cases).")
 
 
 if __name__ == "__main__":
