@@ -29,6 +29,19 @@ def main() -> None:
     assert EXPECTED_CHECK_SETS <= set(check_sets), check_sets
     assert all(check_sets[name] for name in EXPECTED_CHECK_SETS)
 
+    declared_checks = {
+        check_name
+        for check_set in check_sets.values()
+        for check_name in check_set
+    }
+    workflow_names = set()
+    for workflow_path in Path(".github/workflows").glob("*.yml"):
+        workflow = yaml.safe_load(workflow_path.read_text(encoding="utf-8")) or {}
+        if isinstance(workflow.get("name"), str):
+            workflow_names.add(workflow["name"])
+    missing_workflows = sorted(declared_checks - workflow_names)
+    assert not missing_workflows, "manifest checks without matching workflow names: " + ", ".join(missing_workflows)
+
     phases = {phase["id"]: phase for phase in manifest["phases"]}
     assert all(phase.get("completion_check_sets") for phase in phases.values())
 
