@@ -130,22 +130,24 @@ def validate_contract_terms() -> None:
         "sync.status",
         "sync.last_success_at",
         "scripts/lifecycle_next_action.py",
+        "Do not report an inventory of inactive integrations",
     ])
     require("templates/module.md", [
         "## Como este conteúdo foi construído",
         "## Fontes e caminhos para aprofundar",
         "## Outras formas de aprender",
-        "flashcards_study: null",
+        "## Confira sem consultar",
+        "Não gere flashcards, decks Markdown, arquivos TSV ou conjuntos em serviços externos.",
     ])
     require("templates/topic.md", [
         "## O que você vai aprender",
         "## Por que isso importa para você",
         "## Para concluir esta etapa",
+        "não crie decks, arquivos de importação",
     ])
     require("templates/integrations-plan.md", [
         "# Ferramentas que podem ajudar nesta trilha",
         "<details>",
-        "Conectei o Quizlet. Crie meus flashcards.",
     ])
     require("templates/chatgpt-project-instructions.md", [
         "Experience for the person",
