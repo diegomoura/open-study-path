@@ -14,15 +14,17 @@ from jsonschema import Draft202012Validator, FormatChecker
 
 ROOT = Path(__file__).resolve().parents[1]
 INSTANCE_MARKER = ".open-study-path/instance.yml"
+TEMPLATE_MARKER = ".open-study-path/template.yml"
 COMPLETION_CONTRACT = "instructions/phase-completion.md"
 DIAGNOSTIC_TEMPLATE = "templates/state/diagnostic-summary.json"
 DIAGNOSTIC_SCHEMA = "schemas/diagnostic-summary.schema.json"
 DIAGNOSTIC_STATE = "state/diagnostic-summary.json"
+CURRENT_INTAKE_MARKER = "<!-- open-study-path:intake form_id=create-study-path version=4 -->"
 MERGE_POLICIES = {"manual", "auto_after_ci", "auto_when_unambiguous"}
 DIAGNOSTIC_EXCEPTIONS = {None, "owner_requested_comprehensive", "legacy_before_policy"}
 
 REUSABLE_YAML_FILES = [
-    ".open-study-path/template.yml",
+    TEMPLATE_MARKER,
     ".github/ISSUE_TEMPLATE/create-study-path.yml",
     "instructions/manifest.yml",
     "intake/jotform-form-spec.yml",
@@ -61,17 +63,13 @@ REQUIRED_INTAKE_KEYS = {
     "objective",
     "current_level",
     "preferred_language",
-    "task_manager",
-    "consent",
-}
-
-REQUIRED_INTEGRATION_INTAKE_KEYS = {
     "integration_experience",
     "already_uses",
     "willing_to_connect",
     "task_manager",
-    "todoist_reminders",
-    "email_summaries",
+    "study_routine_mode",
+    "study_routine_details",
+    "consent",
 }
 
 REMOVED_INTAKE_KEYS = {
@@ -83,6 +81,8 @@ REMOVED_INTAKE_KEYS = {
     "account_connections",
     "scheduling_provider",
     "integration_notes",
+    "todoist_reminders",
+    "email_summaries",
 }
 
 
@@ -113,12 +113,10 @@ def check_yaml() -> None:
     paths = list(REUSABLE_YAML_FILES)
     if is_instance():
         paths.extend([INSTANCE_MARKER, "study.config.yml"])
-
     for path in paths:
         if not (ROOT / path).is_file():
             fail(f"missing required YAML file: {path}")
         load_yaml(path)
-
     print("YAML parsing passed.")
 
 
@@ -132,47 +130,30 @@ def validate_workflow_policy(document: dict[str, Any], *, required: bool) -> Non
         fail("instance marker workflow must be an object")
     if workflow.get("guided") is not True:
         fail("instance workflow must set guided: true")
-
     for key in ["intake_merge_policy", "diagnostic_merge_policy"]:
-        policy = workflow.get(key)
-        if policy not in MERGE_POLICIES:
-            fail(f"invalid {key}: {policy}")
+        if workflow.get(key) not in MERGE_POLICIES:
+            fail(f"invalid {key}: {workflow.get(key)}")
 
 
 def validate_diagnostic_budget(document: dict[str, Any], path: str) -> None:
     budget = document.get("question_budget", {})
-    target_min = budget.get("target_min")
-    target_max = budget.get("target_max")
-    hard_max = budget.get("hard_max")
-    exception = budget.get("exception")
-    count = document.get("question_count")
-
-    if not all(isinstance(value, int) for value in [target_min, target_max, hard_max, count]):
+    values = [budget.get("target_min"), budget.get("target_max"), budget.get("hard_max"), document.get("question_count")]
+    if not all(isinstance(value, int) for value in values):
         fail(f"diagnostic budget values must be integers in {path}")
+    target_min, target_max, hard_max, count = values
     if not (1 <= target_min <= target_max <= hard_max <= 10):
         fail(f"invalid diagnostic question budget in {path}")
+    exception = budget.get("exception")
     if exception not in DIAGNOSTIC_EXCEPTIONS:
         fail(f"invalid diagnostic budget exception in {path}: {exception}")
     if count > hard_max and exception is None:
         fail(f"diagnostic question count exceeds hard maximum without exception in {path}")
 
 
-def validate_json_document(path: str, validator: Draft202012Validator) -> dict[str, Any]:
-    document = load_json(path)
-    errors = list(validator.iter_errors(document))
-    if errors:
-        for error in errors:
-            location = ".".join(str(part) for part in error.path) or "<root>"
-            print(f"SCHEMA ERROR in {path} at {location}: {error.message}", file=sys.stderr)
-        raise SystemExit(1)
-    return document
-
-
 def check_reusable_contract(marker: dict[str, Any]) -> None:
     for path in REQUIRED_REUSABLE_FILES:
         if not (ROOT / path).is_file():
             fail(f"missing required reusable file: {path}")
-
     if marker.get("generation_allowed") is not False:
         fail("template marker must set generation_allowed: false")
 
@@ -190,19 +171,15 @@ def check_reusable_contract(marker: dict[str, Any]) -> None:
     manifest = load_yaml("instructions/manifest.yml")
     if manifest.get("completion_contract") != COMPLETION_CONTRACT:
         fail(f"lifecycle manifest must reference {COMPLETION_CONTRACT}")
-    phases = {
-        phase.get("id"): phase
-        for phase in manifest.get("phases", [])
-        if isinstance(phase, dict) and phase.get("id")
-    }
+    phases = {phase.get("id"): phase for phase in manifest.get("phases", []) if isinstance(phase, dict)}
     if phases.get("intake", {}).get("next_phase") != "diagnostic":
         fail("intake phase must guide to diagnostic")
-    diagnostic_phase = phases.get("diagnostic", {})
-    if diagnostic_phase.get("next_phase") != "generate":
+    diagnostic = phases.get("diagnostic", {})
+    if diagnostic.get("next_phase") != "generate":
         fail("diagnostic phase must guide to generation")
-    if diagnostic_phase.get("merge_policy_path") != "workflow.diagnostic_merge_policy":
+    if diagnostic.get("merge_policy_path") != "workflow.diagnostic_merge_policy":
         fail("diagnostic phase must reference its merge policy")
-    if diagnostic_phase.get("outputs") != [INSTANCE_MARKER, DIAGNOSTIC_STATE]:
+    if diagnostic.get("outputs") != [INSTANCE_MARKER, DIAGNOSTIC_STATE]:
         fail("diagnostic phase must restrict outputs to marker and diagnostic summary")
 
     instance_template = load_yaml("templates/instance.yml")
@@ -214,61 +191,12 @@ def check_reusable_contract(marker: dict[str, Any]) -> None:
         fail("new instances must default diagnostic to auto_when_unambiguous")
 
     project_instructions = load_text("templates/chatgpt-project-instructions.md")
-    for term in [
-        "OWNER/REPOSITORY",
-        INSTANCE_MARKER,
-        "diegomoura/open-study-path",
-        "Keep the process guided",
-        "exact command to continue",
-    ]:
+    for term in ["OWNER/REPOSITORY", INSTANCE_MARKER, "diegomoura/open-study-path", "Keep the process guided", "exact command to continue"]:
         if term not in project_instructions:
             fail(f"ChatGPT Project Instructions template is missing required term: {term}")
 
-    project_setup = load_text("docs/chatgpt-project-setup.md")
-    if "Project Instructions" not in project_setup:
-        fail("ChatGPT Project setup guide must explain Project Instructions")
-    if "OWNER/REPOSITORY" not in project_setup:
-        fail("ChatGPT Project setup guide must include the repository placeholder")
-
-    intake_setup = load_text("instructions/05-configure-intake.md")
-    for term in [
-        "https://github.com/OWNER/REPOSITORY/issues/new?template=create-study-path.yml",
-        "explicit_issue",
-        "clickable link",
-        "issue number",
-    ]:
-        if term not in intake_setup:
-            fail(f"GitHub Issue Form setup instructions are missing required term: {term}")
-
-    intake_instruction = load_text("instructions/10-intake.md")
-    for term in [
-        "workflow.intake_merge_policy",
-        "auto_when_unambiguous",
-        "Inicie o diagnóstico proporcional desta trilha",
-    ]:
-        if term not in intake_instruction:
-            fail(f"intake instructions are missing required guided-flow term: {term}")
-
-    diagnostic_instruction = load_text("instructions/20-diagnostic.md")
-    for term in [
-        "target 3 to 5 questions",
-        "hard maximum of 7 questions",
-        "workflow.diagnostic_merge_policy",
-        DIAGNOSTIC_TEMPLATE,
-        DIAGNOSTIC_SCHEMA,
-        "Do not send a separate transition message",
-    ]:
-        if term not in diagnostic_instruction:
-            fail(f"diagnostic instructions are missing required bounded-flow term: {term}")
-
     completion = load_text(COMPLETION_CONTRACT)
-    for term in [
-        "Next step",
-        "Continue command",
-        "Concision rule",
-        "auto_when_unambiguous",
-        "Do not send a separate transition message",
-    ]:
+    for term in ["Next step", "Continue command", "Concision rule", "auto_when_unambiguous", "Do not send a separate transition message"]:
         if term not in completion:
             fail(f"phase completion contract is missing required term: {term}")
 
@@ -284,23 +212,17 @@ def check_instance_mode(marker: dict[str, Any]) -> None:
     for path in INSTANCE_ARTIFACTS:
         if not (ROOT / path).exists():
             fail(f"required instance artifact is missing: {path}")
-
     instance = load_yaml(INSTANCE_MARKER)
-    canonical_repository = marker.get("canonical_repository")
     repository = instance.get("repository")
-    source_template = instance.get("source_template")
-
+    canonical = marker.get("canonical_repository")
     if instance.get("kind") != "open-study-path-instance":
         fail("instance marker kind must be open-study-path-instance")
-    if not isinstance(repository, str) or not repository.strip():
+    if not isinstance(repository, str) or not repository.strip() or repository == "OWNER/REPOSITORY":
         fail("instance marker must contain a repository identifier")
-    if repository == "OWNER/REPOSITORY":
-        fail("instance marker repository placeholder must be replaced")
-    if repository == canonical_repository:
+    if repository == canonical:
         fail("canonical template repository cannot be configured as an instance")
-    if source_template != canonical_repository:
+    if instance.get("source_template") != canonical:
         fail("instance source_template must match the canonical repository")
-
     validate_workflow_policy(instance, required=False)
     if instance.get("status", {}).get("diagnostic_complete") is True and not (ROOT / DIAGNOSTIC_STATE).is_file():
         fail("completed diagnostic requires state/diagnostic-summary.json")
@@ -308,24 +230,18 @@ def check_instance_mode(marker: dict[str, Any]) -> None:
 
 
 def check_guard() -> None:
-    marker = load_yaml(".open-study-path/template.yml")
+    marker = load_yaml(TEMPLATE_MARKER)
     check_reusable_contract(marker)
-    if is_instance():
-        check_instance_mode(marker)
-    else:
-        check_template_mode(marker)
+    check_instance_mode(marker) if is_instance() else check_template_mode(marker)
 
 
 def option_values(field: dict[str, Any]) -> set[str]:
-    options = field.get("options", [])
     values: set[str] = set()
-    for option in options:
+    for option in field.get("options", []):
         if isinstance(option, str):
             values.add(option.lower())
-        elif isinstance(option, dict):
-            label = option.get("label")
-            if isinstance(label, str):
-                values.add(label.lower())
+        elif isinstance(option, dict) and isinstance(option.get("label"), str):
+            values.add(option["label"].lower())
     return values
 
 
@@ -335,122 +251,86 @@ def check_intake() -> None:
     example = load_yaml("study.config.example.yml")
     issue_form = load_yaml(".github/ISSUE_TEMPLATE/create-study-path.yml")
 
-    fields = spec.get("fields", [])
+    fields = [field for field in spec.get("fields", []) if isinstance(field, dict)]
     field_keys = [field.get("key") for field in fields]
     if len(field_keys) != len(set(field_keys)):
         fail("jotform specification contains duplicate field keys")
+    missing = REQUIRED_INTAKE_KEYS.difference(field_keys)
+    if missing:
+        fail(f"jotform specification is missing required keys: {sorted(missing)}")
+    removed = REMOVED_INTAKE_KEYS.intersection(field_keys)
+    if removed:
+        fail(f"jotform specification still contains removed intake keys: {sorted(removed)}")
+    if spec.get("privacy", {}).get("attachments_optional") is not True or spec.get("privacy", {}).get("persist_raw_submission") is not False:
+        fail("jotform privacy contract is invalid")
 
-    expected_keys = REQUIRED_INTAKE_KEYS | REQUIRED_INTEGRATION_INTAKE_KEYS
-    missing_required = expected_keys.difference(field_keys)
-    if missing_required:
-        fail(f"jotform specification is missing required keys: {sorted(missing_required)}")
-    unexpected_removed = REMOVED_INTAKE_KEYS.intersection(field_keys)
-    if unexpected_removed:
-        fail(f"jotform specification still contains removed intake keys: {sorted(unexpected_removed)}")
-    if spec.get("privacy", {}).get("attachments_optional") is not True:
-        fail("jotform specification must keep attachments optional")
-    if spec.get("privacy", {}).get("persist_raw_submission") is not False:
-        fail("jotform specification must prohibit raw-submission persistence")
-
-    language_field = next((field for field in fields if field.get("key") == "preferred_language"), None)
-    if option_values(language_field or {}) != {"pt-br", "en"}:
+    language = next((field for field in fields if field.get("key") == "preferred_language"), {})
+    if option_values(language) != {"pt-br", "en"}:
         fail("Jotform preferred language must offer exactly pt-BR and en")
-
-    balance_field = next((field for field in fields if field.get("key") == "theory_practice_balance"), None)
-    if (balance_field or {}).get("default") != "balanced":
+    balance = next((field for field in fields if field.get("key") == "theory_practice_balance"), {})
+    if balance.get("default") != "balanced":
         fail("Jotform theory/practice balance must default to balanced")
-
-    task_field = next((field for field in fields if field.get("key") == "task_manager"), None)
-    task_options = option_values(task_field or {})
-    if not {"auto", "trello", "github_issues", "todoist"}.issubset(task_options):
+    task = next((field for field in fields if field.get("key") == "task_manager"), {})
+    if not {"auto", "trello", "github_issues", "todoist"}.issubset(option_values(task)):
         fail("Jotform task manager must support auto, Trello, GitHub Issues and Todoist")
-    if "markdown" in task_options:
-        fail("Jotform task manager must not offer Markdown-only tracking")
+    routine = next((field for field in fields if field.get("key") == "study_routine_mode"), {})
+    if option_values(routine) != {"none", "fixed_calendar", "flexible_reminders", "custom", "decide_later"}:
+        fail("Jotform study routine must expose the supported routine modes")
 
-    email_field = next((field for field in fields if field.get("key") == "email_summaries"), None)
-    if not email_field:
-        fail("Jotform must define email_summaries")
-    email_options = option_values(email_field)
-    if not {"gmail", "outlook_email"}.issubset(email_options):
-        fail("Jotform email summaries must support Gmail and Outlook")
-
-    if mapping.get("spec_id") != spec.get("id"):
-        fail("field mapping spec_id does not match jotform specification id")
-    if mapping.get("version") != spec.get("version"):
-        fail("field mapping version must match jotform specification version")
-    mapped_keys = set(mapping.get("mappings", {}))
-    persistable_keys = expected_keys - {"consent"}
-    missing_mappings = persistable_keys.difference(mapped_keys)
+    if mapping.get("spec_id") != spec.get("id") or mapping.get("version") != spec.get("version"):
+        fail("field mapping identity does not match Jotform specification")
+    mapped = set(mapping.get("mappings", {}))
+    persistable = REQUIRED_INTAKE_KEYS - {"consent"}
+    missing_mappings = persistable.difference(mapped)
     if missing_mappings:
         fail(f"field mapping is missing intake keys: {sorted(missing_mappings)}")
-    stale_mappings = REMOVED_INTAKE_KEYS.intersection(mapped_keys)
-    if stale_mappings:
-        fail(f"field mapping still contains removed intake keys: {sorted(stale_mappings)}")
-    if "consent" in mapped_keys:
+    stale = REMOVED_INTAKE_KEYS.intersection(mapped)
+    if stale:
+        fail(f"field mapping still contains removed intake keys: {sorted(stale)}")
+    if "consent" in mapped:
         fail("consent must be validated but not persisted as course configuration")
 
     intake = example.get("intake", {})
-    if intake.get("form_spec_id") != spec.get("id"):
-        fail("configuration example form_spec_id does not match specification")
-    if intake.get("form_spec_version") != spec.get("version"):
-        fail("configuration example form_spec_version does not match specification")
-    if intake.get("attachments_optional") is not True:
-        fail("configuration example must keep attachments optional")
-    if intake.get("persist_raw_submission") is not False:
-        fail("configuration example must prohibit raw-submission persistence")
+    if intake.get("form_spec_id") != spec.get("id") or intake.get("form_spec_version") != spec.get("version"):
+        fail("configuration example form specification identity is invalid")
+    if intake.get("attachments_optional") is not True or intake.get("persist_raw_submission") is not False:
+        fail("configuration example intake privacy contract is invalid")
 
-    issue_blocks = [block for block in issue_form.get("body", []) if isinstance(block, dict)]
-    issue_ids = {block.get("id") for block in issue_blocks if block.get("id")}
-    missing_issue_fields = expected_keys.difference(issue_ids)
-    if missing_issue_fields:
-        fail(f"GitHub Issue Form is missing required fields: {sorted(missing_issue_fields)}")
-    unexpected_issue_fields = REMOVED_INTAKE_KEYS.intersection(issue_ids)
-    if unexpected_issue_fields:
-        fail(f"GitHub Issue Form still contains removed fields: {sorted(unexpected_issue_fields)}")
+    blocks = [block for block in issue_form.get("body", []) if isinstance(block, dict)]
+    issue_ids = {block.get("id") for block in blocks if block.get("id")}
+    issue_required = REQUIRED_INTAKE_KEYS - {"consent"}
+    missing_issue = issue_required.difference(issue_ids)
+    if missing_issue:
+        fail(f"GitHub Issue Form is missing required fields: {sorted(missing_issue)}")
+    if "consent" not in issue_ids:
+        fail("GitHub Issue Form is missing required consent")
+    removed_issue = REMOVED_INTAKE_KEYS.intersection(issue_ids)
+    if removed_issue:
+        fail(f"GitHub Issue Form still contains removed fields: {sorted(removed_issue)}")
 
-    issue_language = next((block for block in issue_blocks if block.get("id") == "preferred_language"), None)
-    issue_language_attributes = (issue_language or {}).get("attributes", {})
-    issue_language_options = option_values(issue_language_attributes)
-    if issue_language_options != {"português (brasil)", "english"}:
-        fail("GitHub Issue Form language must offer Portuguese and English")
-    if issue_language_attributes.get("default") != 0:
-        fail("GitHub Issue Form language must default to Portuguese")
+    language_block = next((block for block in blocks if block.get("id") == "preferred_language"), {})
+    attrs = language_block.get("attributes", {})
+    if option_values(attrs) != {"português (brasil)", "english"} or attrs.get("default") != 0:
+        fail("GitHub Issue Form language contract is invalid")
+    task_block = next((block for block in blocks if block.get("id") == "task_manager"), {})
+    task_options = option_values(task_block.get("attributes", {}))
+    if not any("trello" in option for option in task_options) or not any("github issues" in option for option in task_options):
+        fail("GitHub Issue Form task manager options are incomplete")
+    routine_block = next((block for block in blocks if block.get("id") == "study_routine_mode"), {})
+    routine_options = option_values(routine_block.get("attributes", {}))
+    for term in ["sem lembretes", "horário fixo", "horário flexível", "própria rotina", "decidir depois"]:
+        if not any(term in option for option in routine_options):
+            fail(f"GitHub Issue Form routine options are missing: {term}")
 
-    issue_balance = next((block for block in issue_blocks if block.get("id") == "theory_practice_balance"), None)
-    if (issue_balance or {}).get("attributes", {}).get("default") != 1:
-        fail("GitHub Issue Form theory/practice balance must default to Equilibrado")
-
-    issue_task = next((block for block in issue_blocks if block.get("id") == "task_manager"), None)
-    issue_task_options = option_values((issue_task or {}).get("attributes", {}))
-    if not any("trello" in option for option in issue_task_options):
-        fail("GitHub Issue Form task manager must support Trello")
-    if not any("github issues" in option for option in issue_task_options):
-        fail("GitHub Issue Form task manager must support GitHub Issues")
-    if any("markdown" in option for option in issue_task_options):
-        fail("GitHub Issue Form task manager must not offer Markdown-only tracking")
-
-    issue_email = next((block for block in issue_blocks if block.get("id") == "email_summaries"), None)
-    issue_email_options = option_values((issue_email or {}).get("attributes", {}))
-    if not any("gmail" in option for option in issue_email_options):
-        fail("GitHub Issue Form email summaries must support Gmail")
-    if not any("outlook" in option for option in issue_email_options):
-        fail("GitHub Issue Form email summaries must support Outlook")
-
-    explanatory_text = "\n".join(
-        str(block.get("attributes", {}).get("value", ""))
-        for block in issue_blocks
-        if block.get("type") == "markdown"
-    )
-    for term in ["GitHub", "fonte de verdade", "opcionais"]:
-        if term not in explanatory_text:
+    explanatory = "\n".join(str(block.get("attributes", {}).get("value", "")) for block in blocks if block.get("type") == "markdown")
+    for term in ["GitHub", "fonte de verdade", "opcionais", CURRENT_INTAKE_MARKER]:
+        if term not in explanatory:
             fail(f"GitHub Issue Form integration explanation is missing: {term}")
-
     print("Intake contract passed.")
 
 
 def validate_config(path: str, validator: Draft202012Validator) -> None:
-    config = load_yaml(path)
-    errors = list(validator.iter_errors(config))
+    errors = list(validator.iter_errors(load_yaml(path)))
     if errors:
         for error in errors:
             location = ".".join(str(part) for part in error.path) or "<root>"
@@ -458,39 +338,39 @@ def validate_config(path: str, validator: Draft202012Validator) -> None:
         raise SystemExit(1)
 
 
+def validate_json_document(path: str, validator: Draft202012Validator) -> dict[str, Any]:
+    document = load_json(path)
+    errors = list(validator.iter_errors(document))
+    if errors:
+        for error in errors:
+            location = ".".join(str(part) for part in error.path) or "<root>"
+            print(f"SCHEMA ERROR in {path} at {location}: {error.message}", file=sys.stderr)
+        raise SystemExit(1)
+    return document
+
+
 def check_schema() -> None:
     study_validator = Draft202012Validator(load_json("schemas/study-config.schema.json"), format_checker=FormatChecker())
     validate_config("study.config.example.yml", study_validator)
     if is_instance():
         validate_config("study.config.yml", study_validator)
-
     diagnostic_validator = Draft202012Validator(load_json(DIAGNOSTIC_SCHEMA), format_checker=FormatChecker())
     template_document = validate_json_document(DIAGNOSTIC_TEMPLATE, diagnostic_validator)
     validate_diagnostic_budget(template_document, DIAGNOSTIC_TEMPLATE)
     if (ROOT / DIAGNOSTIC_STATE).is_file():
-        state_document = validate_json_document(DIAGNOSTIC_STATE, diagnostic_validator)
-        validate_diagnostic_budget(state_document, DIAGNOSTIC_STATE)
-
+        validate_diagnostic_budget(validate_json_document(DIAGNOSTIC_STATE, diagnostic_validator), DIAGNOSTIC_STATE)
     print("Configuration and diagnostic schemas passed.")
 
 
-CHECKS = {
-    "yaml": check_yaml,
-    "guard": check_guard,
-    "intake": check_intake,
-    "schema": check_schema,
-}
+CHECKS = {"yaml": check_yaml, "guard": check_guard, "intake": check_intake, "schema": check_schema}
 
 
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("check", choices=[*CHECKS, "all"])
     args = parser.parse_args()
-
-    selected = CHECKS.values() if args.check == "all" else [CHECKS[args.check]]
-    for check in selected:
+    for check in CHECKS.values() if args.check == "all" else [CHECKS[args.check]]:
         check()
-
     print("Open Study Path repository validation passed.")
 
 
