@@ -79,7 +79,7 @@ Return the direct intake link and use:
 
 `Preenchi o formulário. Pode continuar.`
 
-Do not ask for an issue number unless deterministic lookup finds more than one valid candidate.
+Do not ask for an issue or submission number unless deterministic lookup finds more than one valid candidate.
 
 ### After intake import
 
