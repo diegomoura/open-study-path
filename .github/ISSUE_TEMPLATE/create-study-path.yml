@@ -232,7 +232,7 @@ body:
     attributes:
       label: Quando você gostaria de estudar?
       description: Opcional. Informe dias, horários, duração, antecedência do aviso e fuso horário quando isso for importante.
-      placeholder: Exemplo: segunda, quarta e sexta, das 19h às 19h45, com aviso 15 minutos antes, horário de Brasília.
+      placeholder: "Exemplo: segunda, quarta e sexta, das 19h às 19h45, com aviso 15 minutos antes, horário de Brasília."
 
   - type: textarea
     id: additional_notes
