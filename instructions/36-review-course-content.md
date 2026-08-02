@@ -38,7 +38,7 @@ Markers and mappings are evidence locations, not proof by themselves. Review req
 
 - The topic uses only declared prerequisites.
 - Retrieval recalls knowledge actually taught by those prerequisites.
-- The lesson does not infer prerequisites from numbering.
+- The review does not assume linear order and the lesson does not infer prerequisites from numbering.
 - Branched navigation names direct prerequisites and never implies numeric adjacency.
 
 ### 3. Outcome coverage
