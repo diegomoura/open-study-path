@@ -58,7 +58,7 @@ For every selected topic:
 4. create the 100-point rubric with valid `outcome_ids`;
 5. create the assessment Issue Form;
 6. materialize and version the topic contract;
-7. create a current approved course-content review;
+7. create a current approved course-content review under `state/content-reviews/` for the current content version;
 8. generate semantic `index.html`, `slides.css` and `slides.js` from the reviewed lesson;
 9. create a current approved slide review version 3;
 10. run `python scripts/package_study_slides.py TOPIC-000`;
