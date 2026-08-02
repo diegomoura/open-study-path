@@ -2,7 +2,7 @@
 
 Run this review after an authoring pass creates or changes any materialized lesson, assessment or learner-facing task projection. It is a separate internal role from curriculum planning and content authorship. Do not ask the learner for a generic review command.
 
-This review approves the complete teaching content before slide authoring begins. It does not approve the visual summary or rendered PDF. After it passes, generate the internal slide sources and run `instructions/37-review-study-slides.md` as another independent role.
+This review approves the complete teaching content before slide authoring begins. It does not approve the visual summary or offline ZIP package. After it passes, generate the internal slide sources and run `instructions/37-review-study-slides.md` as another independent role.
 
 ## Role
 
@@ -24,7 +24,7 @@ For every materialized topic:
 4. `state/content-reviews/TOPIC-000.yml` records the review for the current `content_version`;
 5. the review maps each outcome to assessment questions that genuinely evaluate it.
 
-Markers and mappings are evidence locations, not proof by themselves. Review requires semantic honesty: a marker must point to content that actually teaches the outcome and a question must genuinely measure it.
+Markers and mappings are evidence locations, not proof by themselves. Review requires semantic honesty.
 
 ## Review dimensions
 
@@ -40,33 +40,23 @@ Markers and mappings are evidence locations, not proof by themselves. Review req
 - Retrieval recalls knowledge actually taught by those prerequisites.
 - The lesson does not infer prerequisites from numbering.
 - Branched navigation names direct prerequisites and never implies numeric adjacency.
-- Learner-facing task copy does not assume linear order when the dependency graph branches.
 
 ### 3. Outcome coverage
 
-For each learning outcome:
-
-- find the explanation that teaches it;
-- find a worked example, practice step or application that exercises it when appropriate;
-- find the assessment question or evidence criterion that measures it;
-- verify required concepts are defined at the declared level;
-- reject markers beside content that only mentions vocabulary.
+For each learning outcome, find the explanation, relevant worked example or practice, assessment evidence and required concepts. Reject markers beside content that only mentions vocabulary.
 
 ### 4. Lesson, practice and assessment alignment
 
 - Guided practice, independent practice and `## Confira sem consultar` prepare the learner for the assessment without copying answers.
-- The deliverable in topic, lesson, Issue Form and rubric is the same artifact or performance.
-- Critical misconceptions in the rubric are taught and corrected in the lesson.
-- Retrieval practice requires explanation, contrast or application rather than a duplicate flashcard artifact.
+- The deliverable is consistent across topic, lesson, Issue Form and rubric.
+- Critical misconceptions are taught and corrected.
 - No Markdown deck, TSV export or Quizlet set is required or generated.
 
 ### 5. Learner navigation
 
 - Roadmap, lesson, assessment and task use the same human title and capability.
-- A future task says **Pré-requisitos desta etapa** and lists direct prerequisites.
-- A future task says to follow the prerequisite list rather than card number.
+- Future tasks list direct prerequisites and do not imply a false linear sequence.
 - Ready tasks are ready because dependencies are satisfied.
-- No card implies a false linear sequence.
 
 ### 6. Level and pedagogy
 
@@ -87,26 +77,13 @@ For each learning outcome:
 - Task copy is a concise projection, not a new curriculum artifact.
 - Direct prerequisites, objective, effort and deliverable match the topic contract.
 - External links point to the current reviewed version.
-- A separate **Prática** link appears only when a distinct approved exercise or laboratory adds value; otherwise practice remains in the lesson.
+- A separate **Prática** link appears only when a distinct approved exercise or laboratory adds value.
 
 ## Findings and disposition
 
-Classify findings as:
+Classify findings as `blocking` or `non_blocking`. Correct resolvable blocking findings on the proposal branch. When the topic contract itself is wrong, use replan instead of silently rewriting it.
 
-- `blocking`: the course promise, prerequisite graph, outcome, assessment alignment, factual support or navigation is wrong;
-- `non_blocking`: a useful improvement that does not invalidate the current lesson.
-
-Correct resolvable blocking findings on the proposal branch. When the topic contract itself is wrong, stop materialization and use replan instead of silently rewriting it.
-
-Approve only when:
-
-- every required check in `templates/content-review.yml` is `passed`;
-- every learning outcome is `covered`;
-- `blocking_findings` is empty;
-- the review references the exact current `content_version`;
-- deterministic validation passes.
-
-A changed lesson or content version requires a new review.
+Approve only when every required check is `passed`, every learning outcome is covered, `blocking_findings` is empty, the review references the current content version and deterministic validation passes.
 
 ## Study-slide handoff
 
@@ -116,14 +93,15 @@ Only after approval:
 2. generate HTML, CSS and JavaScript under `study/slides/TOPIC-000/`;
 3. preserve outcomes through `data-outcome-ids`;
 4. avoid new research, unsupported claims and raster slide images;
-5. run `instructions/37-review-study-slides.md` before rendering the PDF.
+5. run `instructions/37-review-study-slides.md`;
+6. build and validate the deterministic `slides.zip` package containing `slides.html`.
 
 The course-content reviewer does not pre-approve the slide summary.
 
 ## Independence boundary
 
-The same runtime may execute authoring and review, but as separate passes with separate instructions and artifacts. During review, inspect repository output as evidence and actively search for contradictions.
+The same runtime may execute authoring and review, but as separate passes with separate instructions and artifacts.
 
 ## Merge boundary
 
-Course-content review is required before a curriculum or materialization PR can merge when enabled. When study slides are enabled, the same PR must subsequently contain a current approved slide review, generated PDF and passing deterministic slide validation.
+Course-content review is required before a curriculum or materialization PR can merge when enabled. When study slides are enabled, the same PR must subsequently contain a current approved slide review, offline ZIP package, matching metadata and passing deterministic slide validation.
