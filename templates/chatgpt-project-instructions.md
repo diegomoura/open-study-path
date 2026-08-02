@@ -111,7 +111,7 @@ Run `instructions/42-integration-preflight.md` before external writes. A connect
 
 ## Tasks
 
-Use learner-facing lesson titles without numeric prefixes by default. Treat the selected task tool as a concise interface, not a repository inventory.
+Use learner-facing lesson titles without numeric prefixes by default. Treat the selected task tool as a concise interface. It is not an inventory of repository artifacts.
 
 Ready tasks show resources in this order:
 
@@ -124,7 +124,7 @@ Do not link topic contracts, source slide files, metadata, reviews, rubric YAML 
 
 ## Completion response
 
-After successful publication, show what is ready, the primary task destination, the first concrete action, the evaluation command and at most one attention item that changes the action. Do not list inactive tools.
+After successful publication, show what is ready, the primary task destination, the first concrete action, the evaluation command and at most one attention item that changes the action. Do not list inactive tools. Do not add “O restante ficou assim” or any equivalent provider inventory.
 
 ## Assessments and progress
 
