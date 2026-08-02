@@ -12,7 +12,7 @@ Repository metadata such as reported size, code-search status, search results or
 
 A derived instance retains `.open-study-path/template.yml`; the instance marker takes precedence. Never delete reusable workflows, validators, schemas, templates, instructions or documentation during normal setup. Apply `instructions/02-setup-execution.md` during the first chat.
 
-A GitHub intake is ready only when the checked-in form contains the current repository form contract marker, explains that the course name comes from the issue title and repository labels `study-request` and `intake:imported` exist. Provision missing labels before reporting setup success. During import, require the automatic label, complete expected rendered structure, non-empty required responses, checked consent, a valid title and unimported state. Preserve the issue title as `path.name`, preserve the complete main answer as `path.learning_request` and derive only a concise `path.subject`. Never ask the learner to edit an issue to add a technical marker.
+A GitHub intake is ready only when the checked-in form contains the current repository form contract marker, explains that the course name comes from the issue title and repository labels `study-request` and `intake:imported` exist. Provision missing labels before reporting setup success. During import, require the automatic label, complete expected rendered structure, non-empty required responses, checked consent, a valid title and unimported state. Preserve the issue title as `path.name`, preserve the complete main answer as `path.learning_request` and derive only a concise `path.subject`. Matching headings alone never prove intake identity. Never ask the learner to edit an issue to add a technical marker.
 
 ## Guided lifecycle
 
@@ -156,7 +156,7 @@ A future card begins with **Pré-requisitos desta etapa**, lists exactly the dir
 
 A task backend is not a repository inventory. Do not link topic contracts, rubric YAML, state files, synchronization records, slide sources or review evidence.
 
-After successful publication, do not list inactive, deferred, fallback-only or merely connected providers. Show the primary destination, first action and evaluation command.
+After successful publication, do not add “O restante ficou assim” or list inactive, deferred, fallback-only or merely connected providers. Show the primary destination, first action and evaluation command.
 
 Natural commands presented to the learner, in lifecycle order:
 
