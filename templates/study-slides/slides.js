@@ -1,5 +1,5 @@
-/* open-study-path:study-slides-runtime version=2 */
-import mermaid from "/node_modules/mermaid/dist/mermaid.esm.min.mjs";
+/* open-study-path:study-slides-runtime version=3 */
+import mermaid from "mermaid";
 
 const slides = Array.from(document.querySelectorAll(".osp-slide"));
 const currentLabel = document.querySelector("[data-current-slide]");
@@ -50,7 +50,7 @@ async function renderMermaid() {
     deterministicIds: true,
     deterministicIDSeed: mermaidSeed,
     theme: "dark",
-    fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif",
+    fontFamily: "ui-sans-serif, system-ui, sans-serif",
     themeVariables: {
       background: "#070910",
       primaryColor: "#14243a",
@@ -65,16 +65,8 @@ async function renderMermaid() {
     },
     flowchart: { htmlLabels: false, curve: "basis", nodeSpacing: 38, rankSpacing: 54 }
   });
-
-  const diagrams = Array.from(document.querySelectorAll(".mermaid"));
-  for (const diagram of diagrams) {
-    const slide = diagram.closest(".osp-slide");
-    slide?.classList.add("osp-slide--measure");
-    try {
-      await mermaid.run({ nodes: [diagram] });
-    } finally {
-      slide?.classList.remove("osp-slide--measure");
-    }
+  for (const diagram of document.querySelectorAll(".mermaid")) {
+    await mermaid.run({ nodes: [diagram] });
   }
 }
 

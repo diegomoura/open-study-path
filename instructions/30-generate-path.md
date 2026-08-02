@@ -12,78 +12,53 @@ Read before generating:
 - `docs/study-slides.md`;
 - `instructions/35-review-curriculum.md`;
 - `instructions/36-review-course-content.md`;
-- `instructions/37-review-study-slides.md`.
+- `instructions/37-review-study-slides.md`;
+- `instructions/38-complete-usable-generation.md`.
 
 ## Planning contract
 
 Always create upfront:
 
 - `study/roadmap.md` with the complete topic graph and estimated effort;
-- one concise contract per topic under `study/topics/` using `templates/topic.md`;
+- one concise contract per topic under `study/topics/`;
 - observable objectives, prerequisites, effort, deliverables, evidence, completion criteria and precise resources;
-- one to seven stable learning outcome IDs per topic, with the concepts that must be taught;
-- `study/integrations.md` using `templates/integrations-plan.md`.
+- one to seven stable learning outcome IDs per topic, with concepts that must be taught;
+- `study/integrations.md` using the integrations-plan template.
 
-Stable learning outcome IDs use `LO-1`, `LO-2` and so on inside each topic. They are internal traceability keys. The learner-facing objective remains natural prose, but it must describe the same promised results.
+Stable outcome IDs use `LO-1`, `LO-2` and so on inside each topic. They are internal traceability keys. The learner-facing objective remains natural prose and must describe the same promised results.
 
-The learner must be able to understand the whole path without reading workflow terminology or already knowing the course vocabulary. Translate `materialized` to “aula pronta” and `planned` to “aula futura” in learner-facing prose.
+Translate `materialized` to “aula pronta” and `planned` to “aula futura” in learner-facing prose. Do not expose rolling-window or topological-order terminology unless technical details are requested.
 
-## Dependency graph, not numbered sequence
+## Dependency graph
 
-Topic numbers provide stable identity and roadmap order. They do not establish prerequisites by themselves. Use only direct prerequisite IDs declared in each topic contract.
+Topic numbers provide stable identity and roadmap order. They do not establish prerequisites. Use only direct prerequisite IDs declared in each contract. In a branched graph, never infer numeric adjacency or say “todas as etapas anteriores” when the dependency list is narrower.
 
-When the graph branches:
+## Personalization and beginner progression
 
-- do not claim numeric adjacency as dependency;
-- do not use “todas as etapas anteriores” instead of direct prerequisites;
-- write future task copy from the direct prerequisite list;
-- explain that readiness follows prerequisites, not card number.
+Use intake and diagnostic evidence to personalize motivation, examples, difficulty, prerequisite retrieval, formats, accessibility, practice balance, source selection and next-step language. Treat subject knowledge and transferable experience as separate dimensions.
 
-## Personalization
+When level is `none` or `beginner`, or diagnostic records missing vocabulary:
 
-Use intake and diagnostic evidence to personalize why each topic matters, examples, difficulty, prerequisite retrieval, preferred formats, accessibility, practice balance, source selection and next-step language.
-
-Treat subject knowledge and transferable experience as separate dimensions. Adjacent experience may make examples more sophisticated, but it must not remove foundations the learner does not know.
-
-Do not manufacture intimacy or expose unnecessary personal data.
-
-## Beginner-first concept progression
-
-When the configured level is `none` or `beginner`, or diagnostic records missing vocabulary:
-
-1. explain what the object is in plain language before how it works;
-2. expand title acronyms at first learner-visible occurrence;
-3. define prerequisite terms before using them inside another definition;
+1. explain what the object is before how it works;
+2. expand acronyms at first visible occurrence;
+3. define prerequisites before using them in another definition;
 4. distinguish neighboring concepts and common confusions;
 5. explain why the concept exists and where it appears;
-6. provide an intuition bridge;
-7. then introduce mechanisms, technical vocabulary, limits and implementation.
+6. provide intuition through a bounded analogy or concrete example;
+7. then introduce mechanisms, limits and implementation.
 
-Every beginner module must contain:
-
-- `## Começando do zero`;
-- `### Vocabulário desta aula`;
-- `## Intuição antes dos detalhes`;
-- either a bounded analogy or a labeled concrete example before the main technical explanation.
-
-## Writing and example contract
-
-Write one main conceptual move per paragraph. Prefer a plain sentence before the formal name. Avoid stacking undefined terms.
-
-Every ready lesson must include at least one labeled analogy or concrete example. When useful, combine an everyday situation, a domain-relevant worked example and a case with ambiguity, failure or a limit.
-
-A fictional but plausible example is a **realistic teaching scenario**, not a real case. A real event, statistic or result requires a verified source.
+Every beginner module contains `## Começando do zero`, `### Vocabulário desta aula` and `## Intuição antes dos detalhes`.
 
 ## Topic and task granularity
 
-A topic is an independently assessable capability, not a reading or administrative action. Use three to seven focused actions, normally 10–25 minutes each. Prefer topics around 45–90 minutes and split above 120 minutes when responsibly separable.
+A topic is an independently assessable capability. Use three to seven focused actions, normally 10–25 minutes each. Prefer 45–90 minutes per topic and split above 120 minutes when responsibly separable.
 
 ## Content-generation strategy
 
 For `adaptive_rolling_window`:
 
 1. generate the complete roadmap and every topic contract;
-2. generate all detailed content only when the curriculum is within both configured full-upfront thresholds;
+2. generate all detailed content only when the curriculum fits both full-upfront thresholds;
 3. otherwise materialize only the first deterministic lookahead window;
 4. choose it in topological order;
 5. keep future contracts `content_status: planned` without broken module, slide, rubric or form links.
@@ -91,35 +66,37 @@ For `adaptive_rolling_window`:
 For every materialized topic, create:
 
 - a complete module under `study/modules/`;
-- internal semantic slide sources and a rendered PDF under `study/slides/TOPIC-000/`;
+- semantic slide sources under `study/slides/TOPIC-000/`;
+- a deterministic `slides.zip` containing exactly one self-contained `slides.html`;
+- `slides.meta.json` with current source, HTML and package hashes;
 - a 100-point rubric under `study/assessments/`;
 - a GitHub Issue Form under `.github/ISSUE_TEMPLATE/`;
 - positive content version and materialization date;
 - a current independent review under `state/content-reviews/`;
 - a current independent slide review under `state/slide-reviews/`.
 
-Do not create flashcards, Markdown decks, TSV exports or Quizlet sets. Retrieval practice must be taught inside the lesson through prerequisite recall, guided questions, independent application and `## Confira sem consultar`.
+Do not create flashcards, Markdown decks, TSV exports or Quizlet sets. Retrieval practice belongs inside the lesson and assessment.
 
-The topic contract records `slides`, `slides_pdf` and `slides_review`. The module links only the PDF through the stable authenticated GitHub raw route. HTML, CSS, JavaScript, render metadata and slide-review evidence are internal.
+The topic contract records `slides`, `slides_package` and `slides_review`. The module links only the ZIP through the stable authenticated GitHub raw route and tells the learner to extract it and open `slides.html`. Source HTML, CSS, JavaScript, metadata and review evidence remain internal.
 
 ## Outcome traceability
 
 For every materialized topic:
 
-1. preserve approved learning outcome IDs and required concepts;
+1. preserve approved outcomes and required concepts;
 2. place exactly one hidden `open-study-path:outcome` marker for each outcome beside content that genuinely teaches it;
-3. add `outcome_ids` to every assessment-rubric question;
-4. ensure every outcome is taught and assessed at least once;
-5. run `instructions/36-review-course-content.md` as a separate pass;
-6. create `state/content-reviews/TOPIC-000.yml` for the current version;
-7. represent every outcome in slides through honest `data-outcome-ids`;
-8. run `instructions/37-review-study-slides.md` before PDF rendering.
+3. add `outcome_ids` to every rubric question;
+4. ensure every outcome is taught and assessed;
+5. run course-content review as a separate pass;
+6. create a current content-review artifact;
+7. represent every outcome honestly in slides through `data-outcome-ids`;
+8. run independent slide review before packaging.
 
-A marker or identifier beside a heading does not prove coverage. Reviewers must verify the actual explanation, example, practice, assessment and visual summary.
+Identifiers do not prove coverage. Reviewers verify explanations, examples, practice, assessment and visual summary.
 
 ## Complete-content contract
 
-Every ready lesson must be self-contained for the configured time and level. It must include:
+Every ready lesson is self-contained for the configured time and level and includes:
 
 1. personal orientation and clear outcome;
 2. granular study session;
@@ -127,122 +104,77 @@ Every ready lesson must be self-contained for the configured time and level. It 
 4. prerequisite retrieval based on direct prerequisites;
 5. actual explanatory content;
 6. definitions, relationships, limits and nuance;
-7. intuition through a bounded analogy or concrete example;
+7. bounded analogy or concrete example;
 8. at least one explained Mermaid model;
 9. at least two worked examples;
 10. common errors and corrections;
-11. guided practice with hints;
-12. independent practice and deliverable;
-13. active recall inside the lesson;
-14. direct assessment action;
-15. **How this content was built** provenance;
-16. **Other ways to learn** when useful;
-17. **Sources and paths to deepen** with verified links and locators;
-18. one direct **Slides da aula** PDF link.
+11. guided and independent practice;
+12. active recall inside the lesson;
+13. direct assessment action;
+14. provenance and verified sources;
+15. Other ways to learn when useful;
+16. one direct **Slides da aula** ZIP link plus the `slides.html` opening instruction.
 
-Reject modules that merely instruct the learner to read, study, watch, reflect or discuss without teaching the underlying content.
+Reject modules that merely instruct the learner to read, study, watch, reflect or discuss without teaching the content.
 
 ## Source and provenance contract
 
-For every materialized module:
-
-- inspect every source before including it;
-- use three to seven curated sources by default;
-- include at least one primary or official source when one exists;
-- include at least one reliable explanatory source;
-- include a complementary format when it adds real pedagogical value;
-- explain how each source was used;
-- record chapter, section, page, DOI, version, lesson, exercise or timestamp;
-- distinguish sourced claims from agent-created diagrams, analogies, examples and exercises;
-- distinguish a realistic teaching scenario from a sourced real case;
-- do not cite a plugin response instead of the original document;
-- provide a free or official alternative for potentially paid resources;
-- keep the lesson understandable without opening external links.
-
-The slide deck inherits these reviewed claims. It does not run a second research pass or introduce unsupported claims.
-
-## Videos and courses
-
-Use videos when they provide a useful alternative explanation or demonstration. Include title, creator or institution, direct link, duration or recommended timestamp, language or legends when relevant and one active task.
-
-Use Coursera, edX, Udemy, Khan Academy or other catalogs only at the exact section, lesson or exercise level. Never assign an entire course as one vague task.
+Inspect every source before including it. Use three to seven curated sources by default, including a primary or official source when available and a reliable explanatory source. Record precise locators and explain how each source was used. Distinguish sourced claims from agent-created diagrams, analogies, examples and exercises. The slide deck inherits reviewed claims and does not perform a second research pass.
 
 ## Visual learning with Mermaid
 
-The roadmap must show the actual topic dependency graph. Every materialized module contains the configured number of explained Mermaid diagrams. A diagram is a teaching artifact, not decoration.
+The roadmap shows the actual dependency graph. Every materialized module contains the configured number of explained Mermaid diagrams. Every slide deck contains at least one focused Mermaid diagram with a short interpretation and a relevant limit.
 
-Every slide deck also contains at least one useful Mermaid diagram. Reuse or simplify a reviewed lesson model when it fits the visual narrative. Mermaid stays as text in HTML and renders to SVG.
+## Study-slide authoring and packaging
 
-## Study-slide authoring and rendering
+Slides are derived only after lesson, practice and assessment pass course-content review.
 
-Slides are derived only after the lesson, practice and assessment pass `instructions/36-review-course-content.md`.
+- Use `templates/study-slides/` and create 8–18 focused 16:9 slides.
+- Keep one principal conceptual move per slide and no more than 120 words.
+- Use semantic headings, high contrast, concise examples and focused diagrams.
+- Do not generate raster illustrations or complete-slide images.
+- Do not use CDNs, remote fonts, GitHub Pages or external slide services.
+- Keep `slides.css` and `slides.js` identical to canonical templates.
 
-- Use `templates/study-slides/` and create six to eighteen focused 16:9 slides.
-- Keep one principal conceptual move per slide and normally no more than 120 words.
-- Prefer dark high-contrast layouts, semantic headings, concise examples and focused diagrams.
-- Do not generate raster illustrations or an image of each slide.
-- Do not use a CDN, remote font, GitHub Pages, RawGitHack, PowerPoint or an external slide service.
-- Do not expose HTML source to the learner.
+After authoring:
 
-After authoring, run `instructions/37-review-study-slides.md`, correct findings, render `slides.pdf`, commit `slides.meta.json` and run `scripts/validate_study_slides.py`.
+1. run `instructions/37-review-study-slides.md` and correct findings;
+2. run `python scripts/package_study_slides.py`;
+3. run `python scripts/package_study_slides.py --check`;
+4. run `python scripts/validate_study_slides.py`.
+
+The packager bundles local JavaScript and Mermaid, inlines CSS and JavaScript and writes a deterministic ZIP containing exactly `slides.html`. The packaged document must open through `file://` without a server or runtime network assets.
+
+Do not install Playwright or Chromium. Do not render or commit PDF files. PDF failure must not be part of curriculum completion because PDF is no longer an active artifact.
 
 ## Contextual integration recommendation
 
-Recommend only capabilities supported by concrete current course signals. Explain them in learner language in `study/integrations.md`; keep preflight, authority and state classifications inside technical details and `state/integrations.json`.
-
-Apply contextual defaults:
-
-- Consensus supports empirical research but never replaces original citations;
-- Trello is preferred for rich courses; GitHub Issues is the first fallback and Todoist may be a task backend or flexible reminder tool;
-- `fixed_calendar` uses one calendar provider for fixed study blocks;
-- `flexible_reminders` uses Todoist and no duplicate calendar event;
-- `none` and `decide_later` activate neither routine provider;
-- missing day, time, duration, recurrence or timezone is collected before activation;
-- Gmail remains an on-request action and is not configured during generation or publication;
-- Habitify supports consistency only;
-- Mermaid remains canonical even with an external visual workspace;
-- Google Drive may hold deliverables;
-- Airtable remains a `github_to_airtable` projection;
-- course and media platforms are resource discovery, not progress authority.
-
-Use harmless reads only for providers needed now. If an optional provider is unavailable, continue with the repository-native alternative.
+Recommend only capabilities supported by concrete current course signals. Explain them in learner language in `study/integrations.md`; keep technical classifications in state. Optional providers never block repository-native content.
 
 ## Assessments
 
-Each assessment contains five substantial prompts covering understanding, analysis, transfer, misconception correction and evidence. Issue Forms include labels, hidden topic marker and complete prefilled title.
-
-Every rubric question declares one or more valid `outcome_ids`. All approved outcomes must be assessed. For beginner topics, at least one prompt verifies that the learner can define the central object and distinguish it from a nearby concept before applying it.
+Each assessment contains five substantial prompts covering understanding, analysis, transfer, misconception correction and evidence. Every rubric question declares one or more valid `outcome_ids`, and all approved outcomes are assessed.
 
 The lesson may teach:
 
 `Terminei <título da aula>. Avalie minhas respostas.`
 
-Continue accepting:
-
-`Finalizei o TOPIC-000. Avalie minhas respostas.`
-
-The module contains the direct clickable Issue Form URL. Never expose only the YAML filename.
-
-Assessment links and commands inside the lesson do not authorize the generation-completion response to skip publication.
+Continue accepting `Finalizei o TOPIC-000. Avalie minhas respostas.` as an alias.
 
 ## Roadmap and contracts language
 
-Roadmaps and topic contracts emphasize what the learner will be able to do, why it matters, what is ready, what will be prepared next, how to know the stage is complete and where supporting sources are.
-
-Do not foreground generation thresholds, topological order, PR status, CI or internal classifications in learner-facing sections.
+Emphasize what the learner will be able to do, why it matters, what is ready, what will be prepared next, how to know the stage is complete and where supporting sources are. Do not foreground generation thresholds, topological order, PR status or CI in learner-facing sections.
 
 ## Pull request and automatic review
 
-Open one draft PR containing only allowed curriculum artifacts. Run curriculum review, course-content review for every materialized topic, slide review, PDF rendering and the shared phase review. The lesson, slide sources, PDF, metadata and reviews belong to the same content version and PR. Merge only when no material decision or blocking finding remains.
+Open one draft PR containing only allowed curriculum artifacts. Run curriculum review, course-content review for every materialized topic, slide review, ZIP packaging and the shared phase review. The lesson, slide sources, ZIP, metadata and reviews belong to the same content version and PR. Merge only when required checks pass and no material decision or blocking finding remains.
 
 ## Completion
 
-Create no external tasks, events, reminders, email messages, notifications or workspaces during generation. Complete using `instructions/phase-completion.md` and resolve the next action through `scripts/lifecycle_next_action.py`.
+Create no external tasks, events, reminders, email messages or workspaces during generation. Complete using `instructions/phase-completion.md` and resolve the next action through `scripts/lifecycle_next_action.py`.
 
-When generation succeeds and publication is pending, guide naturally to this as the only normal copyable continuation:
+When generation succeeds and publication is pending, guide naturally to:
 
 `Organize minha trilha nas ferramentas que escolhemos.`
 
-This remains mandatory when the agent itself suggested `sem publicar tarefas ainda`. Do not present `Terminei <título da aula>. Avalie minhas respostas.` as the next command before publication succeeds.
-
-Continue accepting `Publique as tarefas da trilha nas integrações configuradas.` as an alias.
+Do not present `Terminei <título da aula>. Avalie minhas respostas.` as the next command before publication succeeds.

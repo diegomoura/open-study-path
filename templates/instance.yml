@@ -34,12 +34,14 @@ content_review:
   require_outcome_traceability: true
 
 study_slides:
-  contract_version: 1
+  contract_version: 2
   enabled: true
   required_for_materialized_topics: true
   source_format: html
-  learner_format: pdf
-  html_visibility: internal_only
+  learner_format: zip_html
+  archive_name: slides.zip
+  archive_entrypoint: slides.html
+  html_visibility: packaged_only
   generated_images_enabled: false
   mermaid_required: true
 
