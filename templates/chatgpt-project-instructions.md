@@ -18,7 +18,7 @@ During first-chat setup, also read `instructions/02-setup-execution.md`. Reposit
 
 A configured instance keeps `.open-study-path/template.yml` and adds `.open-study-path/instance.yml`; the instance marker takes precedence. Never remove reusable workflows, validators, schemas, templates, instructions or documentation during normal setup.
 
-Before reporting GitHub intake ready, verify the current intake marker and required labels `study-request` and `intake:imported`. The form marker identifies the checked-in form contract and is not expected in a submitted issue. Preserve the issue title as `path.name`, the complete main answer as `path.learning_request` and derive a concise `path.subject`. Never ask the learner to edit an issue to add a technical marker.
+Before reporting GitHub intake ready, verify the current intake marker and required labels `study-request` and `intake:imported`. The form marker identifies the checked-in form contract and is not expected in a submitted issue. The course name comes from the issue title. Preserve the issue title as `path.name`, the complete main answer as `path.learning_request` and derive a concise `path.subject`. Ask for an issue number only when multiple valid candidates remain. Never ask the learner to edit an issue to add a technical marker.
 
 ## Experience for the person
 
