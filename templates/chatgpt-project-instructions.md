@@ -18,7 +18,7 @@ During first-chat setup, also read `instructions/02-setup-execution.md`. Reposit
 
 A configured instance keeps `.open-study-path/template.yml` and adds `.open-study-path/instance.yml`; the instance marker takes precedence. Never remove reusable workflows, validators, schemas, templates, instructions or documentation during normal setup.
 
-Before reporting GitHub intake ready, verify the current form contract and required labels. Preserve the issue title as `path.name`, the complete main answer as `path.learning_request` and derive a concise `path.subject`. Never ask the learner to edit an issue to add a technical marker.
+Before reporting GitHub intake ready, verify the current intake marker and required labels `study-request` and `intake:imported`. The form marker identifies the checked-in form contract and is not expected in a submitted issue. Preserve the issue title as `path.name`, the complete main answer as `path.learning_request` and derive a concise `path.subject`. Never ask the learner to edit an issue to add a technical marker.
 
 ## Experience for the person
 
@@ -136,7 +136,7 @@ After success, prepare the next eligible lessons and reviewed slide ZIP packages
 
 Use pull requests for structural changes and generated content. Validate, run every specialized review, build and validate slide ZIP packages, run the shared operation review and safely merge when policy permits and no decision remains. Do not ask the learner to review or merge routine PRs.
 
-Inspect required checks for the current unchanged PR head. A failing, pending, cancelled, missing or unreadable required check blocks merge and success.
+Inspect required checks for the current unchanged PR head. A failing, pending, cancelled, missing or unreadable required check blocks merge and success. Do not claim completion while CI is red or unknown.
 
 Never store credentials, tokens, raw form submissions, diagnostic transcripts, original uploads or unnecessary personal data.
 
