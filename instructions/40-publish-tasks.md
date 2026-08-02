@@ -1,6 +1,6 @@
 # Publish tasks and selected integrations
 
-Use the approved roadmap, topic contracts, ready lessons, reviewed slide PDFs, integration plan and current state. Publication creates execution and practice projections. It must not regenerate or rewrite pedagogical content, slide sources or PDFs, but it may synchronize bounded integration-reference blocks whose content is derived deterministically from approved artifacts and durable state.
+Use the approved roadmap, topic contracts, ready lessons, reviewed slide PDFs, integration plan and current state. Publication creates only the external organization that helps the learner act now. It must not regenerate pedagogical content, slide sources or PDFs.
 
 Read `docs/learner-facing-language.md` and `docs/study-slides.md` before writing task descriptions or the completion response.
 
@@ -12,15 +12,13 @@ Continue accepting `Publique as tarefas da trilha nas integrações configuradas
 
 ## Connection preflight
 
-Run `instructions/42-integration-preflight.md` before external writes. Required providers must pass harmless verification before the required publication set. Optional missing providers use their documented alternatives and may receive one nonblocking connection suggestion.
+Run `instructions/42-integration-preflight.md` before external writes. Required providers must pass harmless verification. Optional providers are activated only when the learner supplied the information required to create a useful resource now.
 
-Do not wait for an optional connection click before completing work that can use a repository-native alternative.
+Do not advertise, probe or summarize tools merely because they were mentioned in intake. Do not report an inventory of inactive integrations.
 
 ## Authority model
 
-GitHub stores approved curriculum, lessons, slide PDFs, assessments and verified progress. Exactly one task backend tracks operational execution. External practice, reminders, calendars, habits, analytics and course platforms never establish learning completion.
-
-This is an internal contract. Do not repeat it verbatim in every learner-facing card.
+GitHub stores approved curriculum, lessons, slide PDFs, assessments and verified progress. Exactly one task backend tracks operational execution. Reminders and calendars support routine only; they never establish learning completion.
 
 ## Standard assessment labels
 
@@ -35,18 +33,18 @@ Do not create empty assessment issues during publication.
 
 ## Task backend
 
-Create one task per topic in the single selected backend. The task is the learner's concise entry point into the visual summary, complete lesson, primary practice and assessment. It is not an inventory of every repository artifact.
+Create one task per topic in the single selected backend. The task is the learner's concise entry point into the lesson, practice and assessment. It is not an inventory of repository artifacts or integrations.
 
 ### One primary resource per capability
 
-For every ready topic, show exactly these learner-facing capabilities in this order:
+For every ready topic, show these learner-facing capabilities in this order:
 
 1. one **Slides** link to the current reviewed PDF;
 2. one **Aula** link to the complete module;
-3. one current **Prática** link for the same practice capability;
+3. one **Prática** link only when a separate approved exercise or laboratory is useful;
 4. one direct **Avaliação** link.
 
-Keep one current practice link in the task. Do not duplicate local and external alternatives merely because both are stored.
+When practice is already contained in the lesson, do not create or link a duplicate deck. Never create flashcard Markdown, TSV exports or Quizlet sets. The **Aula** remains the practice destination in that case.
 
 Build the slide URL from the exact instance identity and topic contract:
 
@@ -54,13 +52,7 @@ Build the slide URL from the exact instance identity and topic contract:
 https://github.com/OWNER/REPOSITORY/raw/HEAD/study/slides/TOPIC-000/slides.pdf
 ```
 
-This route stays on GitHub, preserves private-repository access and returns the PDF directly for an authenticated viewer. Do not use a temporary signed `raw.githubusercontent.com` URL. Do not show the internal HTML, CSS, JavaScript, render metadata, slide-review evidence, topic contract or rubric.
-
-When an external integration is connected and its current resource was created successfully, show that external resource as the primary practice link. Keep local Markdown and TSV alternatives in the lesson and repository, but do not duplicate them in the task.
-
-When the external resource is unavailable, show the best local learner-facing alternative instead. Prefer the Markdown study deck. Show the TSV only when import is the intended action or the learner explicitly asks for it.
-
-Do not link internal topic contracts under `study/topics/`, rubric YAML files under `study/assessments/`, state files or synchronization records from the primary task. Summarize the useful parts of those artifacts directly in the card.
+Do not show internal HTML, CSS, JavaScript, render metadata, slide reviews, topic contracts, rubric YAML, state files or synchronization records.
 
 ### Human card titles
 
@@ -68,9 +60,7 @@ Prefer the learner-facing lesson title without a numeric prefix:
 
 `<título da aula>`
 
-A dependency graph may branch, so `9. <título>` can falsely suggest that card 8 is the required previous lesson. Keep the stable topic ID and roadmap position in state. Use `Etapa <n> · <título>` only when the course is genuinely linear or the learner explicitly prefers numbering.
-
-Do not use `[TOPIC-001]` in the visible title unless the learner explicitly prefers technical IDs.
+Use `Etapa <n> · <título>` only when the course is genuinely linear or the learner explicitly prefers numbering. Do not use `[TOPIC-001]` in visible titles by default.
 
 ### Ready lesson card
 
@@ -85,7 +75,7 @@ Use a description equivalent to:
 >
 > - **Slides:** <link direto para o PDF da versão atual>
 > - **Aula:** <link direto para o módulo completo>
-> - **Prática:** <um único recurso principal disponível agora>
+> - **Prática:** <somente quando houver um exercício separado útil>
 > - **Avaliação:** <link direto para o formulário>
 >
 > **O que você vai produzir:** <entregável>  
@@ -94,15 +84,13 @@ Use a description equivalent to:
 > Quando terminar, envie a avaliação e escreva:  
 > **“Terminei <título da aula>. Avalie minhas respostas.”**
 
-Do not append “Este cartão registra execução; somente a avaliação no GitHub estabelece domínio.” Use the friendlier completion sentence above.
-
 Create a checklist named **Sua sessão de estudo** using the three to seven granular actions from the module. The checklist intro may say:
 
 > Siga estas etapas no seu ritmo. Os tempos são sugestões, não limites.
 
 ### Future lesson card
 
-Build this copy from the topic contract's **direct prerequisites**, never from numeric adjacency or from every lower-numbered topic.
+Build the copy from the topic contract's direct prerequisites, never from numeric adjacency.
 
 Use:
 
@@ -116,11 +104,7 @@ Use:
 >
 > A aula completa será preparada automaticamente quando todos os pré-requisitos acima estiverem concluídos. Os slides serão gerados junto com ela. Você não precisa pedir a geração manualmente.
 
-When there are no prerequisites, say that the stage is an entry point. When there is one prerequisite, name it directly. When there are multiple prerequisites from different branches, list all of them and do not imply that the numerically previous card contains their combined content.
-
-The future card must stand on its own. Do not link the internal topic contract merely to provide a destination. Link a roadmap only when it genuinely helps the learner understand the wider sequence. Do not attach nonexistent module, PDF, slide source, rubric, flashcard or assessment links. Do not use `planned`, `materialized`, “janela ativa” or “ordem topológica” in learner copy.
-
-Only dependency-ready lessons enter the ready list. Keep future lessons in the planned list.
+The future card must stand on its own. Do not link nonexistent modules, PDFs, assessments or internal contracts.
 
 ### Trello structure
 
@@ -133,133 +117,115 @@ For a rich course, create or reuse one course board with lists equivalent to:
 - Revisão necessária;
 - Concluído.
 
-Use “Revisão necessária” in visible copy instead of “Recuperação” when the latter could sound punitive. Internal state may retain recovery terminology.
+Use “Revisão necessária” in visible copy instead of “Recuperação” when the latter could sound punitive.
 
 ### Todoist or GitHub Issues
 
-When another task backend is selected, preserve the same human structure, resource order and projection rules. Todoist reminders may be auxiliary only and must point to the primary task or lesson.
+When another task backend is selected, preserve the same human structure and projection rules. Todoist used as the primary task backend is distinct from Todoist used only for flexible reminders.
 
-### Task projection review
+## Routine activation
 
-Before publication success, review every created or updated task against the approved topic contract:
+Read `integration_preferences.routine` before creating reminders or calendar events.
+
+### Fixed calendar blocks
+
+Use Google Calendar or the approved calendar provider only when:
+
+- `routine.mode` is `fixed_calendar`;
+- days or dates, start time, duration and timezone can be resolved;
+- the selected calendar is known;
+- creating the event will not conflict with an explicit learner restriction.
+
+Use the calendar event's own notification. Do not also create Todoist reminders for the same study block.
+
+### Flexible reminders
+
+Use Todoist reminders only when:
+
+- `routine.mode` is `flexible_reminders`;
+- recurrence or trigger and any requested reminder time can be resolved;
+- the reminder points to the primary task or lesson.
+
+Do not create Google Calendar events for the same routine.
+
+### Missing routine details
+
+When the learner chose a routine but required timing details are missing, ask one concise question before external writes. Do not mark the provider as configured, connected-and-ready or successfully published. A routine mode of `none` or `decide_later` activates neither calendar nor reminder provider.
+
+## Email summaries
+
+Email is an action available on explicit request, not a provider configured during publication. Do not create Gmail filters, drafts, schedules or automatic sends merely because Gmail is connected.
+
+When the learner explicitly asks for an email summary, verify Gmail access at that moment, ask for any genuinely missing recipient or scope, and send or draft according to the request. Until then, keep `notifications.provider: chat` and `email_enabled: false`.
+
+## Other integrations
+
+Activate another optional tool only when it has immediate value in the ready content window and the learner must use it now. Research, artifact workspaces, external diagrams, habits and analytics remain absent unless a concrete current task requires them.
+
+Never finish with a section equivalent to “O restante ficou assim”. Do not list inactive, deferred, reserved, fallback-only or merely connected providers. Mention a provider only when it gives the learner a destination now or when a real limitation changes the next action.
+
+## Task projection review
+
+Before publication success, read every created or updated task back when supported and verify:
 
 - visible title matches the topic title;
 - objective, effort and deliverable match;
 - prerequisite copy contains exactly the direct prerequisite titles;
-- no wording assumes a linear previous card when the graph branches;
 - ready status comes from satisfied dependencies;
-- the resource order is Slides, Aula, Prática, Avaliação;
-- the slide link uses the direct GitHub raw PDF route and points to the current `content_version` recorded by `slides.meta.json`;
-- the lesson, practice and assessment links point to the current reviewed content version;
-- no internal slide source or review artifact is exposed.
+- resource order is Slides, Aula, optional Prática, Avaliação;
+- links point to current reviewed content;
+- no internal artifact or inactive provider is exposed.
 
-Read the external task back when the connector exposes a harmless read. Correct mismatches before continuing. Persist the direct prerequisite IDs and current content version with the task resource so later synchronization can detect drift. This projection review does not replace `instructions/36-review-course-content.md` or `instructions/37-review-study-slides.md`; it verifies that the reviewed course was represented correctly outside GitHub.
-
-## Scheduling
-
-Use the selected scheduling provider only as an aid to reserve time. Future content links only to its current task when a link is useful. Update existing matching schedule resources rather than creating duplicates.
-
-## Formative practice
-
-When Quizlet is selected and connected, create one real set from each approved current-version local deck. Prefer TSV as the structured source and Markdown as the review reference. Store the external ID and URL, then show only **Praticar no Quizlet** as the flashcard-practice link in the current task. Keep local Markdown and TSV files available inside the lesson and repository as durable alternatives.
-
-After every successful create or reuse operation, persist the resource with topic, `content_version`, URL and `status: success` before projecting the link elsewhere. Do not re-evaluate or regenerate the flashcards: the approved TSV and Markdown deck remain the reviewed content.
-
-### Synchronize lesson practice links
-
-After current-version formative resources are durably recorded, run:
-
-`python scripts/sync_practice_links.py`
-
-The script may change only the block delimited by:
-
-- `<!-- open-study-path:practice-links:start -->`
-- `<!-- open-study-path:practice-links:end -->`
-
-That block lists the current Quizlet set when one exists and always retains the local Markdown and TSV alternatives. The rest of the lesson, including the slide PDF link block, must remain byte-for-byte unchanged. Older Quizlet sets whose `content_version` does not match the topic must not be linked.
-
-For legacy lessons without markers, the script may migrate only the link list inside `## Pratique e revise` and add the markers. It must preserve the surrounding explanation and every other section.
-
-Run `python scripts/sync_practice_links.py --check` after synchronization. A current successful Quizlet set missing from its lesson, a stale external link, malformed markers or any further pending change blocks publication success.
-
-When useful decks exist but Quizlet is not connected, render one nonblocking connection suggestion through Plugin Management. Use natural copy:
-
-> Os flashcards já estão disponíveis na aula. Conectar o Quizlet acrescenta um modo interativo de praticar.
-
-Until Quizlet is connected, show **Estudar os flashcards no GitHub** as the task's primary practice link. Do not also show the TSV unless import is the intended action.
-
-Do not ask a separate yes/no question before the control and do not block publication.
-
-If no harmless read operation exists, never create a disposable test set. The first intended set creation is the optional access check. On failure, retain local decks and record a short non-sensitive reason.
-
-When a connector creates but cannot edit:
-
-- reuse an existing exact current-version set;
-- create a versioned replacement only after approved content changes;
-- mark the prior record as `superseded`;
-- update operational links to the newest successful set;
-- never claim that an old set was updated when a new one was created.
-
-Natural return command:
-
-`Conectei o Quizlet. Crie meus flashcards.`
-
-Technical alias:
-
-`Conectei o Quizlet ao ChatGPT. Verifique novamente e publique os flashcards dos tópicos materializados.`
-
-Do not publish sets for future topics without complete decks.
-
-## Other integrations
-
-Apply the same projection rule to other capabilities:
-
-- show one current scheduler or task destination, not every calendar fallback;
-- show one artifact workspace link when it is the actual place to work;
-- show one external diagram only when it adds something beyond the canonical Mermaid view;
-- habits support consistency only;
-- Airtable is a `github_to_airtable` read model;
-- Gmail or Outlook may send only configured summaries;
-- course platforms link precise approved lessons or exercises.
-
-Use human labels in visible resources. Keep provider authority, preflight, fallbacks and synchronization terminology in the lesson, integration state and technical plan instead of repeating them in tasks.
+Correct mismatches before continuing. Persist direct prerequisite IDs and current content version with the task resource so later synchronization can detect drift.
 
 ## Idempotency and state
 
 Inspect `state/integrations.json` and matching provider resources before writing. Reuse or update exact resources when supported. Store capability, provider, safe ID, URL, topic, content version, direct prerequisite IDs, authority, sync status and timestamp. Never persist credentials, tokens, OAuth details, raw submissions or unnecessary identity data.
 
-Task synchronization is idempotent. Re-running publication with an unchanged topic version must retain the same slide PDF route and update only provider fields that genuinely drifted. A changed `content_version` requires a newly reviewed and rendered PDF before the task is updated.
-
-Practice-link synchronization is idempotent. Re-running it with unchanged topic versions and integration state must produce no diff. When a topic version changes, the old external practice link is removed until a successful resource for the new version is recorded.
+Task synchronization is idempotent. An interrupted publication must report and reuse what was actually created.
 
 ## Persist publication completion
 
-The lifecycle may advance to evaluation only after publication state is durably recorded, learner-facing practice links are synchronized and task projection review has no blocking mismatch.
+The lifecycle may advance to evaluation only after the required task projection is durably recorded and its review has no blocking mismatch.
 
-After the complete required publication set succeeds, all created or reused resources are represented in `state/integrations.json`, and `python scripts/sync_practice_links.py --check` passes:
+After the complete required publication set succeeds:
 
 - set `sync.status` to `success`;
 - set `sync.last_success_at` to the current ISO 8601 timestamp;
 - clear resolved entries from `sync.errors`;
 - retain safe resource IDs and URLs needed for idempotent updates.
 
-A Markdown or GitHub-native task backend still completes the publication phase; record the same successful sync state after its repository-native projection is ready.
+Do not make inactive reminders, calendars, email or other optional providers part of publication success.
 
-When required publication is blocked, failed, partial, still in progress, task projection is inconsistent, the current slide PDF is missing or practice links are out of sync:
+When required publication is blocked, failed, partial or still in progress:
 
-- do not set a success status or `last_success_at`;
-- persist the accurate non-success status and a short non-sensitive reason;
+- do not set success or `sync.last_success_at`;
+- persist the accurate status and a short non-sensitive reason;
 - do not present an evaluation command;
-- return the provider-specific connection or retry command from `instructions/phase-completion.md`.
+- return the provider-specific connection or retry command.
 
 Run `scripts/lifecycle_next_action.py` against the final persisted state before composing the completion response.
 
 ## Completion
 
-After publication, link the first ready slide PDF, complete lesson, primary task and assessment. Mention an alternative only when the primary resource is unavailable or the learner explicitly asks for it.
+After publication, answer in this order:
 
-Do not lead with a publication report, provider inventory, PR status or CI result. Only after successful publication state is persisted, use:
+1. what is ready;
+2. the primary task destination;
+3. the first concrete action;
+4. the natural evaluation command;
+5. one attention item only when it changes that action.
 
-`Terminei <título da aula>. Avalie minhas respostas.`
+A good response is equivalent to:
 
-Continue accepting `Finalizei o TOPIC-000. Avalie minhas respostas.` as an alias.
+> Sua trilha está organizada no <ferramenta principal>.
+>
+> <link do quadro ou tarefa>
+>
+> Comece por **<título da primeira aula>** e mova a tarefa para **Em andamento** quando iniciar.
+>
+> Quando terminar a aula e enviar a avaliação, escreva:
+>
+> `Terminei <título da aula>. Avalie minhas respostas.`
+
+Do not lead with a publication report, provider inventory, PR status or CI result.

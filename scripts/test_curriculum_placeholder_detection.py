@@ -11,7 +11,6 @@ from generated_instance_contract import (
     CANONICAL_LOCATOR,
     CANONICAL_MODULE_HEADINGS,
     OTHER_FORMATS_HEADING,
-    PRACTICE_HEADING,
     assessment_form_text,
     heading_order_errors,
     is_specialized_review_path,
@@ -77,10 +76,12 @@ def test_specialized_reviews_do_not_need_second_review() -> None:
     assert not is_specialized_review_path("state/reviews/curriculum.yml")
 
 
-def test_practice_sections_remain_distinct() -> None:
-    assert PRACTICE_HEADING != OTHER_FORMATS_HEADING
+def test_lesson_practice_precedes_alternative_formats() -> None:
     template = (ROOT / "templates/module.md").read_text(encoding="utf-8")
-    assert template.index(PRACTICE_HEADING) < template.index(OTHER_FORMATS_HEADING)
+    assert template.index("## Prática guiada") < template.index("## Prática independente")
+    assert template.index("## Prática independente") < template.index(OTHER_FORMATS_HEADING)
+    assert "Quizlet" not in template
+    assert ".tsv" not in template.lower()
 
 
 def test_regeneration_closure() -> None:
@@ -126,7 +127,7 @@ def main() -> None:
     test_one_ordered_lesson_vocabulary()
     test_assessment_commands_are_semantic()
     test_specialized_reviews_do_not_need_second_review()
-    test_practice_sections_remain_distinct()
+    test_lesson_practice_precedes_alternative_formats()
     test_regeneration_closure()
     test_finalization_contract_is_wired()
 

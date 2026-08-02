@@ -44,6 +44,9 @@ integration_preferences:
   account_connections: ask_per_provider
   already_uses: []
   willing_to_connect: []
+  routine:
+    mode: decide_later
+    details: null
   notes: null
 
 integrations:
@@ -68,16 +71,6 @@ integrations:
       - official_documentation
       - web_research
 
-  formative_practice:
-    provider: auto
-    preferred: quizlet
-    alternatives:
-      - ace_quiz_maker
-      - markdown_flashcards
-    enabled: auto
-    required: false
-    affects_mastery: false
-
   task_manager:
     provider: auto
     preferred: trello
@@ -89,20 +82,19 @@ integrations:
     single_authoritative_backend: true
 
   reminders:
-    provider: auto
+    provider: none
     preferred: todoist
-    enabled: auto
+    enabled: disabled
     required: false
     affects_task_state: false
 
   calendar:
-    provider: auto
-    preferred: reclaim
+    provider: none
+    preferred: google_calendar
     alternatives:
-      - google_calendar
       - outlook_calendar
       - none
-    enabled: auto
+    enabled: disabled
     required: false
 
   habit_tracking:

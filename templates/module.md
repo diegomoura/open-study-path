@@ -37,16 +37,13 @@ Ao final, você deverá conseguir:
 
 Para tópicos iniciantes ou lacunas registradas no diagnóstico, explique primeiro o objeto estudado em linguagem comum. Não comece pelo mecanismo interno. Diferencie experiência em uma área adjacente de conhecimento no assunto: use a experiência prévia para escolher exemplos, não para pular fundamentos.
 
-Expanda siglas na primeira ocorrência visível e defina os termos necessários antes de usá-los para definir outros termos. Explique, quando pertinente, a diferença entre criação/configuração e uso, como treinamento versus inferência.
+Expanda siglas na primeira ocorrência visível e defina os termos necessários antes de usá-los para definir outros termos. Quando a dificuldade não for iniciante e o diagnóstico confirmar domínio do vocabulário, esta seção pode ser mais curta, mas termos novos ainda devem ser definidos na primeira ocorrência.
 
 ### Vocabulário desta aula
 
-Liste apenas os termos indispensáveis à aula atual. Use uma definição curta e compreensível antes de aprofundar.
+Liste somente os termos indispensáveis à aula atual.
 
-- **SIGLA — termo completo:** explicação em linguagem comum.
 - **Conceito:** o que é, para que serve e com qual conceito próximo não deve ser confundido.
-
-Quando a dificuldade não for iniciante e o diagnóstico confirmar domínio do vocabulário, esta seção pode ser mais curta, mas termos novos ainda devem ser definidos na primeira ocorrência.
 
 ## Intuição antes dos detalhes
 
@@ -58,28 +55,17 @@ Use uma analogia quando ela realmente ajudar. Declare a relação útil e o limi
 
 **Onde a analogia deixa de funcionar:** explique o que o sistema real faz de maneira diferente.
 
-Quando uma analogia for artificial ou enganosa, substitua-a por uma situação reconhecível:
-
-**Exemplo concreto:** mostre uma situação, o que acontece, qual é a consequência e como verificar o resultado.
-
-Toda aula deve trazer ao menos uma analogia com limite explícito ou um exemplo concreto rotulado. Sempre que o tema permitir, combine um exemplo cotidiano com outro ligado ao objetivo ou à experiência da pessoa.
+Quando uma analogia for artificial ou enganosa, substitua-a por um exemplo concreto rotulado.
 
 ## Recupere o que já sabe
 
-Inclua duas ou três perguntas curtas ou tarefas de recuperação ativa. Dê orientação clara para revisar somente os pré-requisitos diretos quando necessário. Não faça perguntas que pressuponham termos que ainda não foram explicados na própria aula ou em um pré-requisito confirmado. A etapa numericamente anterior não é um pré-requisito automático em um roadmap com ramificações.
+Inclua duas ou três perguntas curtas ou tarefas de recuperação ativa. Dê orientação clara para revisar somente os pré-requisitos diretos quando necessário. Não faça perguntas que pressuponham termos ainda não explicados.
 
 ## Conteúdo essencial
 
 Ensine efetivamente o conteúdo em linguagem adequada ao nível configurado. Inclua definições, relações entre conceitos, limites, nuances e raciocínio. Não use placeholders como “estude o conceito”.
 
-Escreva uma ideia principal por parágrafo. Apresente primeiro a frase simples e depois o termo técnico. Use transições que mostrem como uma ideia leva à seguinte e coloque exemplos logo depois de abstrações difíceis. Evite empilhar termos novos na mesma frase.
-
-As afirmações centrais devem poder ser rastreadas até as fontes listadas no final. Diferencie claramente:
-
-- o que vem de fonte primária, documentação oficial ou pesquisa;
-- o que é síntese do agente;
-- o que é exemplo ou adaptação pedagógica criada para esta trilha;
-- o que é cenário realista criado para ensino e o que é caso real documentado.
+Escreva uma ideia principal por parágrafo. Apresente primeiro a frase simples e depois o termo técnico. Coloque exemplos logo depois de abstrações difíceis e diferencie claramente fonte, síntese do agente e cenário pedagógico.
 
 ## Mapa visual
 
@@ -92,7 +78,7 @@ flowchart TD
     B -->|Caminho 2| D[Alternativa ou erro comum]
 ```
 
-Depois do diagrama, explique o que observar, como as partes se relacionam e quais limitações o desenho não mostra. Não deixe o diagrama solto e não o use como substituto da explicação.
+Depois do diagrama, explique o que observar, como as partes se relacionam e quais limitações o desenho não mostra.
 
 ## Exemplos trabalhados
 
@@ -102,7 +88,7 @@ Apresente ao menos dois exemplos resolvidos passo a passo:
 - um caso ligado ao domínio da trilha;
 - entre eles, inclua ambiguidade, limite ou erro comum.
 
-Estruture cada exemplo com situação, mecanismo ou decisão, consequência, forma de verificar e limite ou alternativa. Um cenário inventado deve ser chamado de **cenário realista**, não de caso real. Um caso real precisa de fonte verificável.
+Estruture cada exemplo com situação, mecanismo ou decisão, consequência, forma de verificar e limite ou alternativa. Um cenário inventado deve ser chamado de **cenário realista**, não de caso real.
 
 ## Erros comuns e como corrigir
 
@@ -114,48 +100,17 @@ Inclua exercícios com pistas graduais. Não revele imediatamente a resposta com
 
 ## Prática independente
 
-Inclua tarefas que exijam transferência para um caso novo e produção do entregável definido no tópico.
-
-## Pratique e revise
-
-Quando o tópico tiver definições, comandos, fórmulas, classificações, comparações ou erros comuns adequados à recuperação ativa:
-
-- defina `flashcards: study/flashcards/TOPIC-000.tsv` no contrato da etapa;
-- defina `flashcards_study: study/flashcards/TOPIC-000.md` no contrato da etapa;
-- gere o TSV com colunas `Front`, `Back` e `Tags`;
-- gere o Markdown com cartões expansíveis usando `<details>` e `<summary>`.
-
-Mantenha os links de prática dentro do bloco delimitado abaixo. A geração inicial inclui as alternativas locais. Depois da publicação, `scripts/sync_practice_links.py` acrescenta ou remove somente o link externo correspondente à versão atual.
-
-<!-- open-study-path:practice-links:start -->
-- [Estudar os flashcards no GitHub](../flashcards/TOPIC-000.md)
-- [Baixar ou importar o TSV](../flashcards/TOPIC-000.tsv)
-<!-- open-study-path:practice-links:end -->
-
-Dentro da aula, mantenha as alternativas duráveis e, quando existir um conjunto real da versão atual, **Praticar no Quizlet**. A pessoa pode escolher o formato que melhor ajuda.
-
-A ferramenta de tarefas não deve repetir todos esses links. Conforme `instructions/40-publish-tasks.md`, o cartão mostra somente um recurso principal de prática: Quizlet quando o conjunto atual existe; Markdown quando o recurso externo não está disponível; TSV apenas quando importação é a ação pretendida.
-
-Explique uma única vez, em linguagem natural: os flashcards ajudam a praticar; a etapa é concluída pela avaliação.
-
-Quando flashcards não forem úteis, mantenha `flashcards: null` e `flashcards_study: null` no contrato e explique qual prática substitui a memorização.
+Inclua tarefas que exijam transferência para um caso novo e produção do entregável definido no tópico. A prática deve desenvolver a capacidade prometida, não apenas pedir repetição de definições.
 
 ## Outras formas de aprender
 
-Selecione somente formatos que realmente acrescentem uma perspectiva ou demonstração útil. Podem incluir:
-
-- vídeo curto ou trecho específico de aula;
-- aula universitária aberta;
-- podcast;
-- laboratório ou demonstração interativa;
-- capítulo ou exercício de curso;
-- artigo, TCC, dissertação ou paper relevante.
-
-Para cada recurso, diga **por que usar**, **qual trecho estudar**, **quanto esforço exige**, **idioma/legendas quando relevante** e **condição de acesso**. Recursos potencialmente pagos precisam de uma alternativa gratuita ou oficial.
+Selecione somente formatos que realmente acrescentem uma perspectiva ou demonstração útil. Para cada recurso, diga por que usar, qual trecho estudar, quanto esforço exige, idioma ou legendas e condição de acesso. Recursos potencialmente pagos precisam de uma alternativa gratuita ou oficial.
 
 ## Confira sem consultar
 
-Inclua perguntas que possam ser respondidas sem olhar o texto e uma orientação breve de revisão espaçada. Para uma aula iniciante, inclua ao menos uma pergunta de definição em linguagem própria e outra que peça aplicação ou contraste.
+Inclua perguntas que possam ser respondidas sem olhar o texto. Para uma aula iniciante, inclua ao menos uma pergunta de definição em linguagem própria e outra que peça aplicação ou contraste. Oriente a pessoa a voltar somente ao trecho relacionado ao erro e depois responder novamente sem consultar.
+
+Não gere flashcards, decks Markdown, arquivos TSV ou conjuntos em serviços externos. Recuperação ativa continua dentro da aula e da avaliação.
 
 ## O que você vai produzir
 
@@ -167,17 +122,15 @@ Construa o link direto usando a identidade exata da instância:
 
 `https://github.com/OWNER/REPOSITORY/issues/new?template=assessment-topic-000.yml`
 
-Apresente como **Abrir a avaliação de <título da aula>**. Não apresente somente o nome interno `assessment-topic-000.yml`.
-
-Depois do envio, peça uma frase natural:
+Apresente como **Abrir a avaliação de <título da aula>**. Depois do envio, peça:
 
 `Terminei <título da aula>. Avalie minhas respostas.`
 
-Continue aceitando `Finalizei o TOPIC-000. Avalie minhas respostas.` como alias técnico. O número da issue só deve ser solicitado quando houver mais de uma submissão candidata.
+Continue aceitando `Finalizei o TOPIC-000. Avalie minhas respostas.` como alias técnico.
 
 ## Como este conteúdo foi construído
 
-Explique em um parágrafo quais fontes sustentaram as ideias centrais e quais diagramas, analogias, exemplos ou exercícios foram criados como adaptação pedagógica. Declare simplificações, divergências ou limites importantes. Identifique cenários realistas criados para ensino e cite a fonte de casos reais.
+Explique em um parágrafo quais fontes sustentaram as ideias centrais e quais diagramas, analogias, exemplos ou exercícios foram criados como adaptação pedagógica. Declare simplificações, divergências ou limites importantes.
 
 ## Fontes e caminhos para aprofundar
 
@@ -189,4 +142,4 @@ Inclua de três a sete fontes realmente consultadas. Sempre que existirem, combi
 | Acadêmica ou técnica | Título, instituição, seção e link | Conferência de definições, evidência ou limites | público |
 | Vídeo, aula ou curso | Título, autor/canal, trecho ou timestamp e link | Explicação alternativa ou demonstração | público, idioma e legendas |
 
-Links sem explicação não bastam. Inclua capítulo, seção, página, DOI, aula, exercício ou timestamp. Não cite uma resposta de plugin como fonte; cite o documento original. Siga `docs/content-quality-and-sources.md` e `docs/beginner-first-pedagogy.md`.
+Links sem explicação não bastam. Inclua capítulo, seção, página, DOI, aula, exercício ou timestamp. Não cite uma resposta de plugin como fonte; cite o documento original.

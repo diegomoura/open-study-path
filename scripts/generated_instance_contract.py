@@ -24,7 +24,6 @@ CANONICAL_MODULE_HEADINGS = (
     "## Erros comuns e como corrigir",
     "## Prática guiada",
     "## Prática independente",
-    "## Pratique e revise",
     "## Outras formas de aprender",
     "## Confira sem consultar",
     "## O que você vai produzir",
@@ -33,10 +32,7 @@ CANONICAL_MODULE_HEADINGS = (
     "## Fontes e caminhos para aprofundar",
 )
 
-PRACTICE_HEADING = "## Pratique e revise"
 OTHER_FORMATS_HEADING = "## Outras formas de aprender"
-PRACTICE_START_MARKER = "<!-- open-study-path:practice-links:start -->"
-PRACTICE_END_MARKER = "<!-- open-study-path:practice-links:end -->"
 
 SPECIALIZED_REVIEW_PREFIXES = (
     "state/content-reviews/",

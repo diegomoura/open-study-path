@@ -31,9 +31,9 @@ Before reporting GitHub intake ready, verify the form contains the current intak
    - `Vamos fazer meu diagnóstico.`
    - `Crie minha trilha de estudos.`
    - `Organize minha trilha nas ferramentas que escolhemos.`
-   - `Conectei o Quizlet. Crie meus flashcards.`
    - `Terminei <título da aula>. Avalie minhas respostas.`
 6. Translate internal language: `materialized` becomes “aula pronta”, `planned` becomes “aula futura”, fallback becomes “alternativa” and recovery becomes “revisão necessária” in visible copy.
+7. Never end a successful phase with an inventory of inactive, deferred, fallback-only, reserved or merely connected integrations. Show only the tools the learner needs now.
 
 ## Lifecycle
 
@@ -82,12 +82,14 @@ Every ready lesson must include:
 - at least two worked examples;
 - common mistakes and corrections;
 - guided and independent practice;
-- active recall;
+- active recall inside the lesson;
 - deliverable and direct assessment;
 - `Como este conteúdo foi construído`;
 - `Outras formas de aprender`;
 - `Fontes e caminhos para aprofundar`;
 - one direct `Slides da aula` PDF link.
+
+Do not generate flashcards, Markdown decks, TSV exports or Quizlet sets. Recovery practice belongs inside the lesson and assessment unless a genuinely different exercise or laboratory adds value.
 
 Use normally three to seven inspected sources. Include a primary or official source when available, a reliable explanatory source and an alternative format when it adds real value. Videos and courses need precise lessons or timestamps, purpose, effort, language/access and an active learning task. Potentially paid resources require a free or official alternative.
 
@@ -126,11 +128,20 @@ PDF rendering is deterministic validation after semantic review. A missing PDF, 
 
 ## Integrations
 
-Recommend only tools justified by the course and preferences. Explain them in simple language first; keep preflight, authority and synchronization details in collapsed technical sections and state files.
+Recommend only tools justified by the course and current learner action. Explain them in simple language first; keep preflight, authority and synchronization details in state files.
 
-GitHub stores curriculum, lessons, slide PDFs, assessments and verified progress. Use one primary task backend. Prefer Trello for a visual course experience, use GitHub Issues as the first fallback and keep repository-native Markdown as the final internal fallback; Todoist remains available for simpler task flows or recurring reminders. Quizlet and other formative tools support practice only and always have local alternatives. Mermaid remains canonical. Airtable is only a `github_to_airtable` projection.
+GitHub stores curriculum, lessons, slide PDFs, assessments and verified progress. Use one primary task backend. Prefer Trello for a visual course experience, use GitHub Issues as the first fallback and keep repository-native Markdown as the final internal fallback. Todoist may be the task backend or a flexible reminder tool, but not both by accident. Mermaid remains canonical. Airtable is only a `github_to_airtable` projection.
 
-When `integration_preferences.account_connections` is `no_external_accounts`, do not suggest, probe or write to apps requiring another account, even when the learner says they already use them. Use GitHub Issues or repository Markdown, local flashcards, Mermaid, repository artifacts, primary sources, web research and chat.
+Read `integration_preferences.routine` before routine writes:
+
+- `fixed_calendar` uses one calendar provider and its event notification;
+- `flexible_reminders` uses Todoist and creates no duplicate calendar event;
+- `none` and `decide_later` activate neither;
+- missing days, time, duration, recurrence or timezone must be collected with one concise question before creation.
+
+Gmail is an action available on explicit request, not a provider configured during normal publication. Do not claim Gmail is configured merely because it is connected. Verify access only when the learner asks to send or draft an email summary.
+
+When `integration_preferences.account_connections` is `no_external_accounts`, do not suggest, probe or write to apps requiring another account, even when the learner says they already use them. Use GitHub Issues or repository Markdown, Mermaid, repository artifacts, primary sources, web research and chat.
 
 Run `instructions/42-integration-preflight.md` before external writes. Optional missing tools use alternatives and do not block the course. A connection suggestion requires an explicit click and does not itself prove access.
 
@@ -144,16 +155,40 @@ Ready tasks say:
 - time suggested;
 - one direct slide PDF link;
 - one complete lesson link;
-- one primary practice link available now;
+- one optional separate practice link only when it adds value;
 - one direct assessment link;
 - what to produce;
 - how to finish.
 
-Show resources in exactly this order: **Slides**, **Aula**, **Prática**, **Avaliação**. When an external practice resource such as Quizlet exists, show it as the task's practice link and keep Markdown/TSV alternatives inside the lesson. When it does not exist, show the best local learner-facing alternative. Do not show both merely because both are stored.
+Show resources in this order: **Slides**, **Aula**, optional **Prática**, **Avaliação**. Do not create a duplicate practice artifact when the complete exercises already live inside the lesson.
 
 Do not link `study/topics/` contracts, slide HTML/CSS/JavaScript, render metadata, slide reviews, rubric YAML, state files or synchronization records from normal learner tasks. Summarize objective, deliverable and completion criteria directly in the task.
 
 Future tasks begin with **Pré-requisitos desta etapa**, list exactly the direct prerequisite titles and say to follow that list rather than card numbering. They say what the person will learn, what they will produce and that the complete lesson and slides will be prepared automatically after those prerequisites. Do not use “todas as etapas anteriores” in a branched graph and do not add nonexistent lesson or slide links.
+
+## Completion response
+
+After successful publication, show only:
+
+1. what is ready;
+2. the primary task destination;
+3. the first concrete action;
+4. the evaluation command;
+5. one attention item only when it changes that action.
+
+Do not add “O restante ficou assim” or list inactive reminders, calendars, email, research, workspace or analytics tools.
+
+Use a response equivalent to:
+
+> Sua trilha está organizada no <ferramenta principal>.
+>
+> <link do quadro ou tarefa>
+>
+> Comece por **<título da primeira aula>** e mova a tarefa para **Em andamento** quando iniciar.
+>
+> Quando terminar a aula e enviar a avaliação, escreva:
+>
+> `Terminei <título da aula>. Avalie minhas respostas.`
 
 ## Assessments and progress
 

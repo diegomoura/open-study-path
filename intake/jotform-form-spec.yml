@@ -29,11 +29,11 @@ sections:
   - id: preferences
     title: Preferências de aprendizagem
   - id: integrations
-    title: Integrações opcionais
+    title: Organização e rotina
     description: >-
-      O agente analisará o curso e recomendará somente ferramentas úteis. Para cada
-      recomendação, explicará finalidade, dados, fallback e autoridade. Nenhuma
-      integração opcional bloqueará o curso.
+      O agente recomendará somente ferramentas úteis para acompanhar a trilha e
+      apoiar a rotina escolhida. Nenhum evento ou lembrete será criado sem os
+      detalhes necessários.
   - id: consent
     title: Consentimento
 
@@ -102,8 +102,7 @@ fields:
   - key: reference_attachments
     section: context
     label: Anexe arquivos de referência
-    help_text: >-
-      Anexos são opcionais. Exemplos: vaga, currículo, PDF, ementa, imagem ou texto.
+    help_text: Anexos são opcionais, como PDF, ementa, imagem ou texto.
     type: file_upload
     required: false
     multiple: true
@@ -111,7 +110,6 @@ fields:
   - key: preferred_language
     section: preferences
     label: Em qual idioma prefere estudar?
-    help_text: Escolha o idioma principal das explicações e atividades.
     type: single_choice
     required: true
     default: pt-BR
@@ -123,7 +121,7 @@ fields:
     help_text: Se não marcar nenhuma, o curso escolherá os formatos mais adequados ao conteúdo.
     type: multi_choice
     required: false
-    options: [documentation, books, videos, courses, exercises, projects, discussions, flashcards]
+    options: [documentation, books, videos, courses, exercises, projects, discussions]
 
   - key: theory_practice_balance
     section: preferences
@@ -152,8 +150,8 @@ fields:
     label: Como você prefere organizar a experiência?
     help_text: >-
       guided_recommendations sugere somente o que for útil; minimal usa principalmente
-      GitHub; enriched considera mais recursos opcionais; no_external_accounts mantém
-      a experiência sem sugestões que exijam conectar outras contas.
+      GitHub; enriched considera recursos opcionais; no_external_accounts mantém a
+      experiência sem sugestões que exijam conectar outras contas.
     type: single_choice
     required: true
     default: guided_recommendations
@@ -162,11 +160,7 @@ fields:
   - key: already_uses
     section: integrations
     label: Quais ferramentas você já usa?
-    help_text: >-
-      Trello organiza tópicos visualmente; Todoist oferece tarefas simples e recorrentes;
-      Reclaim protege tempo de foco; Quizlet cria flashcards; Consensus pesquisa literatura;
-      Habitify mede consistência; Whimsical cria diagramas externos; Drive guarda entregáveis;
-      Airtable mostra dashboards derivados e nunca substitui o GitHub.
+    help_text: Marcar aqui não conecta automaticamente nenhuma conta.
     type: multi_choice
     required: false
     options:
@@ -175,7 +169,6 @@ fields:
       - google_calendar
       - outlook_calendar
       - reclaim
-      - quizlet
       - consensus
       - habitify
       - whimsical
@@ -192,7 +185,6 @@ fields:
     options:
       - task_management
       - scheduling
-      - flashcards
       - academic_research
       - habit_tracking
       - external_diagrams
@@ -203,7 +195,6 @@ fields:
   - key: integration_constraints
     section: integrations
     label: Existe alguma ferramenta, conta ou restrição que devemos evitar?
-    help_text: Informe limitações de privacidade, regras do ambiente de trabalho ou serviços que não deseja usar.
     type: long_text
     required: false
 
@@ -212,29 +203,32 @@ fields:
     label: Onde gostaria de acompanhar suas etapas?
     help_text: >-
       Trello é o padrão para uma visão em cards. Se ele não for conectado, GitHub
-      Issues é o primeiro fallback. O repositório continua como último fallback
-      interno. Apenas um backend manterá o estado operacional.
+      Issues é o primeiro fallback. Apenas um backend manterá o estado operacional.
     type: single_choice
     required: true
     default: auto
     options: [auto, trello, github_issues, todoist]
 
-  - key: todoist_reminders
+  - key: study_routine_mode
     section: integrations
-    label: Gostaria de considerar lembretes recorrentes no Todoist?
-    help_text: Concluir um lembrete não conclui o tópico no backend principal.
+    label: Como você prefere encaixar os estudos na sua rotina?
+    help_text: >-
+      fixed_calendar reserva blocos fixos; flexible_reminders cria lembretes
+      recorrentes flexíveis; none e decide_later não ativam ferramentas agora.
     type: single_choice
-    required: false
-    default: auto
-    options: [auto, enabled, disabled]
+    required: true
+    default: decide_later
+    options: [none, fixed_calendar, flexible_reminders, custom, decide_later]
 
-  - key: email_summaries
+  - key: study_routine_details
     section: integrations
-    label: Gostaria de receber algum resumo por e-mail?
-    type: single_choice
+    label: Quando você gostaria de estudar?
+    help_text: >-
+      Opcional. Informe dias, horários, duração, antecedência do aviso e fuso horário.
+      Exemplo: segunda, quarta e sexta, 19h às 19h45, aviso 15 minutos antes,
+      America/Sao_Paulo.
+    type: long_text
     required: false
-    default: none
-    options: [none, gmail, outlook_email]
 
   - key: additional_notes
     section: preferences

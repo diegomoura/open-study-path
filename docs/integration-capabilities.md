@@ -1,20 +1,19 @@
 # Capability-based integrations
 
-Open Study Path selects integrations from learning needs rather than maintaining a fixed list of required apps. A provider is an implementation of a capability. GitHub remains the only source of truth for curriculum, content, assessment, mastery and verified progress.
+Open Study Path selects integrations from current learning actions rather than maintaining a fixed list of apps. GitHub remains the source of truth for curriculum, content, assessment, mastery and verified progress.
 
 ```mermaid
 flowchart LR
     I[Intake preferences] --> D[Diagnostic evidence]
     D --> C[Approved curriculum]
-    C --> R[Contextual capability recommendation]
+    C --> R[Current capability recommendation]
     R --> P[Explained integration plan]
-    P --> O[Optional connection offer]
-    O --> F[Capability-based preflight]
-    F --> S[Idempotent synchronization]
+    P --> F[Capability-based preflight]
+    F --> S[Idempotent publication]
     S --> G[GitHub verified state]
 ```
 
-The plan is generated only after the agent understands the subject, learner, scope and active content window. Optional providers never block the core GitHub/Markdown path.
+The plan is generated only after the subject, learner, scope and active content window are understood. Optional providers never block the core GitHub or Markdown path.
 
 ## Capability catalog
 
@@ -22,44 +21,45 @@ The plan is generated only after the agent understands the subject, learner, sco
 | --- | --- | --- | --- | --- |
 | Source of truth | GitHub | every path | none | curriculum, assessment, mastery |
 | Research | Consensus | empirical or scientific claims | primary sources, official docs, web | supporting evidence only |
-| Formative practice | Quizlet | terms, commands, formulas and recall | Markdown/TSV flashcards, Ace Quiz Maker | practice only |
-| Task management | Trello | rich courses and visual execution | GitHub Issues, then repository Markdown | execution state only |
-| Recurring reminders | Todoist | simple repeated actions | calendar or chat | no task or mastery authority |
-| Scheduling | Reclaim | variable agenda and protected focus | Google/Outlook Calendar or none | schedule only |
-| Habit tracking | Habitify | consistency and routines | manual tracking | habits only |
+| Task management | Trello | visual execution with several stages | GitHub Issues, then repository Markdown | execution state only |
+| Flexible reminders | Todoist | recurring study prompts without fixed calendar blocks | primary task board | reminder only |
+| Fixed scheduling | Google Calendar | reserved study blocks with known times | no calendar | schedule only |
+| Habit tracking | Habitify | consistency when it is a material risk | task checklist | habits only |
 | Canonical visuals | Mermaid | every generated course | none | versioned visual model |
 | External visuals | Whimsical | editable or collaborative maps | Mermaid | auxiliary artifact |
-| Artifact workspace | Google Drive | Docs, Sheets, Slides and evidence | GitHub files | evidence link only |
-| Analytics projection | Airtable | dashboards across courses | repository state | read-model only |
-| Course discovery | Coursera, edX, Udemy, Khan Academy | selected external lessons | public or official resources | resource discovery only |
+| Artifact workspace | Google Drive | a real deliverable needs collaborative files | GitHub files | evidence link only |
+| Analytics projection | Airtable | dashboards across courses | repository state | read model only |
+| Course discovery | Coursera, edX, Udemy, Khan Academy | precise approved lessons or exercises | public or official resources | resource discovery only |
+| Email action | Gmail or Outlook | the learner explicitly asks to send or draft a summary | chat | one requested message only |
 
 ## Recommendation signals
 
-### Quizlet
-
-Recommend when the course contains a meaningful body of atomic recall material: terminology, definitions, commands, formulas, classifications, comparisons or common errors. Generate a durable local Markdown and TSV flashcard artifact before or alongside external synchronization. A Quizlet score never changes mastery.
-
-A Quizlet connection offer is eligible only after at least one materialized topic has an approved local deck. The offer should explain that connecting enables an interactive external set while the local decks remain available. Do not suggest Quizlet merely because the app exists.
-
 ### Consensus
 
-Recommend or use conditionally for empirical claims, research comparisons and evidence-based topics. Prefer official documentation and primary technical sources for APIs, programming languages, cloud products and standards. Record source locators in the materialized module.
+Recommend or use conditionally for empirical claims, research comparisons and evidence-based topics. Prefer official documentation and primary technical sources for APIs, programming languages, cloud products and standards. Record original source locators in the lesson.
 
-### Reclaim and calendars
+### Routine support
 
-Recommend scheduling only when it has a concrete benefit and the learner already uses an agenda, accepted connecting the scheduling capability or explicitly asks for it. Reclaim is useful when the routine varies; Google or Outlook Calendar fit fixed blocks. Collect the minimum scheduling details during activation instead of requiring them in the intake. If activation does not happen, keep the course usable without calendar events.
+Read `integration_preferences.routine`:
 
-### Habitify
+- `fixed_calendar` uses one calendar provider and the event's own notification;
+- `flexible_reminders` uses Todoist and creates no duplicate calendar event;
+- `none` and `decide_later` activate neither capability;
+- `custom` is interpreted before choosing a provider.
 
-Recommend only when consistency is a material risk. Keep the default to at most three habits. The normal set is study session, active recall and spaced review. Habit completion is never mastery evidence.
+A fixed block requires days or dates, start time, duration, timezone and selected calendar. A flexible reminder requires recurrence or trigger and a time when applicable. Ask one concise question when those details are missing. Do not create placeholder resources and do not claim configuration succeeded.
 
 ### Trello, GitHub Issues, Todoist and Markdown
 
-Trello is preferred for most rich courses because it can show the whole roadmap, links, checklists, recovery and states. When Trello is not connected, GitHub Issues is the first operational fallback. Todoist may replace them for a short or simple path and may also be auxiliary for recurring reminders, but auxiliary reminders cannot modify the authoritative task state. Repository-native Markdown remains the last internal fallback when no external or issue-based task backend should be used; it is not exposed as a normal intake choice.
+Trello is preferred for rich courses because it can show the roadmap, links, checklists, review and completion states. When Trello is not connected, GitHub Issues is the first operational fallback. Todoist may replace them for a short path or act only as flexible reminder support. Repository Markdown remains the final internal fallback.
+
+### Habitify
+
+Recommend only when consistency is a material risk. Habit completion is never mastery evidence.
 
 ### Whimsical
 
-Recommend for collaborative, learner-editable or spatial diagrams. Mermaid remains canonical and must be sufficient to understand the concept without the external board.
+Recommend only for collaborative or learner-editable spatial diagrams. Mermaid remains canonical and sufficient without the external workspace.
 
 ### Airtable
 
@@ -70,91 +70,88 @@ flowchart LR
     G[GitHub state] --> X[Sync adapter]
     X --> A[Airtable dashboard]
     X --> T[Task backend]
-    X --> C[Calendar]
-    X --> Q[Formative practice]
+    X --> C[Calendar or reminders]
     A -. no mastery writes .-> G
     T -. execution is not mastery .-> G
-    Q -. practice is not mastery .-> G
+    C -. schedule is not mastery .-> G
 ```
 
-Suggested Airtable tables are Courses, Topics, Attempts, Study Sessions and Integrations. Every row derived from GitHub should include its source repository, source path or issue, content version and last synchronization timestamp.
+## Removed practice integrations
+
+Open Study Path does not create flashcards, Markdown decks, TSV exports or Quizlet sets. Retrieval practice is part of the complete lesson and assessment. A separate exercise or laboratory may be linked only when it adds a genuinely different practice experience.
+
+## Gmail and Outlook are actions, not configured providers
+
+Normal course publication does not configure email. Connector availability does not establish recipient, scope, cadence, trigger or permission to send.
+
+When the learner explicitly asks for an email summary, verify access then, resolve only genuinely missing details and send or draft the requested message. Do not persist an automatic policy unless the learner separately requests a recurring automation.
 
 ## Account-connection preference
 
 `integration_preferences.account_connections` has two supported values:
 
-- `ask_per_provider` — contextual connection controls may be shown when a provider has immediate value;
-- `no_external_accounts` — do not suggest, probe or write to apps that require another account. Use GitHub Issues, repository Markdown, local flashcards, Mermaid, repository artifacts, web or primary sources and chat.
+- `ask_per_provider` — contextual connection controls may be shown for a provider needed now;
+- `no_external_accounts` — do not suggest, probe or write to apps requiring another account. Use GitHub Issues, repository Markdown, Mermaid, repository artifacts, web or primary sources and chat.
 
-This preference is stronger than `already_uses` or `willing_to_connect`. A tool the learner already uses is not permission to connect it in the current ChatGPT Project.
+This preference is stronger than `already_uses` or `willing_to_connect`. A tool the learner already uses is not permission to connect it in the current Project.
 
 ## Optional connection offer
 
-A contextual recommendation and an app connection are separate decisions.
+A recommendation and an app connection are separate decisions. A control may be shown only when a provider has immediate value for the current action, connections are allowed and access is not already verified.
 
-When a selected or recommended optional provider has immediate value in the materialized content window, account connections are allowed and access is not verified, the agent may use ChatGPT's Plugin Management capability to search for the exact provider and render an install/connect suggestion.
+The offer:
 
-The connection offer must follow these rules:
+1. is based on a concrete current need;
+2. respects account and integration restrictions;
+3. requires an explicit user click;
+4. remains nonblocking when the provider is optional;
+5. does not authorize writes by itself;
+6. is shown at most once per provider in the operation;
+7. is not evidence that the provider is connected;
+8. is followed by a harmless access verification before writes.
 
-1. it is based on a concrete course need, not the global app catalog;
-2. it respects `account_connections`, `already_uses`, `willing_to_connect`, integration notes and experience choices;
-3. it requires an explicit user click and normal app authorization;
-4. it is nonblocking, so the repository-native fallback and lifecycle response continue;
-5. it does not authorize external writes by itself;
-6. it is shown at most once per provider in the current operation and no more than three suggestions are prioritized at one time;
-7. displaying the control is not evidence that the provider is connected;
-8. after connection, access is verified again before creating resources.
+## Explanation contract
 
-For Quizlet, the normal return command is:
-
-`Conectei o Quizlet ao ChatGPT. Verifique novamente e publique os flashcards dos tópicos materializados.`
-
-During publication, state may record `connection_offer_status`, `connection_offer_at` and a short `connection_reason`. Never store tokens, OAuth details or raw authorization errors.
-
-## Explanation card contract
-
-Every recommended provider must be explained using all fields below:
+Every active recommended provider must explain:
 
 1. what it is;
-2. why it fits this course;
+2. why it fits the current course action;
 3. how it will be used;
 4. when it activates;
-5. access and possible cost or account constraints;
+5. access or account constraints;
 6. minimum data read or written;
 7. authority boundaries;
 8. fallback;
 9. preflight class;
-10. decision status;
-11. connection-offer eligibility and return command when applicable.
+10. current decision status.
 
-Do not assume the learner knows a provider by name. Avoid marketing language and do not promise that a free plan contains a capability without verifying it during use.
+Do not create explanations for inactive, deferred or hypothetical providers merely to fill an inventory.
 
 ## Required and optional preflight
 
-Connections are classified by the selected integration plan:
+Connections are classified as:
 
-- `required_for_selected_publication`: failure pauses writes that must remain atomic together;
-- `optional_probe`: missing access may show a nonblocking connection offer and then uses the fallback;
-- `not_enabled`: no probe, suggestion or write.
+- `required_for_selected_publication`: failure pauses the required publication set;
+- `optional_current_action`: activate only for a concrete current action with sufficient details;
+- `not_enabled`: no probe, suggestion, write or learner-facing status line.
 
-GitHub access is always required. A selected primary task backend may be required for publication. Research, flashcards, reminders, habits, external visuals, artifact workspaces, analytics and course discovery are optional unless the owner explicitly promotes a capability to required.
+GitHub access is always required. A selected primary task backend may be required. Other capabilities are optional unless explicitly promoted.
 
-When a connector has no harmless read action, never create a disposable test resource. Use the first intended approved write as the optional access check and retain the fallback on failure.
+When a connector has no harmless read action, never create a disposable test resource. The first write must be an intended canonical resource that can be adopted and recorded immediately.
 
 ## Idempotency
 
-`state/integrations.json` is an index, not a second source of learning truth. Each external resource records capability, provider, external identifier, URL, topic, content version, authority, synchronization status and timestamp. Search both this state file and the provider before creating anything when provider search is supported.
+`state/integrations.json` is an index, not a second source of learning truth. Each external resource records capability, provider, safe identifier, URL, topic or routine association, content version when relevant, authority, synchronization status and timestamp.
 
-When a provider can create but cannot update, create a versioned replacement only after approved content changes, preserve the previous record as superseded and point operational links to the newest successful version.
+Search the state file and provider before creating anything when provider search is supported. An interrupted operation reuses recorded resources.
+
+## Completion visibility
+
+A successful learner response shows the primary task destination, first action and continuation command. It does not list inactive, reserved, fallback-only or merely connected providers. Mention an integration only when it gives the learner a destination now or changes the next action.
 
 ## Cost and fallback policy
 
-No optional paid capability may become the only way to study. Before recommending or activating a provider:
-
-- verify the currently available capability and relevant limits;
-- explain cost or account constraints without guaranteeing current pricing;
-- provide a repository-native or otherwise accessible fallback;
-- never block the course because an optional provider requires payment.
+No optional paid capability may become the only way to study. Verify the available capability during use, explain possible constraints without guaranteeing current pricing and preserve an accessible fallback.
 
 ## Security
 

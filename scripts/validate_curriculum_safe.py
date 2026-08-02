@@ -31,14 +31,14 @@ PLACEHOLDER_TOKEN = re.compile(
 PLACEHOLDER_LINES = {
     "Explique em poucas linhas o que a pessoa vai aprender, por que isso importa para o objetivo dela, quanto tempo reservar e o que produzir ao final. Este arquivo deve ser uma aula autocontida, não apenas uma lista de tarefas.",
     "Divida a experiência em três a sete ações pequenas e verificáveis. Cada ação deve normalmente durar entre 10 e 25 minutos. Os tempos são sugestões, não limites rígidos.",
-    "Inclua duas ou três perguntas curtas ou tarefas de recuperação ativa. Dê orientação clara para revisar a etapa anterior quando necessário.",
+    "Inclua duas ou três perguntas curtas ou tarefas de recuperação ativa. Dê orientação clara para revisar somente os pré-requisitos diretos quando necessário. Não faça perguntas que pressuponham termos ainda não explicados.",
     "Ensine efetivamente o conteúdo em linguagem adequada ao nível configurado. Inclua definições, relações entre conceitos, limites, nuances e raciocínio. Não use placeholders como “estude o conceito”.",
     "Introduza o que o diagrama representa e por que ele ajuda. Todo módulo pronto deve conter ao menos um diagrama Mermaid útil e explicado.",
-    "Apresente ao menos dois exemplos resolvidos passo a passo, incluindo um caso simples e um caso com ambiguidade, limite ou erro comum.",
+    "Apresente ao menos dois exemplos resolvidos passo a passo:",
     "Liste equívocos prováveis, explique por que falham e mostre como reformular o raciocínio.",
     "Inclua exercícios com pistas graduais. Não revele imediatamente a resposta completa; mostre critérios para a pessoa conferir o próprio raciocínio.",
-    "Inclua tarefas que exijam transferência para um caso novo e produção do entregável definido no tópico.",
-    "Inclua perguntas que possam ser respondidas sem olhar o texto e uma orientação breve de revisão espaçada.",
+    "Inclua tarefas que exijam transferência para um caso novo e produção do entregável definido no tópico. A prática deve desenvolver a capacidade prometida, não apenas pedir repetição de definições.",
+    "Inclua perguntas que possam ser respondidas sem olhar o texto. Para uma aula iniciante, inclua ao menos uma pergunta de definição em linguagem própria e outra que peça aplicação ou contraste.",
     "Descreva exatamente o entregável e como vincular ou transcrever a evidência no formulário. Não peça dados pessoais desnecessários.",
 }
 
@@ -146,11 +146,6 @@ def check_module(topic_id: str, path: Path, config: dict[str, Any]) -> None:
     )
     if f"Terminei {title}. Avalie minhas respostas." not in body:
         validator.fail(f"module {topic_id} is missing the natural assessment command")
-
-    tsv = metadata.get("flashcards")
-    study = metadata.get("flashcards_study")
-    if (tsv is None) != (study is None):
-        validator.fail(f"topic contract {topic_id} must declare both flashcard formats or neither")
 
 
 def check_issue_form(topic_id: str, path: Path) -> None:
