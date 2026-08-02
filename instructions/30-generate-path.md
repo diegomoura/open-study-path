@@ -112,12 +112,12 @@ Every ready lesson is self-contained for the configured time and level and inclu
 12. active recall inside the lesson;
 13. direct assessment action;
 14. provenance and verified sources;
-15. other learning formats when useful;
+15. Other ways to learn when useful;
 16. one direct **Slides da aula** ZIP link plus the `slides.html` opening instruction.
 
 Reject modules that merely instruct the learner to read, study, watch, reflect or discuss without teaching the content.
 
-## Sources and provenance
+## Source and provenance contract
 
 Inspect every source before including it. Use three to seven curated sources by default, including a primary or official source when available and a reliable explanatory source. Record precise locators and explain how each source was used. Distinguish sourced claims from agent-created diagrams, analogies, examples and exercises. The slide deck inherits reviewed claims and does not perform a second research pass.
 
@@ -177,4 +177,4 @@ When generation succeeds and publication is pending, guide naturally to:
 
 `Organize minha trilha nas ferramentas que escolhemos.`
 
-Do not present an evaluation command before required publication succeeds.
+Do not present `Terminei <título da aula>. Avalie minhas respostas.` as the next command before publication succeeds.
