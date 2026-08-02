@@ -24,7 +24,7 @@ For every materialized topic:
 4. `state/content-reviews/TOPIC-000.yml` records the review for the current `content_version`;
 5. the review maps each outcome to assessment questions that genuinely evaluate it.
 
-Markers and mappings are evidence locations, not proof by themselves.
+Markers and mappings are evidence locations, not proof by themselves. Review requires semantic honesty: a marker must point to content that actually teaches the outcome and a question must genuinely measure it.
 
 ## Review dimensions
 
@@ -40,6 +40,7 @@ Markers and mappings are evidence locations, not proof by themselves.
 - Retrieval recalls knowledge actually taught by those prerequisites.
 - The lesson does not infer prerequisites from numbering.
 - Branched navigation names direct prerequisites and never implies numeric adjacency.
+- Learner-facing task copy does not assume linear order when the dependency graph branches.
 
 ### 3. Outcome coverage
 
