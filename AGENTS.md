@@ -24,7 +24,7 @@ The learner-facing response describes what is ready, where to go and what to do 
 
 Resolve the next learner command from persisted state with `scripts/lifecycle_next_action.py`. Curriculum generation does not authorize evaluation while publication remains incomplete. A recorded partial publication must return the resume command and reuse every recorded external resource.
 
-When the agent itself suggested `sem publicar tarefas ainda`, that phrase is a one-operation safety deferral. Restore publication as the next visible action after generation; never treat the suggestion as a learner decision to skip integrations.
+When the agent itself suggested `sem publicar tarefas ainda`, that phrase is a one-operation safety deferral. The agent must restore publication as the next visible action after generation; never treat the suggestion as a learner decision to skip integrations.
 
 ## Independent review framework
 
@@ -145,6 +145,8 @@ Inspect required checks for the current unchanged PR head. A failing, pending, c
 ## Publication and task language
 
 Read `instructions/40-publish-tasks.md`, `instructions/42-integration-preflight.md` and `instructions/31-topic-first-safe-publication.md`.
+
+### Human task titles
 
 Create one task per topic. By default, use the human lesson title without a numeric prefix. Use `Etapa <n> · <título>` only for a genuinely linear course or an explicit learner preference.
 
