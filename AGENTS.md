@@ -91,7 +91,7 @@ Read `instructions/35-review-curriculum.md` and `instructions/36-review-course-c
 
 The curriculum reviewer verifies scope, graph, topic contracts and architecture. The course-content reviewer verifies that every materialized lesson, practice and assessment delivers what the contract promised.
 
-Every topic defines stable learning outcomes and required concepts. Every materialized lesson contains one hidden outcome marker per approved outcome, every rubric question maps to outcomes and every materialized topic has a current content review. A stale review, missing outcome, false prerequisite, navigation mismatch or blocking finding prevents merge.
+Every topic defines stable learning outcomes and required concepts. Every materialized lesson contains one hidden outcome marker per approved outcome, every rubric question maps to outcomes and every materialized topic has a current content review under `state/content-reviews/`. A stale review, missing outcome, false prerequisite, navigation mismatch or blocking finding prevents merge.
 
 ## Mermaid visual learning
 
