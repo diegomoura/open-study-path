@@ -1,4 +1,4 @@
-version: 2
+version: 3
 topic_id: TOPIC-000
 content_version: 1
 reviewed_at: null
@@ -20,6 +20,7 @@ checks:
   mermaid_quality: pending
   accessibility: pending
   link_consistency: pending
+  offline_delivery: pending
 outcomes_reviewed: []
 blocking_findings: []
 non_blocking_findings: []
