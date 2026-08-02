@@ -12,7 +12,7 @@ Repository metadata such as reported size, code-search status, search results or
 
 A derived instance retains `.open-study-path/template.yml`; the instance marker takes precedence. Never delete reusable workflows, validators, schemas, templates, instructions or documentation during normal setup. Apply `instructions/02-setup-execution.md` during the first chat.
 
-A GitHub intake is ready only when the checked-in form contains the current repository form contract marker, explains that the course name comes from the issue title and repository labels `study-request` and `intake:imported` exist. Provision missing labels before reporting setup success. The marker identifies the form file and is not emitted into a submitted issue body. During import, require the automatic label, complete expected rendered structure, non-empty required responses, checked consent, a valid title and unimported state. Preserve the issue title as `path.name`, preserve the complete main answer as `path.learning_request` and derive only a concise `path.subject`. Matching headings alone never prove intake identity. Never ask the learner to edit an issue to add a technical marker.
+A GitHub intake is ready only when the checked-in form contains the current repository form contract marker, explains that the course name comes from the issue title and repository labels `study-request` and `intake:imported` exist. Provision missing labels before reporting setup success. During import, require the automatic label, complete expected rendered structure, non-empty required responses, checked consent, a valid title and unimported state. Preserve the issue title as `path.name`, preserve the complete main answer as `path.learning_request` and derive only a concise `path.subject`. Never ask the learner to edit an issue to add a technical marker.
 
 ## Guided lifecycle
 
@@ -24,7 +24,7 @@ The learner-facing response describes what is ready, where to go and what to do 
 
 Resolve the next learner command from persisted state with `scripts/lifecycle_next_action.py`. Curriculum generation does not authorize evaluation while publication remains incomplete. A recorded partial publication must return the resume command and reuse every recorded external resource.
 
-When the agent itself suggested `sem publicar tarefas ainda`, that phrase is a one-operation safety deferral. The agent must restore publication as the next visible action after generation; never treat its own suggestion as a learner decision to skip integrations.
+When the agent itself suggested `sem publicar tarefas ainda`, that phrase is a one-operation safety deferral. Restore publication as the next visible action after generation; never treat the suggestion as a learner decision to skip integrations.
 
 ## Independent review framework
 
@@ -79,7 +79,7 @@ Read `docs/beginner-first-pedagogy.md`. A topic overview is not a lesson. Every 
 - active recall inside the lesson;
 - deliverable and assessment instructions;
 - provenance, inspected sources and useful alternative formats;
-- a direct link to the current slide PDF.
+- a direct link to the current slide ZIP package.
 
 Do not generate flashcards, Markdown decks, TSV exports or Quizlet sets. Recovery practice stays inside the lesson and assessment unless a genuinely different exercise or laboratory adds value.
 
@@ -97,17 +97,21 @@ Every topic defines stable learning outcomes and required concepts. Every materi
 
 Every roadmap contains the actual topic dependency graph. Every ready module contains the configured minimum number of explained Mermaid diagrams. A diagram supplements prose and practice; it does not replace them.
 
-## Study slides and PDF
+## Study slides and offline ZIP
 
 Read `docs/study-slides.md` and `instructions/37-review-study-slides.md` whenever a topic is materialized.
 
-Create semantic HTML/CSS/JavaScript under `study/slides/TOPIC-000/`, derive concise slides from the reviewed lesson, represent outcomes honestly, include Mermaid, run slide review, render `slides.pdf` and validate it before merge.
+Create semantic HTML/CSS/JavaScript under `study/slides/TOPIC-000/`, derive concise slides from the reviewed lesson, represent outcomes honestly, include Mermaid, run slide review and build `slides.zip` plus `slides.meta.json` with `scripts/package_study_slides.py`.
 
-HTML is build input only. The learner sees only:
+The ZIP contains exactly one self-contained file named `slides.html`. CSS, JavaScript and Mermaid are incorporated into it. It must open offline through the browser without a server or runtime network assets.
 
-`https://github.com/OWNER/REPOSITORY/raw/HEAD/study/slides/TOPIC-000/slides.pdf`
+The learner sees only:
 
-A failed render, stale source hash, overflow, Mermaid error, page mismatch or missing PDF blocks merge and publication.
+`https://github.com/OWNER/REPOSITORY/raw/HEAD/study/slides/TOPIC-000/slides.zip`
+
+Tell the learner to download the ZIP, extract it and open `slides.html` in a browser. Do not link source HTML, CSS, JavaScript, metadata or review evidence.
+
+A stale source hash, unsafe archive path, external runtime dependency, missing entrypoint, stale ZIP or blocking slide-review finding prevents merge and publication. Do not install Playwright or Chromium and do not generate slide PDFs.
 
 ## Capability-based integrations
 
@@ -136,7 +140,7 @@ Read `instructions/32-generation-execution.md` for generation and materializatio
 
 For every operation PR, correct resolvable issues, run specialized review, run the shared phase review, validate generated diff coverage and merge under the configured policy when no genuine decision remains.
 
-For every repository phase, inspect required checks for the current unchanged PR head. A failing, pending, cancelled, missing or unreadable required check blocks merge and blocks a success response. Never merge because the diff looks correct while CI is red or unknown.
+Inspect required checks for the current unchanged PR head. A failing, pending, cancelled, missing or unreadable required check blocks merge and success. Never merge because the diff looks correct while CI is red or unknown.
 
 ## Publication and task language
 
@@ -144,17 +148,15 @@ Read `instructions/40-publish-tasks.md`, `instructions/42-integration-preflight.
 
 Create one task per topic. By default, use the human lesson title without a numeric prefix. Use `Etapa <n> · <título>` only for a genuinely linear course or an explicit learner preference.
 
-### Human task titles
+A ready card says what the learner will do, how long it may take, where the slide ZIP, complete lesson, optional separate practice and assessment are, what to produce and how to finish.
 
-A ready card says what the learner will do, how long it may take, where the slides, complete lesson, optional separate practice and assessment are, what to produce and how to finish.
+Show resources in this order: **Slides**, **Aula**, optional **Prática**, **Avaliação**. Describe Slides as a ZIP and state that `slides.html` opens after extraction. Do not create a duplicate practice resource when the exercises already live in the lesson.
 
-Show resources in this order: **Slides**, **Aula**, optional **Prática**, **Avaliação**. Do not create a duplicate practice resource when the exercises already live in the lesson.
-
-A future card begins with **Pré-requisitos desta etapa**, lists exactly the direct prerequisite titles and tells the learner to follow that list rather than card numbering. Do not attach nonexistent lesson, slide PDF, practice or assessment links.
+A future card begins with **Pré-requisitos desta etapa**, lists exactly the direct prerequisite titles and tells the learner to follow that list rather than card numbering. Do not attach nonexistent lesson, slide ZIP, practice or assessment links.
 
 A task backend is not a repository inventory. Do not link topic contracts, rubric YAML, state files, synchronization records, slide sources or review evidence.
 
-After successful publication, do not add “O restante ficou assim” or list inactive, deferred, reserved, fallback-only or merely connected providers. Show the primary destination, first action and evaluation command.
+After successful publication, do not list inactive, deferred, fallback-only or merely connected providers. Show the primary destination, first action and evaluation command.
 
 Natural commands presented to the learner, in lifecycle order:
 
@@ -174,7 +176,7 @@ Read `instructions/55-evaluate-topic.md`. Resolve submissions using labels, hidd
 
 Grade every response independently, calculate 0–100, comment on the issue, persist a versioned attempt and update progress. No external provider sets completion.
 
-When mastered, run `instructions/57-materialize-next-content.md` automatically and return the next ready slide PDF and lesson. When more work is needed, create focused review and targeted reassessment using supportive language such as “Revisão necessária”.
+When mastered, run `instructions/57-materialize-next-content.md` automatically and return the next ready slide ZIP and lesson. When more work is needed, create focused review and targeted reassessment using supportive language such as “Revisão necessária”.
 
 ## Safety
 
