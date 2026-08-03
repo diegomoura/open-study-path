@@ -3,8 +3,12 @@
 
 from __future__ import annotations
 
+from pathlib import Path
+
 from integration_resolution import validate_documents
 
+
+REPO_ROOT = Path(__file__).resolve().parents[1]
 
 FIXED_PLAN = """
 # Ferramentas que podem ajudar nesta trilha
@@ -306,6 +310,42 @@ def test_plan_rejects_removed_capabilities() -> None:
     assert_error(resolved_fixed_state(), "removed flashcard capabilities", broken, config())
 
 
+def test_numbered_graph_aware_task_projection_contract() -> None:
+    documents = {
+        "AGENTS.md": (REPO_ROOT / "AGENTS.md").read_text(encoding="utf-8"),
+        "templates/chatgpt-project-instructions.md": (
+            REPO_ROOT / "templates" / "chatgpt-project-instructions.md"
+        ).read_text(encoding="utf-8"),
+        "instructions/31-topic-first-safe-publication.md": (
+            REPO_ROOT / "instructions" / "31-topic-first-safe-publication.md"
+        ).read_text(encoding="utf-8"),
+        "instructions/40-publish-tasks.md": (
+            REPO_ROOT / "instructions" / "40-publish-tasks.md"
+        ).read_text(encoding="utf-8"),
+        "docs/integration-capabilities.md": (
+            REPO_ROOT / "docs" / "integration-capabilities.md"
+        ).read_text(encoding="utf-8"),
+    }
+    combined = "\n".join(documents.values())
+    required = (
+        "Aula NN · <título>",
+        "Próxima aula",
+        "Disponível em paralelo",
+        "roadmap fingerprint",
+        "every approved roadmap topic",
+    )
+    for fragment in required:
+        if fragment not in combined:
+            raise AssertionError(f"missing numbered task projection contract: {fragment}")
+    forbidden = (
+        "without a numeric prefix by default",
+        "Prefer the learner-facing lesson title without a numeric prefix",
+    )
+    for fragment in forbidden:
+        if fragment in combined:
+            raise AssertionError(f"obsolete unnumbered task contract remains: {fragment}")
+
+
 def main() -> None:
     tests = [
         test_fresh_setup_may_remain_not_started,
@@ -321,6 +361,7 @@ def main() -> None:
         test_no_external_accounts_uses_only_internal_capabilities,
         test_no_external_accounts_rejects_explicit_external_provider,
         test_plan_rejects_removed_capabilities,
+        test_numbered_graph_aware_task_projection_contract,
     ]
     for test in tests:
         test()
