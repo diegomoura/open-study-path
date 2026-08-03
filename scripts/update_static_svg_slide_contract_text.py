@@ -46,6 +46,32 @@ REPLACEMENTS = (
 )
 
 
+def replace_unmigrated(text: str, old: str, new: str) -> str:
+    """Replace old occurrences while preserving occurrences already expanded to new.
+
+    Some migrations append text to an existing sentence, so ``old`` can be a
+    prefix of ``new``. A plain ``str.replace`` would expand that sentence on
+    every run. This scanner skips complete ``new`` occurrences and migrates
+    only the remaining ``old`` occurrences.
+    """
+    if old == new or old not in text:
+        return text
+    output: list[str] = []
+    cursor = 0
+    while True:
+        index = text.find(old, cursor)
+        if index < 0:
+            output.append(text[cursor:])
+            return "".join(output)
+        output.append(text[cursor:index])
+        if text.startswith(new, index):
+            output.append(new)
+            cursor = index + len(new)
+        else:
+            output.append(new)
+            cursor = index + len(old)
+
+
 def main() -> None:
     changed: list[str] = []
     for relative in TARGETS:
@@ -55,13 +81,15 @@ def main() -> None:
         before = path.read_text(encoding="utf-8")
         after = before
         for old, new in REPLACEMENTS:
-            after = after.replace(old, new)
+            after = replace_unmigrated(after, old, new)
         if relative in {"AGENTS.md", "templates/chatgpt-project-instructions.md", "instructions/30-generate-path.md"}:
-            after = after.replace(
+            after = replace_unmigrated(
+                after,
                 "Create semantic HTML/CSS and Mermaid source files under `study/slides/TOPIC-000/`, derive concise slides",
                 "Create semantic HTML/CSS and Mermaid source files under `study/slides/TOPIC-000/`, derive 12–24 topic-specific slides according to estimated effort",
             )
-            after = after.replace(
+            after = replace_unmigrated(
+                after,
                 "The slide deck inherits these reviewed claims. It does not run a second research pass or introduce unsupported claims.",
                 "The slide deck inherits these reviewed claims. It does not run a second research pass or introduce unsupported claims. It must preserve every required concept and at least two worked examples instead of compressing the lesson into a generic shell.",
             )
