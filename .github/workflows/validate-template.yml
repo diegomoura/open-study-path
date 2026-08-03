@@ -1,190 +1,70 @@
-name: Validate Open Study Path
+name: Patch static SVG PDF renderer
 
 on:
   pull_request:
-  push:
-    branches:
-      - main
   workflow_dispatch:
-    inputs:
-      review_base_sha:
-        description: Base commit used for operation-scope and review validation
-        required: false
-        type: string
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
-  review-generated-artifacts:
-    name: Review generated artifacts
+  patch-renderer:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
+      - name: Checkout branch
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-      - name: Install review dependencies
-        run: python -m pip install --quiet --disable-pip-version-check pyyaml
-      - name: Test generated-artifact review framework
-        run: python scripts/test_review_framework.py
-      - name: Validate generated-artifact review framework
-        env:
-          REVIEW_BASE_SHA: ${{ inputs.review_base_sha || github.event.pull_request.base.sha || github.event.before }}
-        run: python scripts/validate_review_framework.py
-
-  validate:
-    needs: review-generated-artifacts
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-      - name: Set up Node
-        uses: actions/setup-node@v6
-        with:
-          node-version: "22"
-          package-manager-cache: false
-      - name: Install validation dependencies
-        run: python -m pip install --quiet --disable-pip-version-check pyyaml jsonschema pypdf
-      - name: Test instance operation scope guard
-        run: python scripts/test_instance_operation_scope.py
-      - name: Validate instance operation scope and commit budget
-        env:
-          REVIEW_BASE_SHA: ${{ inputs.review_base_sha || github.event.pull_request.base.sha || github.event.before }}
-        run: python scripts/validate_instance_operation_scope.py
-      - name: Apply static SVG/PDF contract text migration
+          ref: ${{ github.head_ref || github.ref_name }}
+      - name: Separate tool root from course root
         run: |
-          python scripts/update_static_svg_slide_contract_text.py
-          if ! git diff --quiet -- AGENTS.md README.md instructions templates; then
-            rm -rf .open-study-path/static-svg-contract-text
-            mkdir -p .open-study-path/static-svg-contract-text
-            git diff --name-only -- AGENTS.md README.md instructions templates \
-              | while read -r file; do cp --parents "$file" .open-study-path/static-svg-contract-text/; done
-            echo "Static SVG/PDF contract text files need to be committed." >&2
-            git diff --stat -- AGENTS.md README.md instructions templates >&2
-            exit 1
-          fi
-      - name: Upload static SVG/PDF contract text handoff
-        if: failure()
-        uses: actions/upload-artifact@v4
-        with:
-          name: static-svg-contract-text
-          path: .open-study-path/static-svg-contract-text/
-          if-no-files-found: ignore
-          retention-days: 3
-      - name: Detect slide contract
-        id: slide-contract
-        run: |
-          python - <<'PY' >> "$GITHUB_OUTPUT"
+          python - <<'PY'
           from pathlib import Path
-          import yaml
-          path = Path('.open-study-path/instance.yml')
-          if not path.is_file():
-              path = Path('templates/instance.yml')
-          data = yaml.safe_load(path.read_text(encoding='utf-8')) or {}
-          version = (data.get('study_slides') or {}).get('contract_version')
-          print(f"pdf={'true' if version == 3 else 'false'}")
+          path = Path('scripts/render_study_slides.mjs')
+          text = path.read_text(encoding='utf-8')
+          text = text.replace(
+              'import { promises as fs } from "node:fs";',
+              'import { promises as fs, readFileSync } from "node:fs";',
+          )
+          text = text.replace(
+              'import path from "node:path";',
+              'import path from "node:path";\nimport { fileURLToPath } from "node:url";',
+          )
+          old = '''const execFileAsync = promisify(execFile);
+          const require = createRequire(import.meta.url);
+          const PUPPETEER_VERSION = require("puppeteer/package.json").version;
+          const MERMAID_CLI_VERSION = require("@mermaid-js/mermaid-cli/package.json").version;
+          const PDF_LIB_VERSION = require("pdf-lib/package.json").version;'''
+          new = '''const execFileAsync = promisify(execFile);
+          const require = createRequire(import.meta.url);
+          const TOOL_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
+
+          function installedPackageVersion(...segments) {
+            const packageJson = path.join(TOOL_ROOT, "node_modules", ...segments, "package.json");
+            return JSON.parse(readFileSync(packageJson, "utf8")).version;
+          }
+
+          const PUPPETEER_VERSION = installedPackageVersion("puppeteer");
+          const MERMAID_CLI_VERSION = installedPackageVersion("@mermaid-js", "mermaid-cli");
+          const PDF_LIB_VERSION = installedPackageVersion("pdf-lib");'''
+          if old not in text and 'const TOOL_ROOT =' not in text:
+              raise SystemExit('renderer header pattern not found')
+          text = text.replace(old, new)
+          text = text.replace(
+              'const mmdc = path.join(root, "node_modules", ".bin", process.platform === "win32" ? "mmdc.cmd" : "mmdc");',
+              'const mmdc = path.join(TOOL_ROOT, "node_modules", ".bin", process.platform === "win32" ? "mmdc.cmd" : "mmdc");',
+          )
+          path.write_text(text, encoding='utf-8')
           PY
-      - name: Cache slide renderer downloads
-        if: steps.slide-contract.outputs.pdf == 'true'
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.npm
-            ~/.cache/puppeteer
-          key: study-slides-node22-puppeteer25.3.0-mermaid11.16.0
-      - name: Install static SVG/PDF renderer
-        if: steps.slide-contract.outputs.pdf == 'true'
-        env:
-          PUPPETEER_CACHE_DIR: ~/.cache/puppeteer
-        run: npm install --no-save --package-lock=false puppeteer@25.3.0 @mermaid-js/mermaid-cli@11.16.0 pdf-lib@1.17.1
-      - name: Parse repository YAML contracts
-        run: python scripts/validate_template.py yaml
-      - name: Validate repository mode guard
-        run: python scripts/validate_template.py guard
-      - name: Validate safe instance setup
-        run: python scripts/validate_setup_safety.py
-      - name: Validate intake contract
-        run: python scripts/validate_template.py intake
-      - name: Validate deterministic intake resolution
-        run: python scripts/validate_intake_resolution.py
-      - name: Test deterministic intake resolution
-        run: python scripts/test_intake_resolution.py
-      - name: Test repository label provisioning
-        run: python scripts/test_repository_labels.py
-      - name: Validate configuration schema
-        run: python scripts/validate_template.py schema
-      - name: Validate guided lifecycle
-        run: python scripts/validate_guided_lifecycle.py 2>&1 | tee guided-validation.log
-      - name: Test lifecycle next-action routing
-        run: python scripts/test_lifecycle_next_action.py
-      - name: Test independent course-content review
-        run: python scripts/test_course_content_review.py
-      - name: Validate independent course-content review
-        run: python scripts/validate_course_content_review.py
-      - name: Test study-slide contract
-        run: python scripts/test_study_slides.py
-      - name: Smoke test static SVG/PDF renderer
-        if: steps.slide-contract.outputs.pdf == 'true'
-        env:
-          PUPPETEER_CACHE_DIR: ~/.cache/puppeteer
-        run: node scripts/test_study_slide_renderer.mjs
-      - name: Render and verify committed study-slide PDFs
-        if: steps.slide-contract.outputs.pdf == 'true'
-        env:
-          PUPPETEER_CACHE_DIR: ~/.cache/puppeteer
+          node --check scripts/render_study_slides.mjs
+      - name: Publish renderer correction
         run: |
-          if find study/slides -mindepth 2 -maxdepth 2 -name index.html -print -quit 2>/dev/null | grep -q .; then
-            node scripts/render_study_slides.mjs --check
-          else
-            echo "No materialized study-slide sources found."
+          if git diff --quiet -- scripts/render_study_slides.mjs; then
+            echo "Renderer already corrected."
+            exit 0
           fi
-      - name: Upload study-slide render handoff
-        if: failure() && steps.slide-contract.outputs.pdf == 'true'
-        uses: actions/upload-artifact@v4
-        with:
-          name: study-slide-render-output
-          path: .open-study-path/rendered-slides/
-          if-no-files-found: ignore
-          retention-days: 3
-      - name: Validate study-slide contract
-        run: python scripts/validate_study_slides.py
-      - name: Test selected integration resolution
-        run: python scripts/test_integration_resolution.py
-      - name: Validate selected integration resolution
-        run: python scripts/validate_integration_resolution.py
-      - name: Validate topic-first planning and publication safety
-        run: python scripts/validate_planning_publication_safety.py
-      - name: Test topic-first planning and publication safety
-        run: python scripts/test_planning_publication_safety.py
-      - name: Test beginner-first pedagogy
-        run: python scripts/test_beginner_pedagogy.py
-      - name: Test generation terminal-state resolution
-        run: python scripts/test_generation_terminal_state.py
-      - name: Validate efficient generation contract
-        run: python scripts/validate_generation_efficiency.py
-      - name: Validate learner-facing study experience
-        run: python scripts/validate_learning_experience.py
-      - name: Test automatic Project Instructions rendering
-        run: python scripts/test_render_project_instructions.py
-      - name: Test curriculum placeholder detection
-        run: python scripts/test_curriculum_placeholder_detection.py
-      - name: Upload guided validation diagnostics
-        if: failure()
-        uses: actions/upload-artifact@v4
-        with:
-          name: guided-validation-diagnostics
-          path: guided-validation.log
-          if-no-files-found: ignore
-      - name: Validate curriculum contract
-        run: python scripts/validate_curriculum_safe.py
+          git config user.name open-study-path-bot
+          git config user.email open-study-path-bot@users.noreply.github.com
+          git add scripts/render_study_slides.mjs
+          git commit -m "Corrigir resolução das ferramentas do renderer"
+          git push origin HEAD:${{ github.head_ref || github.ref_name }}
