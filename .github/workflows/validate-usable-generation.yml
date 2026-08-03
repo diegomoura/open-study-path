@@ -9,6 +9,7 @@ on:
       - 'state/reviews/**'
       - 'study/modules/**'
       - 'study/assessments/**'
+      - 'study/flashcards/**'
       - 'state/content-reviews/**'
   push:
     branches: [main]
@@ -19,6 +20,7 @@ on:
       - 'state/reviews/**'
       - 'study/modules/**'
       - 'study/assessments/**'
+      - 'study/flashcards/**'
       - 'state/content-reviews/**'
   workflow_dispatch:
 
@@ -47,6 +49,6 @@ jobs:
           set -o pipefail
           python -m unittest tests/test_refresh_review_fingerprints.py 2>&1 | tee usable-generation-tests.log
 
-# Slide packaging remains in the dedicated study-slide validation path. This job
-# intentionally represents the durable learning_window_usable gate, not
-# slides_package_status.
+# PDF generation remains in the dedicated study-slide validation path. This job
+# intentionally does not install Playwright or Chromium and represents the
+# durable learning_window_usable gate, not slides_pdf_status.
