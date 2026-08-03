@@ -5,6 +5,12 @@ on:
   push:
     branches:
       - main
+  workflow_dispatch:
+    inputs:
+      review_base_sha:
+        description: Base commit used for operation-scope and review validation
+        required: false
+        type: string
 
 permissions:
   contents: read
@@ -28,7 +34,7 @@ jobs:
         run: python scripts/test_review_framework.py
       - name: Validate generated-artifact review framework
         env:
-          REVIEW_BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
+          REVIEW_BASE_SHA: ${{ inputs.review_base_sha || github.event.pull_request.base.sha || github.event.before }}
         run: python scripts/validate_review_framework.py
 
   validate:
@@ -49,15 +55,61 @@ jobs:
           node-version: "22"
           package-manager-cache: false
       - name: Install validation dependencies
-        run: python -m pip install --quiet --disable-pip-version-check pyyaml jsonschema
+        run: python -m pip install --quiet --disable-pip-version-check pyyaml jsonschema pypdf
       - name: Test instance operation scope guard
         run: python scripts/test_instance_operation_scope.py
       - name: Validate instance operation scope and commit budget
         env:
-          REVIEW_BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
+          REVIEW_BASE_SHA: ${{ inputs.review_base_sha || github.event.pull_request.base.sha || github.event.before }}
         run: python scripts/validate_instance_operation_scope.py
-      - name: Install lightweight study-slide package dependencies
-        run: npm install --no-save --package-lock=false esbuild@0.25.8 mermaid@11.16.0
+      - name: Apply static SVG/PDF contract text migration
+        run: |
+          python scripts/update_static_svg_slide_contract_text.py
+          if ! git diff --quiet -- AGENTS.md README.md instructions templates; then
+            rm -rf .open-study-path/static-svg-contract-text
+            mkdir -p .open-study-path/static-svg-contract-text
+            git diff --name-only -- AGENTS.md README.md instructions templates \
+              | while read -r file; do cp --parents "$file" .open-study-path/static-svg-contract-text/; done
+            echo "Static SVG/PDF contract text files need to be committed." >&2
+            git diff --stat -- AGENTS.md README.md instructions templates >&2
+            exit 1
+          fi
+      - name: Upload static SVG/PDF contract text handoff
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: static-svg-contract-text
+          path: .open-study-path/static-svg-contract-text/
+          if-no-files-found: ignore
+          retention-days: 3
+      - name: Detect slide contract
+        id: slide-contract
+        run: |
+          python - <<'PY' >> "$GITHUB_OUTPUT"
+          from pathlib import Path
+          import yaml
+          path = Path('.open-study-path/instance.yml')
+          if not path.is_file():
+              path = Path('templates/instance.yml')
+          data = yaml.safe_load(path.read_text(encoding='utf-8')) or {}
+          version = (data.get('study_slides') or {}).get('contract_version')
+          print(f"pdf={'true' if version == 3 else 'false'}")
+          PY
+      - name: Cache slide renderer downloads
+        if: steps.slide-contract.outputs.pdf == 'true'
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.npm
+            ~/.cache/puppeteer
+          key: study-slides-node22-puppeteer25.3.0-mermaid11.12.2
+      - name: Install static SVG/PDF renderer
+        if: steps.slide-contract.outputs.pdf == 'true'
+        env:
+          PUPPETEER_CACHE_DIR: ~/.cache/puppeteer
+        run: |
+          npm install --no-save --package-lock=false puppeteer@25.3.0 mermaid@11.12.2 pdf-lib@1.17.1
+          npx puppeteer browsers install chrome-headless-shell
       - name: Parse repository YAML contracts
         run: python scripts/validate_template.py yaml
       - name: Validate repository mode guard
@@ -84,28 +136,29 @@ jobs:
         run: python scripts/validate_course_content_review.py
       - name: Test study-slide contract
         run: python scripts/test_study_slides.py
-      - name: Build expected offline slide packages
+      - name: Smoke test static SVG/PDF renderer
+        if: steps.slide-contract.outputs.pdf == 'true'
+        env:
+          PUPPETEER_CACHE_DIR: ~/.cache/puppeteer
+        run: node scripts/test_study_slide_renderer.mjs
+      - name: Render and verify committed study-slide PDFs
+        if: steps.slide-contract.outputs.pdf == 'true'
+        env:
+          PUPPETEER_CACHE_DIR: ~/.cache/puppeteer
         run: |
-          python scripts/package_study_slides.py
-          if ! git diff --quiet -- study/slides; then
-            rm -rf .open-study-path/generated-slide-packages
-            mkdir -p .open-study-path/generated-slide-packages
-            find study/slides -type f \( -name slides.zip -o -name slides.meta.json \) \
-              -exec cp --parents {} .open-study-path/generated-slide-packages/ \;
-            echo "Committed slide ZIP packages are missing or stale." >&2
-            git diff --stat -- study/slides >&2
-            exit 1
+          if find study/slides -mindepth 2 -maxdepth 2 -name index.html -print -quit 2>/dev/null | grep -q .; then
+            node scripts/render_study_slides.mjs --check
+          else
+            echo "No materialized study-slide sources found."
           fi
-      - name: Upload generated slide package handoff
-        if: failure()
+      - name: Upload study-slide render handoff
+        if: failure() && steps.slide-contract.outputs.pdf == 'true'
         uses: actions/upload-artifact@v4
         with:
-          name: study-slide-package-output
-          path: .open-study-path/generated-slide-packages/
+          name: study-slide-render-output
+          path: .open-study-path/rendered-slides/
           if-no-files-found: ignore
           retention-days: 3
-      - name: Verify committed offline slide packages
-        run: python scripts/package_study_slides.py --check
       - name: Validate study-slide contract
         run: python scripts/validate_study_slides.py
       - name: Test selected integration resolution

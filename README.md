@@ -11,56 +11,90 @@ Uma trilha possui:
 - um mapa completo do caminho de aprendizagem;
 - etapas pequenas, com objetivo e tempo sugerido;
 - aulas autocontidas com explicações, exemplos, prática e diagramas;
-- slides visuais entregues em um ZIP com HTML que abre no navegador;
+- slides visuais em PDF para revisar cada aula pronta;
 - fontes verificáveis e formas alternativas de aprender;
+- flashcards quando ajudam;
 - avaliações com feedback e revisão focada;
-- integração opcional com tarefas, agenda e outras ferramentas.
+- integração opcional com tarefas, agenda, Quizlet e outras ferramentas.
 
 As próximas aulas podem ser preparadas conforme a pessoa avança. Isso permite adaptar exemplos, fontes e prática a partir das avaliações anteriores.
 
 ## Conteúdo com fontes
 
-Cada aula pronta mostra de onde vieram as ideias principais, quais partes são síntese ou adaptação pedagógica e onde localizar as fontes consultadas. Uma resposta de plugin ou resultado de busca não é uma fonte final; o módulo registra o documento original e explica como ele foi usado. Recursos pagos nunca são o único caminho.
+Cada aula pronta deve mostrar:
+
+- de onde vieram as ideias principais;
+- quais partes são síntese ou adaptação pedagógica;
+- fontes primárias, oficiais, acadêmicas ou técnicas;
+- artigos, livros, papers, TCCs ou dissertações quando pertinentes;
+- vídeos, aulas abertas, podcasts, demonstrações ou cursos quando acrescentarem valor;
+- capítulo, seção, página, versão, aula, exercício ou timestamp preciso.
+
+Uma resposta de plugin ou um resultado de busca não é uma fonte final. O módulo registra o documento original e explica como ele foi usado. Recursos pagos nunca são o único caminho.
 
 Veja `docs/content-quality-and-sources.md`.
 
 ## Revisão independente
 
-Tudo o que uma instância gera ou altera passa por um papel revisor antes de a operação ser considerada concluída. A autoria e a revisão acontecem em passes separados, mesmo quando o mesmo runtime executa os dois.
+Tudo o que uma instância gera ou altera passa por um papel revisor antes de a operação ser considerada concluída.
 
-A revisão de aulas verifica se cada resultado prometido é realmente ensinado e avaliado. Uma revisão separada confirma que os slides resumem fielmente a aula, cobrem os mesmos resultados, são legíveis e funcionam offline.
+Há revisores especializados para configuração, intake, diagnóstico, currículo, publicação, avaliação, progresso, replanejamento e migração. A autoria e a revisão acontecem em passes separados, mesmo quando o mesmo runtime executa os dois.
+
+A revisão procura contradições entre o pedido, os artefatos produzidos, o estado persistido e as ferramentas externas. Cada aprovação registra os arquivos exatos revisados e suas versões em `state/reviews/`. Mudanças sem revisão, cobertura parcial, aprovação antiga ou achado bloqueante impedem o merge.
+
+A revisão de aulas continua mais profunda: cada resultado prometido precisa ser realmente ensinado e avaliado, com evidência versionada em `state/content-reviews/`. Depois disso, uma revisão separada verifica se os slides resumem fielmente a aula, cobrem os mesmos resultados e continuam legíveis.
 
 Veja `docs/review-framework.md` e `docs/study-slides.md`.
 
 ## Linguagem voltada para quem estuda
 
-O GitHub continua usando PRs, CI e arquivos de estado internamente, mas a conversa principal mostra apenas o que ficou pronto, o link necessário, o próximo passo e uma frase curta para continuar. Detalhes técnicos aparecem quando solicitados ou quando explicam um bloqueio.
+O GitHub continua usando PRs, CI e arquivos de estado internamente, mas a conversa principal não precisa parecer um relatório de engenharia.
+
+Depois de uma operação bem-sucedida, a pessoa recebe:
+
+1. o que ficou pronto;
+2. o link necessário agora;
+3. o próximo passo;
+4. uma frase curta para continuar.
+
+Números de PR, hashes, branches, jobs de CI e classificações internas aparecem somente quando solicitados ou quando explicam um bloqueio.
 
 Veja `docs/learner-facing-language.md`.
 
 ## Começar uma nova trilha
 
 1. Use este template para criar um repositório próprio.
-2. Aguarde a ação **Prepare ChatGPT Project Instructions** concluir.
-3. Abra `templates/chatgpt-project-instructions.md` e confirme a identidade da instância.
+2. Aguarde a ação **Prepare ChatGPT Project Instructions** concluir. Ela preenche automaticamente o nome exato do novo repositório.
+3. Abra `templates/chatgpt-project-instructions.md` no repositório novo e confirme que a linha **Instance** já contém `owner/repositório`.
 4. Crie um Projeto dedicado no ChatGPT.
 5. Conecte o GitHub e autorize o repositório da trilha.
-6. Copie as instruções preparadas para o Projeto.
-7. Envie:
+6. Copie o conteúdo já preparado de `templates/chatgpt-project-instructions.md` para as Instruções do Projeto, sem editar o identificador.
+7. Abra o primeiro chat e envie:
 
 ```text
 Configure este repositório como uma nova trilha de estudos usando o formulário do GitHub.
 ```
 
-Depois de preencher o formulário, os comandos naturais são:
+Se o arquivo ainda mostrar `OWNER/REPOSITORY`, execute manualmente a ação **Prepare ChatGPT Project Instructions** na aba Actions. A substituição manual continua disponível apenas como alternativa.
+
+O agente cuida internamente dos arquivos, validações e limites da primeira operação. Ao terminar, ele devolve o link do formulário.
+
+Depois de preencher:
 
 ```text
 Preenchi o formulário. Pode continuar.
+```
+
+Os comandos seguintes também são naturais:
+
+```text
 Vamos fazer meu diagnóstico.
 Crie minha trilha de estudos.
 Organize minha trilha nas ferramentas que escolhemos.
 Terminei <título da aula>. Avalie minhas respostas.
 ```
+
+Comandos técnicos antigos continuam aceitos como aliases, mas não precisam ser ensinados à pessoa.
 
 ## Ciclo de aprendizagem
 
@@ -80,31 +114,44 @@ O mapa completo é criado desde o início. Em trilhas maiores, apenas as primeir
 
 ## Estrutura da trilha
 
-- `study/roadmap.md` — visão completa e dependências;
-- `study/topics/` — contrato resumido de cada etapa;
+- `study/roadmap.md` — visão completa e sequência;
+- `study/topics/` — visão resumida de cada etapa;
 - `study/modules/` — aulas completas;
-- `study/slides/` — fontes internas, `slides.zip` e metadados;
+- `study/slides/` — fontes internas e PDFs dos slides;
+- `study/flashcards/` — prática local em Markdown e TSV;
 - `study/assessments/` — rubricas;
 - `.github/ISSUE_TEMPLATE/` — formulários de entrada e avaliação;
 - `study/integrations.md` — ferramentas que podem ajudar;
 - `state/reviews/` — revisões independentes das operações;
-- `state/content-reviews/` — revisão semântica das aulas;
+- `state/content-reviews/` — revisão semântica das aulas materializadas;
 - `state/slide-reviews/` — revisão semântica dos slides;
-- `state/` — progresso e integrações.
+- `state/` — registros técnicos de progresso e integrações.
 
 ## Aprendizagem visual
 
-O roadmap mostra dependências reais em Mermaid. Cada aula pronta possui ao menos um diagrama útil e explicado.
+O roadmap mostra as dependências reais em Mermaid. Cada aula pronta possui ao menos um diagrama útil e explicado. Diagramas podem representar decisões, sequências, estados, relações, arquitetura, dados ou cronologia.
 
-Depois da revisão da aula, o template produz uma apresentação em HTML semântico e empacota um arquivo `slides.zip`. Dentro dele há um único `slides.html` autocontido. A pessoa baixa o ZIP, extrai o arquivo e abre o HTML no navegador, inclusive offline. Não há geração obrigatória de PDF, Playwright ou Chromium.
+Depois da revisão da aula, o template produz uma apresentação resumida em HTML semântico, revisa o conteúdo visual e gera automaticamente um PDF 16:9. O HTML é apenas a base de renderização; a pessoa recebe o PDF na aula e na ferramenta de tarefas.
 
 Veja `docs/mermaid-visual-learning.md` e `docs/study-slides.md`.
 
 ## Integrações por necessidade
 
-Ferramentas externas são escolhidas pelo valor que oferecem, não por estarem disponíveis. Uma ferramenta de tarefas pode organizar a execução; uma agenda pode apoiar a rotina; ferramentas de pesquisa ou entregáveis entram apenas quando a trilha realmente precisa delas. Recursos opcionais nunca bloqueiam o caminho principal no GitHub.
+Ferramentas externas são escolhidas pelo valor que oferecem, não por estarem disponíveis.
 
-Veja `docs/integration-capabilities.md`.
+| Necessidade | Possível ferramenta | Alternativa local |
+| --- | --- | --- |
+| Flashcards | Quizlet | Markdown e TSV |
+| Tarefas | Trello ou Todoist | GitHub ou Markdown |
+| Agenda | Reclaim, Google ou Outlook | projeção semanal |
+| Pesquisa acadêmica | Consensus | fontes originais e web |
+| Diagramas externos | Whimsical | Mermaid |
+| Entregáveis | Google Drive | arquivos do repositório |
+| Analytics | Airtable | arquivos de estado |
+
+Só uma ferramenta de tarefas mantém o acompanhamento principal. Flashcards, agenda, hábitos e cursos ajudam, mas não concluem uma etapa.
+
+Os recursos externos são indexados em `state/integrations.json` para evitar duplicações. Veja `docs/integration-capabilities.md`.
 
 ## Avaliação
 
@@ -113,14 +160,15 @@ Cada aula pronta possui um formulário com cinco questões e uma rubrica de 100 
 O comando recomendado usa o título da aula:
 
 ```text
-Terminei <título da aula>. Avalie minhas respostas.
+Terminei Agência sem garantia. Avalie minhas respostas.
 ```
+
+O agente localiza a submissão correta sem exigir o número da issue na situação normal.
 
 ## Princípios
 
 - a aula ensina; não é uma lista de links;
 - os slides resumem a aula aprovada sem criar um segundo conteúdo;
-- o pacote visual abre offline e não depende de um servidor;
 - as fontes são verificadas e explicadas;
 - exemplos e atividades são personalizados sem expor dados desnecessários;
 - toda operação gerada passa por revisão independente;

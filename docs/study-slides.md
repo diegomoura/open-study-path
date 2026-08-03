@@ -1,6 +1,6 @@
-# Study slides and offline ZIP delivery
+# Study slides and PDF delivery
 
-Open Study Path creates a concise visual presentation for every materialized topic. The deck is derived from the reviewed lesson and delivered as a ZIP containing one self-contained HTML file. PDF generation, browser printing and Chromium rendering are not part of the active contract.
+Open Study Path creates a visual presentation for every materialized topic. The deck is derived from the reviewed lesson, uses static SVG diagrams generated from Mermaid source and is delivered to the learner only as PDF.
 
 ## Artifact contract
 
@@ -10,57 +10,78 @@ Each materialized topic uses:
 study/slides/TOPIC-000/
   index.html
   slides.css
-  slides.js
-  slides.zip
+  diagrams/
+    *.mmd
+    *.svg
+  slides.pdf
   slides.meta.json
 state/slide-reviews/TOPIC-000.yml
 ```
 
-The topic contract records `slides`, `slides_package` and `slides_review`. The source files remain internal. The learner receives `slides.zip`, extracts it and opens `slides.html` in a browser.
+The topic contract records `slides`, `slides_pdf` and `slides_review`. HTML, CSS, Mermaid, SVG and metadata remain internal. The learner receives `slides.pdf`.
 
-The module contains one visible **Slides da aula** link to the ZIP and one short instruction:
+The module contains one visible **Slides da aula** link:
 
-> Baixe o arquivo ZIP, extraia o conteúdo e abra `slides.html` no navegador.
+> Baixe os slides da aula em PDF. Use o PDF para revisão; esta aula continua sendo a fonte principal.
 
-Task projections show resources in this order: slides, complete lesson, optional separate practice and assessment. Do not link source HTML, CSS, JavaScript, metadata or review evidence.
+Task projections show resources in this order: slides, complete lesson, optional separate practice and assessment. Do not link source HTML, CSS, Mermaid, SVG, metadata or review evidence.
 
 ## Pedagogical quality bar
 
-A normal 45–90 minute topic uses 8–18 slides. Required narrative roles are `title`, `map`, `diagram`, `example`, `misconception`, `application` and `summary`. The first slide is `title`, the last is `summary`, and a worked example appears before learner application.
+Deck size follows the estimated study effort: normally 12 slides for 45–60 minutes, about 15 for 75 minutes and about 18 for 90 minutes, with a hard maximum of 24. Slide count is not a quota: every page must carry a real explanatory move.
 
-Slides with roles `concept`, `diagram`, `example`, `misconception`, `application` or `recap` identify the reviewed lesson section through `data-lesson-section`. Every approved outcome appears honestly through `data-outcome-ids`.
+Required narrative roles are `title`, `map`, `concept`, `diagram`, `example`, `misconception`, `application`, `recap` and `summary`; at least two worked examples appear before learner application.
 
-Use at least five canonical layout types. Keep one main idea per slide and no more than 120 words. Mermaid diagrams include a short interpretation and a relevant limit.
+Slides with substantive roles identify the reviewed lesson section through `data-lesson-section`. Every approved outcome appears on at least two substantive slides through honest `data-outcome-ids`.
 
-## Source and package boundary
+Every required concept from the topic contract must appear in visible copy or Mermaid source. Use at least six canonical layout types. Keep one main idea per page and no more than 120 visible words. The complete deck must contain enough explanation to remain useful without turning into a duplicate textbook.
 
-Author semantic HTML in `index.html` and reuse the canonical `slides.css` and `slides.js` unchanged. The package builder:
+Reject generic filler such as “defina a ideia central”, “aplique a um caso novo” or instructions that could be copied unchanged to another topic. Examples, comparisons and limits must be specific to the lesson.
 
-1. bundles the local JavaScript and Mermaid runtime with esbuild;
-2. inlines CSS and JavaScript into the final HTML;
-3. adds no remote fonts, scripts, styles or media;
-4. creates a deterministic ZIP containing exactly `slides.html`;
-5. records source, HTML and ZIP hashes in `slides.meta.json`.
+## Static diagram boundary
 
-Run:
+Author diagrams as `diagrams/*.mmd`. HTML references the corresponding generated SVG:
 
-```bash
-npm install --no-save --package-lock=false esbuild@0.25.8 mermaid@11.16.0
-python scripts/package_study_slides.py
-python scripts/package_study_slides.py --check
-python scripts/validate_study_slides.py
+```html
+<img
+  class="osp-diagram-image"
+  src="diagrams/generation-cycle.svg"
+  data-mermaid-source="diagrams/generation-cycle.mmd"
+  alt="Descrição completa do diagrama"
+>
 ```
 
-`--check` rebuilds the expected bytes and rejects missing or stale packages. Re-running without source changes produces identical ZIP and metadata bytes.
+The CI renderer loads the pinned local Mermaid package through a restricted localhost page and writes SVG before opening the slide HTML. The learner PDF contains no Mermaid runtime and executes no JavaScript. PNG diagrams and full-slide raster images are outside the contract.
 
-## Offline and security contract
+Generated SVGs must contain no script or external asset. Each diagram needs alternative text and an explanatory caption that states both interpretation and relevant limit.
 
-The ZIP contains exactly one file named `slides.html`. The packaged document must open through `file://` without a server and without network access for rendering. External hyperlinks may remain as optional navigation, but scripts, styles, images, fonts and media must not depend on remote URLs.
+## PDF renderer
 
-Reject encrypted archives, unsafe paths, variable ZIP timestamps, extra files, external runtime assets, stale hashes or a missing entrypoint.
+The renderer:
+
+1. converts each `.mmd` file to SVG with the pinned local Mermaid package;
+2. serves only the generated local build tree and renderer dependencies from localhost;
+3. blocks external requests and records browser errors;
+4. waits for fonts and SVG images;
+5. checks overflow at 1280×720;
+6. embeds SVG data into a deterministic isolated-page snapshot;
+7. renders each slide as an isolated PDF page;
+8. merges pages with fixed metadata and provenance;
+9. writes `slides.pdf` and `slides.meta.json`;
+10. verifies that committed artifacts match current sources.
+
+The learner-facing URL is:
+
+```text
+https://github.com/OWNER/REPOSITORY/raw/HEAD/study/slides/TOPIC-000/slides.pdf
+```
+
+## CI handoff
+
+The curriculum agent authors sources but does not install Chromium in chat. GitHub Actions renders missing or stale SVG/PDF artifacts and uploads the internal artifact `study-slide-render-output`. The agent downloads that artifact, visually inspects the PDF and commits generated files in one batch.
+
+The artifact is not published to the learner. A missing PDF, stale source digest, missing SVG, external request, browser error, overflow or page-count mismatch prevents merge.
 
 ## Independent review
 
-Run `instructions/37-review-study-slides.md` after the lesson passes course-content review and before packaging. Review source fidelity, outcome coverage, narrative arc, examples, visual hierarchy, accessibility, Mermaid usefulness, learner links and offline delivery.
-
-The review artifact uses version 3. A changed lesson or slide source invalidates the review, ZIP and metadata. Repair them in the same curriculum or materialization pull request.
+Run `instructions/37-review-study-slides.md` after the lesson passes course-content review and before final rendering. The review artifact uses version 4. A changed lesson, HTML, CSS or Mermaid source invalidates the review and generated output.

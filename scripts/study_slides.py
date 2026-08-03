@@ -1,45 +1,61 @@
 #!/usr/bin/env python3
-"""Validate semantic study-slide sources, review evidence and offline ZIP delivery."""
+"""Validate semantic slide sources, static Mermaid SVGs and learner-facing PDFs."""
 from __future__ import annotations
 
 from dataclasses import dataclass
 from hashlib import sha256
 from html.parser import HTMLParser
-from pathlib import Path, PurePosixPath
+from pathlib import Path
 import json
+import math
 import re
+import unicodedata
 from typing import Any, Mapping
-from zipfile import ZipFile, BadZipFile
+from xml.etree import ElementTree
 
 import yaml
+from pypdf import PdfReader
 
 OUTCOME_ID = re.compile(r"^LO-[1-9][0-9]*$")
 TOPIC_ID = re.compile(r"^TOPIC-[0-9]{3,}$")
 SHA256_HEX = re.compile(r"^[0-9a-f]{64}$")
 SLIDES_LINK_START = "<!-- open-study-path:slides-link:start -->"
 SLIDES_LINK_END = "<!-- open-study-path:slides-link:end -->"
-MIN_SLIDES = 8
-MAX_SLIDES = 18
-THEME_NAME = "canonical-v2"
-PACKAGE_BUILDER_ID = "open-study-path-html-zip-v1"
-PACKAGE_ENTRYPOINT = "slides.html"
-CSS_MARKER = "open-study-path:study-slides-theme version=2"
-JS_MARKER = "open-study-path:study-slides-runtime version=3"
-PACKAGE_MARKER = "open-study-path:packaged-slides version=1"
+THEME_NAME = "canonical-v3"
+CONTRACT_VERSION = 3
+RENDERER_ID = "open-study-path-html-svg-pdf-v3"
+PDF_PRODUCER = "Open Study Path static SVG PDF renderer v3"
+CSS_MARKER = "open-study-path:study-slides-theme version=3"
+MIN_SLIDES_FLOOR = 12
+MAX_SLIDES = 24
 REQUIRED_ROLES = (
-    "title", "map", "diagram", "example", "misconception", "application", "summary"
+    "title", "map", "concept", "diagram", "example", "misconception", "application", "recap", "summary"
 )
 TRACEABLE_ROLES = {"concept", "diagram", "example", "misconception", "application", "recap"}
+SUBSTANTIVE_ROLES = TRACEABLE_ROLES
 LAYOUT_CLASSES = {
-    "osp-title-layout", "osp-grid", "osp-compare", "osp-diagram", "osp-case",
-    "osp-steps", "osp-challenge", "osp-checklist", "osp-prompt-grid", "osp-summary-layout",
+    "osp-title-layout", "osp-grid", "osp-compare", "osp-diagram", "osp-case", "osp-steps",
+    "osp-challenge", "osp-checklist", "osp-prompt-grid", "osp-summary-layout", "osp-code-layout",
+    "osp-process", "osp-matrix", "osp-stack", "osp-spectrum",
 }
 REQUIRED_REVIEW_CHECKS = (
-    "lesson_fidelity", "outcome_coverage", "narrative_arc", "worked_example_quality",
-    "summary_quality", "visual_variety", "visual_hierarchy", "mermaid_quality",
-    "accessibility", "link_consistency", "offline_delivery",
+    "lesson_fidelity", "outcome_coverage", "required_concept_coverage", "narrative_arc",
+    "worked_example_quality", "content_density", "topic_specificity", "summary_quality",
+    "visual_variety", "visual_hierarchy", "static_svg_quality", "accessibility",
+    "link_consistency", "pdf_delivery",
 )
-SOURCE_FILENAMES = ("index.html", "slides.css", "slides.js")
+FORBIDDEN_GENERIC_PHRASES = (
+    "use a definição para explicar uma decisão concreta",
+    "relacione o objeto com o restante do fluxo",
+    "defina a transformação esperada",
+    "separe o que precisa ser validado",
+    "mostre como confirmar o resultado",
+    "defina a ideia central",
+    "aplique a um caso novo",
+    "o controle externo continua necessário",
+    "cada seta representa uma responsabilidade que pode ser explicada e testada",
+    "construa um modelo mental que possa ser explicado, testado e usado nas próximas etapas",
+)
 
 
 @dataclass(frozen=True)
@@ -63,6 +79,12 @@ def _text(value: Any) -> str:
     return str(value or "").strip()
 
 
+def normalize_text(value: str) -> str:
+    decomposed = unicodedata.normalize("NFKD", value)
+    without_marks = "".join(char for char in decomposed if not unicodedata.combining(char))
+    return re.sub(r"\s+", " ", without_marks.lower()).strip()
+
+
 def load_yaml(path: Path) -> Any:
     return yaml.safe_load(path.read_text(encoding="utf-8"))
 
@@ -71,7 +93,10 @@ def parse_frontmatter(path: Path) -> tuple[dict[str, Any], str]:
     text = path.read_text(encoding="utf-8")
     if not text.startswith("---\n"):
         raise ValueError(f"missing YAML frontmatter: {path}")
-    _, raw, body = text.split("---", 2)
+    try:
+        _, raw, body = text.split("---", 2)
+    except ValueError as exc:
+        raise ValueError(f"malformed YAML frontmatter: {path}") from exc
     data = yaml.safe_load(raw)
     if not isinstance(data, dict):
         raise ValueError(f"frontmatter must be an object: {path}")
@@ -93,16 +118,32 @@ def aggregate_source_sha256(paths: list[Path], root: Path) -> str:
     return digest.hexdigest()
 
 
+def slides_contract(instance: Mapping[str, Any]) -> int:
+    contract = _mapping(instance.get("study_slides"))
+    try:
+        return int(contract.get("contract_version", 0))
+    except (TypeError, ValueError):
+        return 0
+
+
 def slides_enabled(instance: Mapping[str, Any]) -> bool:
     contract = _mapping(instance.get("study_slides"))
     return (
-        contract.get("contract_version") == 2
+        slides_contract(instance) == CONTRACT_VERSION
         and contract.get("enabled") is True
         and contract.get("required_for_materialized_topics") is True
         and _text(contract.get("source_format")) == "html"
-        and _text(contract.get("learner_format")) == "zip_html"
-        and _text(contract.get("archive_entrypoint")) == PACKAGE_ENTRYPOINT
+        and _text(contract.get("learner_format")) == "pdf"
+        and _text(contract.get("document_name")) == "slides.pdf"
+        and _text(contract.get("html_visibility")) == "internal_only"
+        and _text(contract.get("diagram_source_format")) == "mermaid"
+        and _text(contract.get("diagram_render_format")) == "svg"
+        and contract.get("generated_images_enabled") is False
+        and contract.get("mermaid_required") is True
     )
+
+
+VOID_TAGS = {"area", "base", "br", "col", "embed", "hr", "img", "input", "link", "meta", "param", "source", "track", "wbr"}
 
 
 class SlideHTMLParser(HTMLParser):
@@ -112,13 +153,10 @@ class SlideHTMLParser(HTMLParser):
         self.content_version: int | None = None
         self.theme = ""
         self.slides: list[dict[str, Any]] = []
-        self.mermaid_count = 0
-        self.image_count = 0
-        self.external_runtime_urls: list[str] = []
         self.stylesheet = ""
-        self.script = ""
+        self.script_count = 0
         self.inline_style_count = 0
-        self.inline_script_count = 0
+        self.external_runtime_urls: list[str] = []
         self._slide_depth = 0
         self._current: dict[str, Any] | None = None
         self._heading_depth = 0
@@ -142,57 +180,54 @@ class SlideHTMLParser(HTMLParser):
                     self.content_version = None
             elif name == "open-study-path:slide-theme":
                 self.theme = content
-        if tag == "link" and values.get("rel") == "stylesheet":
+        elif tag == "link" and values.get("rel") == "stylesheet":
             self.stylesheet = values.get("href", "")
             if self.stylesheet.startswith(("http://", "https://", "//")):
                 self.external_runtime_urls.append(self.stylesheet)
-        if tag == "script":
-            if values.get("src"):
-                self.script = values["src"]
-                if self.script.startswith(("http://", "https://", "//")):
-                    self.external_runtime_urls.append(self.script)
-            else:
-                self.inline_script_count += 1
-        if tag == "style":
+        elif tag == "script":
+            self.script_count += 1
+        elif tag == "style":
             self.inline_style_count += 1
+
         if tag in {"img", "source", "video", "audio", "iframe"}:
             url = values.get("src", "")
-            if tag == "img":
-                self.image_count += 1
             if url.startswith(("http://", "https://", "//")):
                 self.external_runtime_urls.append(url)
+
         if tag == "section" and "osp-slide" in classes:
-            outcomes = [v for v in values.get("data-outcome-ids", "").split() if v]
             self._current = {
-                "outcomes": outcomes,
+                "outcomes": [value for value in values.get("data-outcome-ids", "").split() if value],
                 "heading": "",
                 "text": [],
                 "role": values.get("data-slide-role", ""),
                 "lesson_section": values.get("data-lesson-section", ""),
                 "layouts": set(classes & LAYOUT_CLASSES),
-                "has_mermaid": False,
+                "diagram_images": [],
                 "has_caption": False,
             }
             self.slides.append(self._current)
             self._slide_depth = 1
             return
+
         if self._slide_depth and self._current is not None:
-            self._slide_depth += 1
+            if tag not in VOID_TAGS:
+                self._slide_depth += 1
             self._current["layouts"].update(classes & LAYOUT_CLASSES)
-            if "mermaid" in classes:
-                self.mermaid_count += 1
-                self._current["has_mermaid"] = True
             if "osp-caption" in classes:
                 self._current["has_caption"] = True
+            if tag == "img" and "osp-diagram-image" in classes:
+                self._current["diagram_images"].append({
+                    "src": values.get("src", ""),
+                    "source": values.get("data-mermaid-source", ""),
+                    "alt": values.get("alt", ""),
+                })
             if tag in {"h1", "h2"}:
-                self._heading_depth = 1
-        elif "mermaid" in classes:
-            self.mermaid_count += 1
+                self._heading_depth += 1
 
     def handle_endtag(self, tag: str) -> None:
         if not self._slide_depth:
             return
-        if self._heading_depth:
+        if tag in {"h1", "h2"} and self._heading_depth:
             self._heading_depth -= 1
         self._slide_depth -= 1
         if self._slide_depth == 0:
@@ -209,45 +244,70 @@ class SlideHTMLParser(HTMLParser):
             self._current["heading"] = f"{self._current['heading']} {text}".strip()
 
 
-def parse_slide_html_text(text: str) -> SlideHTMLParser:
+def parse_slide_html(path: Path) -> SlideHTMLParser:
     parser = SlideHTMLParser()
-    parser.feed(text)
+    parser.feed(path.read_text(encoding="utf-8"))
     return parser
 
 
-def parse_slide_html(path: Path) -> SlideHTMLParser:
-    return parse_slide_html_text(path.read_text(encoding="utf-8"))
+def expected_pdf_url(repository: str, pdf_path: str) -> str:
+    return f"https://github.com/{repository}/raw/HEAD/{pdf_path}"
 
 
-def expected_package_url(repository: str, package_path: str) -> str:
-    return f"https://github.com/{repository}/raw/HEAD/{package_path}"
+def source_paths(topic_dir: Path) -> list[Path]:
+    return [topic_dir / "index.html", topic_dir / "slides.css", *sorted((topic_dir / "diagrams").glob("*.mmd"))]
 
 
-def _validate_assets(root: Path, topic_id: str, source_paths: list[Path]) -> list[str]:
+def generated_svg_paths(topic_dir: Path) -> list[Path]:
+    return sorted((topic_dir / "diagrams").glob("*.svg"))
+
+
+def _validate_svg(path: Path) -> list[str]:
     errors: list[str] = []
-    template_dir = root / "templates" / "study-slides"
-    css_template = template_dir / "slides.css"
-    js_template = template_dir / "slides.js"
-    css_path, js_path = source_paths[1], source_paths[2]
-    if CSS_MARKER not in css_path.read_text(encoding="utf-8"):
-        errors.append(f"{topic_id} slide CSS is missing the canonical-v2 theme marker")
-    if JS_MARKER not in js_path.read_text(encoding="utf-8"):
-        errors.append(f"{topic_id} slide runtime is missing the version=3 marker")
-    if css_template.is_file() and css_path.read_bytes() != css_template.read_bytes():
-        errors.append(f"{topic_id} slide CSS must use the canonical-v2 template unchanged")
-    if js_template.is_file() and js_path.read_bytes() != js_template.read_bytes():
-        errors.append(f"{topic_id} slide runtime must use the canonical template unchanged")
+    try:
+        content = path.read_text(encoding="utf-8")
+        root = ElementTree.fromstring(content)
+    except (OSError, UnicodeDecodeError, ElementTree.ParseError) as exc:
+        return [f"invalid generated SVG {path}: {exc}"]
+    if not root.tag.lower().endswith("svg"):
+        errors.append(f"generated diagram is not an SVG root: {path}")
+    lowered = content.lower()
+    if "<script" in lowered:
+        errors.append(f"generated SVG contains script content: {path}")
+    if re.search(r"(?:href|src)\s*=\s*[\"'](?:https?:)?//", lowered):
+        errors.append(f"generated SVG contains an external resource: {path}")
+    if re.search(r"url\(\s*[\"']?(?:https?:)?//", lowered):
+        errors.append(f"generated SVG contains an external CSS resource: {path}")
     return errors
 
 
-def _validate_deck_structure(topic_id: str, parser: SlideHTMLParser) -> list[str]:
+def minimum_slide_count(estimated_hours: Any) -> int:
+    try:
+        hours = float(estimated_hours)
+    except (TypeError, ValueError):
+        hours = 1.0
+    return max(MIN_SLIDES_FLOOR, min(MAX_SLIDES, math.ceil(hours * 12)))
+
+
+def _validate_assets(root: Path, topic_id: str, css_path: Path) -> list[str]:
     errors: list[str] = []
+    template = root / "templates/study-slides/slides.css"
+    content = css_path.read_text(encoding="utf-8")
+    if CSS_MARKER not in content:
+        errors.append(f"{topic_id} slide CSS is missing the canonical-v3 marker")
+    if template.is_file() and css_path.read_bytes() != template.read_bytes():
+        errors.append(f"{topic_id} slide CSS must use the canonical-v3 template unchanged")
+    return errors
+
+
+def _validate_deck_structure(topic: Mapping[str, Any], parser: SlideHTMLParser, mmd_text: str) -> list[str]:
+    errors: list[str] = []
+    topic_id = _text(topic.get("id"))
+    expected_min = minimum_slide_count(topic.get("estimated_hours"))
     if parser.theme != THEME_NAME:
         errors.append(f"{topic_id} slide HTML must declare theme {THEME_NAME}")
-    if not MIN_SLIDES <= len(parser.slides) <= MAX_SLIDES:
-        errors.append(f"{topic_id} must contain between {MIN_SLIDES} and {MAX_SLIDES} slides")
-    if parser.mermaid_count < 1:
-        errors.append(f"{topic_id} slide deck must contain at least one Mermaid diagram")
+    if not expected_min <= len(parser.slides) <= MAX_SLIDES:
+        errors.append(f"{topic_id} must contain between {expected_min} and {MAX_SLIDES} slides for its estimated effort")
     roles = [_text(slide.get("role")) for slide in parser.slides]
     for role in REQUIRED_ROLES:
         if role not in roles:
@@ -259,29 +319,71 @@ def _validate_deck_structure(topic_id: str, parser: SlideHTMLParser) -> list[str
             errors.append(f"{topic_id} final slide role must be summary")
         if "map" in roles and roles.index("map") > 2:
             errors.append(f"{topic_id} map slide must appear within the first three slides")
+        if roles.count("example") < 2:
+            errors.append(f"{topic_id} must contain at least two topic-specific worked examples")
         if "example" in roles and "application" in roles and roles.index("example") > roles.index("application"):
-            errors.append(f"{topic_id} worked example must appear before learner application")
+            errors.append(f"{topic_id} worked examples must appear before learner application")
+
     layouts: set[str] = set()
+    all_visible_text: list[str] = []
+    represented: dict[str, int] = {}
+    diagram_count = 0
     for slide in parser.slides:
         layouts.update(slide.get("layouts", set()))
-        if slide.get("role") in TRACEABLE_ROLES and not _text(slide.get("lesson_section")):
-            errors.append(f"{topic_id} {slide.get('role')} slide is missing data-lesson-section")
+        role = _text(slide.get("role"))
+        if role in TRACEABLE_ROLES and not _text(slide.get("lesson_section")):
+            errors.append(f"{topic_id} {role} slide is missing data-lesson-section")
         words = " ".join(slide.get("text", [])).split()
+        all_visible_text.extend(words)
         if len(words) > 120:
-            errors.append(f"{topic_id} slide '{slide.get('heading')}' exceeds 120 words")
-        if slide.get("has_mermaid") and not slide.get("has_caption"):
-            errors.append(f"{topic_id} Mermaid slide is missing an osp-caption interpretation")
-    if len(layouts) < 5:
-        errors.append(f"{topic_id} must use at least five canonical layout types; got {sorted(layouts)}")
+            errors.append(f"{topic_id} slide '{slide.get('heading')}' exceeds 120 visible words")
+        if role in SUBSTANTIVE_ROLES:
+            for outcome in slide.get("outcomes", []):
+                represented[outcome] = represented.get(outcome, 0) + 1
+        diagrams = slide.get("diagram_images", [])
+        diagram_count += len(diagrams)
+        for diagram in diagrams:
+            if not _text(diagram.get("src")).endswith(".svg"):
+                errors.append(f"{topic_id} diagram image must use a local SVG")
+            if not _text(diagram.get("source")).endswith(".mmd"):
+                errors.append(f"{topic_id} diagram image must declare its Mermaid source")
+            if not _text(diagram.get("alt")):
+                errors.append(f"{topic_id} diagram image is missing alternative text")
+            if not slide.get("has_caption"):
+                errors.append(f"{topic_id} diagram slide is missing an osp-caption interpretation")
+
+    if len(layouts) < 6:
+        errors.append(f"{topic_id} must use at least six canonical layout types; got {sorted(layouts)}")
+    if diagram_count < 1:
+        errors.append(f"{topic_id} slide deck must reference at least one generated Mermaid SVG")
+    if len(all_visible_text) < len(parser.slides) * 24:
+        errors.append(f"{topic_id} slide deck is too thin: {len(all_visible_text)} visible words for {len(parser.slides)} slides")
+
+    outcomes = [_text(_mapping(value).get("id")) for value in _list(topic.get("learning_outcomes"))]
+    for outcome in outcomes:
+        if represented.get(outcome, 0) < 2:
+            errors.append(f"{topic_id} outcome {outcome} must appear on at least two substantive slides")
+    if any(not OUTCOME_ID.fullmatch(value) for value in represented):
+        errors.append(f"{topic_id} slides contain invalid outcome IDs")
+
+    combined = normalize_text(" ".join(all_visible_text) + " " + mmd_text)
+    for outcome in _list(topic.get("learning_outcomes")):
+        for concept in _list(_mapping(outcome).get("required_concepts")):
+            normalized = normalize_text(_text(concept))
+            if normalized and normalized not in combined:
+                errors.append(f"{topic_id} slides do not visibly cover required concept: {_text(concept)}")
+    for phrase in FORBIDDEN_GENERIC_PHRASES:
+        if normalize_text(phrase) in combined:
+            errors.append(f"{topic_id} slide deck contains generic placeholder copy: {phrase}")
     return errors
 
 
 def _validate_review(root: Path, topic: Mapping[str, Any], lesson: Path, sources: list[Path], review: Mapping[str, Any]) -> list[str]:
     errors: list[str] = []
     topic_id = _text(topic.get("id"))
-    outcomes = [_text(_mapping(v).get("id")) for v in _list(topic.get("learning_outcomes")) if _text(_mapping(v).get("id"))]
-    if review.get("version") != 3:
-        errors.append(f"{topic_id} slide review must use version 3")
+    outcomes = [_text(_mapping(value).get("id")) for value in _list(topic.get("learning_outcomes"))]
+    if review.get("version") != 4:
+        errors.append(f"{topic_id} slide review must use version 4")
     if _text(review.get("topic_id")) != topic_id:
         errors.append(f"{topic_id} slide review topic_id mismatch")
     if review.get("content_version") != topic.get("content_version"):
@@ -306,7 +408,7 @@ def _validate_review(root: Path, topic: Mapping[str, Any], lesson: Path, sources
         errors.append(f"{topic_id} slide review slides_source mismatch")
     if _text(review.get("slides_source_sha256")) != aggregate_source_sha256(sources, root):
         errors.append(f"{topic_id} slide review source hash is stale")
-    reviewed = [_text(v) for v in _list(review.get("outcomes_reviewed")) if _text(v)]
+    reviewed = [_text(value) for value in _list(review.get("outcomes_reviewed"))]
     if reviewed != outcomes:
         errors.append(f"{topic_id} slide review outcomes mismatch: expected {outcomes}, got {reviewed}")
     if _list(review.get("blocking_findings")):
@@ -314,76 +416,65 @@ def _validate_review(root: Path, topic: Mapping[str, Any], lesson: Path, sources
     return errors
 
 
-def _safe_zip_name(name: str) -> bool:
-    path = PurePosixPath(name)
-    return not path.is_absolute() and ".." not in path.parts and "\\" not in name
-
-
-def _validate_package(topic_id: str, package_path: Path, meta_path: Path, source_paths: list[Path], root: Path) -> tuple[list[str], str]:
+def _validate_pdf(topic_id: str, pdf_path: Path, meta_path: Path, sources: list[Path], svgs: list[Path], root: Path, slide_count: int) -> list[str]:
     errors: list[str] = []
-    packaged_html = ""
     try:
-        with ZipFile(package_path) as archive:
-            infos = archive.infolist()
-            names = [info.filename for info in infos]
-            if names != [PACKAGE_ENTRYPOINT]:
-                errors.append(f"{topic_id} ZIP must contain exactly {PACKAGE_ENTRYPOINT}; got {names}")
-            for info in infos:
-                if not _safe_zip_name(info.filename):
-                    errors.append(f"{topic_id} ZIP contains an unsafe path: {info.filename}")
-                if info.flag_bits & 0x1:
-                    errors.append(f"{topic_id} ZIP must not encrypt files")
-                if info.date_time != (1980, 1, 1, 0, 0, 0):
-                    errors.append(f"{topic_id} ZIP timestamp is not deterministic for {info.filename}")
-            if PACKAGE_ENTRYPOINT in names:
-                packaged_html = archive.read(PACKAGE_ENTRYPOINT).decode("utf-8")
-    except (BadZipFile, UnicodeDecodeError) as exc:
-        errors.append(f"{topic_id} slides package is invalid: {exc}")
-        return errors, packaged_html
-
-    parser = parse_slide_html_text(packaged_html)
-    if PACKAGE_MARKER not in packaged_html:
-        errors.append(f"{topic_id} packaged HTML is missing the package marker")
-    if parser.stylesheet or parser.script:
-        errors.append(f"{topic_id} packaged HTML must not depend on external CSS or JavaScript files")
-    if parser.inline_style_count < 1 or parser.inline_script_count < 1:
-        errors.append(f"{topic_id} packaged HTML must inline CSS and JavaScript")
-    if parser.external_runtime_urls:
-        errors.append(f"{topic_id} packaged HTML has external runtime assets: {parser.external_runtime_urls}")
-    if parser.topic_id != topic_id:
-        errors.append(f"{topic_id} packaged HTML topic metadata mismatch")
+        pdf_bytes = pdf_path.read_bytes()
+        if not pdf_bytes.startswith(b"%PDF-"):
+            errors.append(f"{topic_id} slides.pdf does not start with a PDF header")
+        reader = PdfReader(str(pdf_path))
+    except Exception as exc:
+        return [f"{topic_id} slides.pdf cannot be read: {exc}"]
+    if len(reader.pages) != slide_count:
+        errors.append(f"{topic_id} PDF page count mismatch: expected {slide_count}, got {len(reader.pages)}")
+    metadata = reader.metadata or {}
+    producer = _text(metadata.get("/Producer"))
+    title = _text(metadata.get("/Title"))
+    subject = _text(metadata.get("/Subject"))
+    if producer != PDF_PRODUCER:
+        errors.append(f"{topic_id} PDF producer mismatch")
+    if title != f"{topic_id} study slides":
+        errors.append(f"{topic_id} PDF title metadata mismatch")
 
     try:
         meta = json.loads(meta_path.read_text(encoding="utf-8"))
     except (OSError, json.JSONDecodeError) as exc:
-        errors.append(f"{topic_id} slides.meta.json is invalid: {exc}")
-        return errors, packaged_html
-    if meta.get("contract_version") != 2:
-        errors.append(f"{topic_id} slides metadata must use contract_version 2")
-    if _text(_mapping(meta.get("builder")).get("id")) != PACKAGE_BUILDER_ID:
-        errors.append(f"{topic_id} slides metadata builder mismatch")
-    if _text(meta.get("entrypoint")) != PACKAGE_ENTRYPOINT:
-        errors.append(f"{topic_id} slides metadata entrypoint mismatch")
-    expected_digest = aggregate_source_sha256(source_paths, root)
+        return errors + [f"{topic_id} slides.meta.json is invalid: {exc}"]
+    if meta.get("contract_version") != CONTRACT_VERSION:
+        errors.append(f"{topic_id} slides metadata must use contract_version {CONTRACT_VERSION}")
+    if _text(_mapping(meta.get("renderer")).get("id")) != RENDERER_ID:
+        errors.append(f"{topic_id} slides metadata renderer mismatch")
+    expected_digest = aggregate_source_sha256(sources, root)
     if _text(meta.get("source_digest")) != expected_digest:
         errors.append(f"{topic_id} slides metadata source_digest is stale")
     source_hashes = _mapping(meta.get("source_sha256"))
-    for source in source_paths:
+    for source in sources:
         relative = source.relative_to(root).as_posix()
         if _text(source_hashes.get(relative)) != file_sha256(source):
             errors.append(f"{topic_id} slides metadata source hash is stale: {relative}")
-    package_meta = _mapping(meta.get("package"))
-    if _text(package_meta.get("sha256")) != file_sha256(package_path):
-        errors.append(f"{topic_id} slides package hash is stale")
-    if package_meta.get("bytes") != package_path.stat().st_size:
-        errors.append(f"{topic_id} slides package byte count mismatch")
-    html_meta = _mapping(meta.get("html"))
-    html_bytes = packaged_html.encode("utf-8")
-    if _text(html_meta.get("sha256")) != sha256(html_bytes).hexdigest():
-        errors.append(f"{topic_id} packaged HTML hash is stale")
-    if html_meta.get("bytes") != len(html_bytes):
-        errors.append(f"{topic_id} packaged HTML byte count mismatch")
-    return errors, packaged_html
+    svg_hashes = _mapping(meta.get("svg_sha256"))
+    for svg in svgs:
+        relative = svg.relative_to(root).as_posix()
+        if _text(svg_hashes.get(relative)) != file_sha256(svg):
+            errors.append(f"{topic_id} slides metadata SVG hash is stale: {relative}")
+    pdf_meta = _mapping(meta.get("pdf"))
+    if pdf_meta.get("pages") != slide_count:
+        errors.append(f"{topic_id} slides metadata page count mismatch")
+    if pdf_meta.get("bytes") != len(pdf_bytes):
+        errors.append(f"{topic_id} slides metadata PDF byte count mismatch")
+    if _text(pdf_meta.get("sha256")) != sha256(pdf_bytes).hexdigest():
+        errors.append(f"{topic_id} slides metadata PDF hash is stale")
+    snapshot = _text(meta.get("rendered_snapshot_sha256"))
+    if not SHA256_HEX.fullmatch(snapshot):
+        errors.append(f"{topic_id} rendered snapshot hash is invalid")
+    expected_subject = f"open-study-path-renderer:{RENDERER_ID};source:{expected_digest};snapshot:{snapshot}"
+    if subject != expected_subject:
+        errors.append(f"{topic_id} PDF provenance metadata mismatch")
+    diagnostics = _mapping(meta.get("diagnostics"))
+    for key in ("console_errors", "overflow_slides", "external_requests", "missing_diagrams"):
+        if _list(diagnostics.get(key)):
+            errors.append(f"{topic_id} renderer diagnostics are not clean: {key}")
+    return errors
 
 
 def validate_materialized_topic(root: Path, repository: str, topic: Mapping[str, Any]) -> list[str]:
@@ -391,14 +482,10 @@ def validate_materialized_topic(root: Path, repository: str, topic: Mapping[str,
     topic_id = _text(topic.get("id"))
     if not TOPIC_ID.fullmatch(topic_id):
         return [f"invalid materialized topic id: {topic_id!r}"]
-    content_version = topic.get("content_version")
-    if not isinstance(content_version, int) or content_version <= 0:
-        errors.append(f"{topic_id} content_version must be positive")
-
     required_paths = {
         "module": _text(topic.get("module")),
         "slides": _text(topic.get("slides")),
-        "slides_package": _text(topic.get("slides_package")),
+        "slides_pdf": _text(topic.get("slides_pdf")),
         "slides_review": _text(topic.get("slides_review")),
     }
     for key, relative in required_paths.items():
@@ -406,73 +493,88 @@ def validate_materialized_topic(root: Path, repository: str, topic: Mapping[str,
             errors.append(f"{topic_id} is missing {key}")
         elif not (root / relative).is_file():
             errors.append(f"{topic_id} {key} is missing: {relative}")
+    if _text(topic.get("slides_package")):
+        errors.append(f"{topic_id} still declares the removed slides_package field")
     if errors:
         return errors
 
     lesson = root / required_paths["module"]
-    source_dir = (root / required_paths["slides"]).parent
-    sources = [source_dir / name for name in SOURCE_FILENAMES]
-    missing_sources = [p.relative_to(root).as_posix() for p in sources if not p.is_file()]
-    if missing_sources:
-        return [f"{topic_id} slide sources are missing: {missing_sources}"]
-    package_path = root / required_paths["slides_package"]
-    meta_path = source_dir / "slides.meta.json"
-    if not meta_path.is_file():
-        errors.append(f"{topic_id} slides metadata is missing: {meta_path.relative_to(root)}")
-        return errors
-
+    topic_dir = (root / required_paths["slides"]).parent
+    sources = source_paths(topic_dir)
+    if not sources[0].is_file() or not sources[1].is_file() or len(sources) < 3:
+        return [f"{topic_id} slide sources must include index.html, slides.css and at least one diagrams/*.mmd"]
     parser = parse_slide_html(sources[0])
     if parser.topic_id != topic_id:
         errors.append(f"{topic_id} source HTML topic metadata mismatch")
-    if parser.content_version != content_version:
+    if parser.content_version != topic.get("content_version"):
         errors.append(f"{topic_id} source HTML content version mismatch")
-    if parser.stylesheet != "slides.css" or parser.script != "slides.js":
-        errors.append(f"{topic_id} source HTML must reference local slides.css and slides.js")
+    if parser.stylesheet != "slides.css":
+        errors.append(f"{topic_id} source HTML must reference local slides.css")
+    if parser.script_count:
+        errors.append(f"{topic_id} source HTML must not execute JavaScript")
     if parser.external_runtime_urls:
         errors.append(f"{topic_id} source HTML has external runtime assets")
-    errors.extend(_validate_assets(root, topic_id, sources))
-    errors.extend(_validate_deck_structure(topic_id, parser))
+    errors.extend(_validate_assets(root, topic_id, sources[1]))
 
-    outcomes = [_text(_mapping(v).get("id")) for v in _list(topic.get("learning_outcomes")) if _text(_mapping(v).get("id"))]
-    represented = []
+    mmd_text = "\n".join(path.read_text(encoding="utf-8") for path in sources[2:])
+    errors.extend(_validate_deck_structure(topic, parser, mmd_text))
+
+    referenced_svgs: set[Path] = set()
+    referenced_mmds: set[Path] = set()
     for slide in parser.slides:
-        for outcome in slide.get("outcomes", []):
-            if outcome not in represented:
-                represented.append(outcome)
-    if represented != outcomes:
-        errors.append(f"{topic_id} slide outcome coverage mismatch: expected {outcomes}, got {represented}")
-    if any(not OUTCOME_ID.fullmatch(value) for value in represented):
-        errors.append(f"{topic_id} slides contain invalid outcome IDs")
+        for diagram in slide.get("diagram_images", []):
+            referenced_svgs.add(topic_dir / _text(diagram.get("src")))
+            referenced_mmds.add(topic_dir / _text(diagram.get("source")))
+    for path in sorted(referenced_mmds):
+        if path not in sources:
+            errors.append(f"{topic_id} HTML references unknown Mermaid source: {path.relative_to(root)}")
+    for path in sorted(referenced_svgs):
+        if not path.is_file():
+            errors.append(f"{topic_id} generated SVG is missing: {path.relative_to(root)}")
+        else:
+            errors.extend(_validate_svg(path))
+    svgs = generated_svg_paths(topic_dir)
+    if set(svgs) != referenced_svgs:
+        errors.append(f"{topic_id} generated SVG set must exactly match diagrams referenced by HTML")
+    if any(path.suffix.lower() == ".png" for path in topic_dir.rglob("*")):
+        errors.append(f"{topic_id} must not contain generated PNG slide assets")
+    if (topic_dir / "slides.zip").exists() or (topic_dir / "slides.js").exists():
+        errors.append(f"{topic_id} retains removed ZIP or JavaScript slide artifacts")
 
-    package_errors, _ = _validate_package(topic_id, package_path, meta_path, sources, root)
-    errors.extend(package_errors)
+    meta_path = topic_dir / "slides.meta.json"
+    if not meta_path.is_file():
+        errors.append(f"{topic_id} slides metadata is missing")
+    else:
+        errors.extend(_validate_pdf(topic_id, root / required_paths["slides_pdf"], meta_path, sources, svgs, root, len(parser.slides)))
+    review = _mapping(load_yaml(root / required_paths["slides_review"]))
+    errors.extend(_validate_review(root, topic, lesson, sources, review))
 
-    review = load_yaml(root / required_paths["slides_review"])
-    errors.extend(_validate_review(root, topic, lesson, sources, _mapping(review)))
-
-    expected_url = expected_package_url(repository, required_paths["slides_package"])
+    expected_url = expected_pdf_url(repository, required_paths["slides_pdf"])
     lesson_text = lesson.read_text(encoding="utf-8")
     if lesson_text.count(SLIDES_LINK_START) != 1 or lesson_text.count(SLIDES_LINK_END) != 1:
         errors.append(f"{topic_id} lesson must contain exactly one managed slides-link block")
     if expected_url not in lesson_text:
-        errors.append(f"{topic_id} lesson is missing the current ZIP slides link")
-    if PACKAGE_ENTRYPOINT not in lesson_text:
-        errors.append(f"{topic_id} lesson must explain that the learner opens {PACKAGE_ENTRYPOINT}")
-    if "slides.pdf" in lesson_text.lower():
-        errors.append(f"{topic_id} lesson still exposes a PDF slide link")
+        errors.append(f"{topic_id} lesson is missing the current PDF slides link")
+    if "slides.zip" in lesson_text.lower() or "slides.html" in lesson_text.lower():
+        errors.append(f"{topic_id} lesson still exposes removed ZIP/HTML slide instructions")
     return errors
 
 
 def validate_repository(root: Path) -> ValidationResult:
-    errors: list[str] = []
-    instance_path = root / ".open-study-path" / "instance.yml"
+    instance_path = root / ".open-study-path/instance.yml"
     if not instance_path.is_file():
-        instance_path = root / "templates" / "instance.yml"
+        instance_path = root / "templates/instance.yml"
     instance = _mapping(load_yaml(instance_path)) if instance_path.is_file() else {}
+    contract = slides_contract(instance)
+    if contract == 2:
+        from study_slides_legacy import validate_repository as validate_legacy
+        return validate_legacy(root)
+    errors: list[str] = []
     if not slides_enabled(instance):
-        errors.append("study_slides must use contract_version 2 and learner_format zip_html")
+        errors.append("study_slides must use contract_version 3 with PDF delivery and static Mermaid SVG")
+        return ValidationResult(tuple(errors))
     repository = _text(instance.get("repository")) or "OWNER/REPOSITORY"
-    topics_dir = root / "study" / "topics"
+    topics_dir = root / "study/topics"
     if topics_dir.is_dir():
         for path in sorted(topics_dir.glob("TOPIC-*.md")):
             try:
