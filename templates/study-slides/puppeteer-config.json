@@ -4,6 +4,7 @@
     "--no-sandbox",
     "--disable-setuid-sandbox",
     "--disable-dev-shm-usage",
+    "--allow-file-access-from-files",
     "--font-render-hinting=none"
   ]
 }
