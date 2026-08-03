@@ -3,10 +3,7 @@
 from __future__ import annotations
 import base64
 from pathlib import Path
-import json
-import os
 import subprocess
-import urllib.request
 
 ROOT = Path(__file__).resolve().parents[1]
 OLD_PDF_COMMIT = "65cd2bdb71709ac812fa516f6c3eefa1e4fb0980"
@@ -28,18 +25,6 @@ def restore(relative: str) -> None:
     target.parent.mkdir(parents=True, exist_ok=True)
     result = subprocess.run(["git", "show", f"{OLD_PDF_COMMIT}:{relative}"], cwd=ROOT, check=True, stdout=subprocess.PIPE)
     target.write_bytes(result.stdout)
-
-
-def dispatch() -> None:
-    data = json.dumps({"ref": os.environ["BOOTSTRAP_BRANCH"], "inputs": {"review_base_sha": os.environ["BOOTSTRAP_BASE_SHA"]}}).encode()
-    request = urllib.request.Request(
-        f"https://api.github.com/repos/{os.environ['GITHUB_REPOSITORY']}/actions/workflows/validate-template.yml/dispatches",
-        data=data, method="POST",
-        headers={"Authorization": f"Bearer {os.environ['GH_TOKEN']}", "Accept": "application/vnd.github+json", "X-GitHub-Api-Version": "2022-11-28", "Content-Type": "application/json"},
-    )
-    with urllib.request.urlopen(request, timeout=30) as response:
-        if response.status != 204:
-            raise RuntimeError(f"workflow dispatch failed: {response.status}")
 
 
 def main() -> None:
@@ -80,14 +65,17 @@ def main() -> None:
     run("python", "scripts/test_study_slides.py")
     run("node", "--check", "scripts/render_study_slides.mjs")
     run("node", "--check", "scripts/test_study_slide_renderer.mjs")
-    run("git", "config", "user.name", "open-study-path-bot")
-    run("git", "config", "user.email", "open-study-path-bot@users.noreply.github.com")
-    run("git", "reset", "--soft", os.environ["BOOTSTRAP_BASE_SHA"])
-    run("git", "add", "-A")
-    run("git", "commit", "-m", "Restaurar PDF com Mermaid estático em SVG")
-    run("git", "push", "--force", "origin", f"HEAD:{os.environ['BOOTSTRAP_BRANCH']}")
-    dispatch()
-    print("Canonical static SVG/PDF contract committed and final validation dispatched.")
+    import shutil
+    for cache in ROOT.rglob("__pycache__"):
+        shutil.rmtree(cache)
+    for pyc in ROOT.rglob("*.pyc"):
+        pyc.unlink()
+    output = Path("/tmp/open-study-path-final-tree.tar.gz")
+    subprocess.run(
+        ["tar", "--exclude=.git", "--exclude=.open-study-path-final-tree.tar.gz", "-czf", str(output), "-C", str(ROOT), "."],
+        check=True,
+    )
+    print(f"Canonical static SVG/PDF tree exported to {output}.")
 
 
 if __name__ == "__main__":
