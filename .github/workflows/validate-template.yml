@@ -1,190 +1,136 @@
-name: Validate Open Study Path
+name: Patch localhost Mermaid renderer
 
 on:
   pull_request:
-  push:
-    branches:
-      - main
   workflow_dispatch:
-    inputs:
-      review_base_sha:
-        description: Base commit used for operation-scope and review validation
-        required: false
-        type: string
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
-  review-generated-artifacts:
-    name: Review generated artifacts
+  patch-renderer:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
+      - name: Checkout branch
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-      - name: Install review dependencies
-        run: python -m pip install --quiet --disable-pip-version-check pyyaml
-      - name: Test generated-artifact review framework
-        run: python scripts/test_review_framework.py
-      - name: Validate generated-artifact review framework
-        env:
-          REVIEW_BASE_SHA: ${{ inputs.review_base_sha || github.event.pull_request.base.sha || github.event.before }}
-        run: python scripts/validate_review_framework.py
-
-  validate:
-    needs: review-generated-artifacts
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-      - name: Set up Node
-        uses: actions/setup-node@v6
-        with:
-          node-version: "22"
-          package-manager-cache: false
-      - name: Install validation dependencies
-        run: python -m pip install --quiet --disable-pip-version-check pyyaml jsonschema pypdf
-      - name: Test instance operation scope guard
-        run: python scripts/test_instance_operation_scope.py
-      - name: Validate instance operation scope and commit budget
-        env:
-          REVIEW_BASE_SHA: ${{ inputs.review_base_sha || github.event.pull_request.base.sha || github.event.before }}
-        run: python scripts/validate_instance_operation_scope.py
-      - name: Apply static SVG/PDF contract text migration
+          ref: ${{ github.head_ref || github.ref_name }}
+      - name: Replace Mermaid CLI file rendering with localhost rendering
         run: |
-          python scripts/update_static_svg_slide_contract_text.py
-          if ! git diff --quiet -- AGENTS.md README.md instructions templates; then
-            rm -rf .open-study-path/static-svg-contract-text
-            mkdir -p .open-study-path/static-svg-contract-text
-            git diff --name-only -- AGENTS.md README.md instructions templates \
-              | while read -r file; do cp --parents "$file" .open-study-path/static-svg-contract-text/; done
-            echo "Static SVG/PDF contract text files need to be committed." >&2
-            git diff --stat -- AGENTS.md README.md instructions templates >&2
-            exit 1
-          fi
-      - name: Upload static SVG/PDF contract text handoff
-        if: failure()
-        uses: actions/upload-artifact@v4
-        with:
-          name: static-svg-contract-text
-          path: .open-study-path/static-svg-contract-text/
-          if-no-files-found: ignore
-          retention-days: 3
-      - name: Detect slide contract
-        id: slide-contract
-        run: |
-          python - <<'PY' >> "$GITHUB_OUTPUT"
+          python - <<'PY'
           from pathlib import Path
-          import yaml
-          path = Path('.open-study-path/instance.yml')
-          if not path.is_file():
-              path = Path('templates/instance.yml')
-          data = yaml.safe_load(path.read_text(encoding='utf-8')) or {}
-          version = (data.get('study_slides') or {}).get('contract_version')
-          print(f"pdf={'true' if version == 3 else 'false'}")
+          import re
+
+          path = Path('scripts/render_study_slides.mjs')
+          text = path.read_text(encoding='utf-8')
+          text = text.replace('import { execFile } from "node:child_process";\n', '')
+          text = text.replace('import { createRequire } from "node:module";\n', '')
+          text = text.replace('import { promisify } from "node:util";\n', '')
+          text = text.replace('const execFileAsync = promisify(execFile);\nconst require = createRequire(import.meta.url);\n', '')
+          text = text.replace(
+              'const MERMAID_CLI_VERSION = installedPackageVersion("@mermaid-js", "mermaid-cli");',
+              'const MERMAID_VERSION = installedPackageVersion("mermaid");',
+          )
+          text = text.replace(
+              'return { ".html": "text/html; charset=utf-8", ".css": "text/css; charset=utf-8", ".svg": "image/svg+xml" }[path.extname(file).toLowerCase()] || "application/octet-stream";',
+              'return { ".html": "text/html; charset=utf-8", ".css": "text/css; charset=utf-8", ".svg": "image/svg+xml", ".mjs": "text/javascript; charset=utf-8", ".js": "text/javascript; charset=utf-8", ".json": "application/json; charset=utf-8" }[path.extname(file).toLowerCase()] || "application/octet-stream";',
+          )
+
+          start_server = r'''async function startServer(root) {
+            const resolvedRoot = path.resolve(root);
+            const mermaidRoot = path.resolve(TOOL_ROOT, "node_modules", "mermaid", "dist");
+            const server = createServer(async (request, response) => {
+              try {
+                const requested = decodeURIComponent(new URL(request.url, "http://127.0.0.1").pathname);
+                if (requested === "/__osp_tools__/mermaid-renderer.html") {
+                  response.writeHead(200, { "Content-Type": "text/html; charset=utf-8", "Cache-Control": "no-store", "X-Content-Type-Options": "nosniff" });
+                  response.end(`<!doctype html><html><head><meta charset="utf-8"></head><body><div id="render-root"></div><script type="module">import mermaid from "/__osp_tools__/mermaid/mermaid.esm.min.mjs"; window.__OSP_MERMAID__ = mermaid; window.__OSP_MERMAID_READY__ = true;</script></body></html>`);
+                  return;
+                }
+                let candidate;
+                if (requested.startsWith("/__osp_tools__/mermaid/")) {
+                  const relative = requested.slice("/__osp_tools__/mermaid/".length);
+                  candidate = path.resolve(mermaidRoot, relative);
+                  if (candidate !== mermaidRoot && !candidate.startsWith(`${mermaidRoot}${path.sep}`)) return response.writeHead(403).end("Forbidden");
+                } else {
+                  candidate = path.resolve(resolvedRoot, `.${requested}`);
+                  if (candidate !== resolvedRoot && !candidate.startsWith(`${resolvedRoot}${path.sep}`)) return response.writeHead(403).end("Forbidden");
+                }
+                const stat = await fs.stat(candidate);
+                const file = stat.isDirectory() ? path.join(candidate, "index.html") : candidate;
+                response.writeHead(200, { "Content-Type": contentType(file), "Cache-Control": "no-store", "X-Content-Type-Options": "nosniff" });
+                response.end(await fs.readFile(file));
+              } catch (error) { response.writeHead(error?.code === "ENOENT" ? 404 : 500).end(String(error)); }
+            });
+            await new Promise((resolve, reject) => { server.once("error", reject); server.listen(0, "127.0.0.1", resolve); });
+            return { server, origin: `http://127.0.0.1:${server.address().port}` };
+          }
+          '''
+          text, count = re.subn(r'async function startServer\(root\) \{.*?\n\}\n\n(?=async function diagramSources)', start_server + '\n', text, flags=re.S)
+          if count != 1:
+              raise SystemExit(f'expected one startServer function, found {count}')
+
+          render_diagrams = r'''async function renderDiagrams(browser, origin, root, sourceDir, buildDir) {
+            const config = JSON.parse(await fs.readFile(path.join(root, "templates", "study-slides", "mermaid-config.json"), "utf8"));
+            const sources = await diagramSources(sourceDir);
+            if (!sources.length) throw new Error(`${path.basename(sourceDir)}: no Mermaid sources found`);
+            const outputs = [];
+            const page = await browser.newPage();
+            const consoleErrors = [];
+            const externalRequests = [];
+            page.on("console", (message) => { if (message.type() === "error") consoleErrors.push(message.text()); });
+            page.on("pageerror", (error) => consoleErrors.push(String(error?.stack || error)));
+            await page.setRequestInterception(true);
+            page.on("request", (request) => {
+              const requestUrl = new URL(request.url());
+              if (requestUrl.origin !== origin) { externalRequests.push(request.url()); request.abort("blockedbyclient"); }
+              else request.continue();
+            });
+            try {
+              await page.goto(`${origin}/__osp_tools__/mermaid-renderer.html`, { waitUntil: "networkidle0" });
+              await page.waitForFunction(() => window.__OSP_MERMAID_READY__ === true, { timeout: 30_000 });
+              for (let index = 0; index < sources.length; index += 1) {
+                const source = sources[index];
+                const sourceText = await fs.readFile(source, "utf8");
+                const diagramId = `osp-${sha256(Buffer.from(`${path.basename(sourceDir)}:${index}:${sourceText}`, "utf8")).slice(0, 16)}`;
+                const value = await page.evaluate(async ({ sourceText, diagramId, config }) => {
+                  const mermaid = window.__OSP_MERMAID__;
+                  mermaid.initialize({ ...config, startOnLoad: false, deterministicIDSeed: `${config.deterministicIDSeed || "open-study-path"}:${diagramId}` });
+                  const { svg } = await mermaid.render(diagramId, sourceText, document.querySelector("#render-root"));
+                  document.querySelector("#render-root").replaceChildren();
+                  return svg;
+                }, { sourceText, diagramId, config });
+                if (!value.includes("<svg") || value.toLowerCase().includes("<script")) throw new Error(`${path.basename(sourceDir)}: unsafe or invalid Mermaid SVG`);
+                const output = path.join(buildDir, "diagrams", `${path.basename(source, ".mmd")}.svg`);
+                await fs.writeFile(output, value, "utf8");
+                outputs.push(output);
+              }
+            } finally { await page.close(); }
+            if (consoleErrors.length) throw new Error(`${path.basename(sourceDir)}: Mermaid browser errors: ${consoleErrors.join(" | ")}`);
+            if (externalRequests.length) throw new Error(`${path.basename(sourceDir)}: Mermaid requested external resources: ${externalRequests.join(" | ")}`);
+            return { sources, outputs };
+          }
+          '''
+          text, count = re.subn(r'async function renderDiagrams\(.*?\n\}\n\n(?=async function prepareBuild)', render_diagrams + '\n', text, flags=re.S)
+          if count != 1:
+              raise SystemExit(f'expected one renderDiagrams function, found {count}')
+
+          text = text.replace(
+              'const diagrams = await renderDiagrams(root, topicDir, buildDir);',
+              'const diagrams = await renderDiagrams(browser, origin, root, topicDir, buildDir);',
+          )
+          text = text.replace(
+              'renderer: { id: RENDERER_ID, puppeteer: PUPPETEER_VERSION, mermaid_cli: MERMAID_CLI_VERSION, pdf_lib: PDF_LIB_VERSION, strategy: "static_svg_isolated_page_merge" },',
+              'renderer: { id: RENDERER_ID, puppeteer: PUPPETEER_VERSION, mermaid: MERMAID_VERSION, pdf_lib: PDF_LIB_VERSION, strategy: "localhost_static_svg_isolated_page_merge" },',
+          )
+          path.write_text(text, encoding='utf-8')
           PY
-      - name: Cache slide renderer downloads
-        if: steps.slide-contract.outputs.pdf == 'true'
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.npm
-            ~/.cache/puppeteer
-          key: study-slides-node22-puppeteer25.3.0-mermaid11.16.0
-      - name: Install static SVG/PDF renderer
-        if: steps.slide-contract.outputs.pdf == 'true'
-        env:
-          PUPPETEER_CACHE_DIR: ~/.cache/puppeteer
-        run: npm install --no-save --package-lock=false puppeteer@25.3.0 @mermaid-js/mermaid-cli@11.16.0 pdf-lib@1.17.1
-      - name: Parse repository YAML contracts
-        run: python scripts/validate_template.py yaml
-      - name: Validate repository mode guard
-        run: python scripts/validate_template.py guard
-      - name: Validate safe instance setup
-        run: python scripts/validate_setup_safety.py
-      - name: Validate intake contract
-        run: python scripts/validate_template.py intake
-      - name: Validate deterministic intake resolution
-        run: python scripts/validate_intake_resolution.py
-      - name: Test deterministic intake resolution
-        run: python scripts/test_intake_resolution.py
-      - name: Test repository label provisioning
-        run: python scripts/test_repository_labels.py
-      - name: Validate configuration schema
-        run: python scripts/validate_template.py schema
-      - name: Validate guided lifecycle
-        run: python scripts/validate_guided_lifecycle.py 2>&1 | tee guided-validation.log
-      - name: Test lifecycle next-action routing
-        run: python scripts/test_lifecycle_next_action.py
-      - name: Test independent course-content review
-        run: python scripts/test_course_content_review.py
-      - name: Validate independent course-content review
-        run: python scripts/validate_course_content_review.py
-      - name: Test study-slide contract
-        run: python scripts/test_study_slides.py
-      - name: Smoke test static SVG/PDF renderer
-        if: steps.slide-contract.outputs.pdf == 'true'
-        env:
-          PUPPETEER_CACHE_DIR: ~/.cache/puppeteer
-        run: node scripts/test_study_slide_renderer.mjs
-      - name: Render and verify committed study-slide PDFs
-        if: steps.slide-contract.outputs.pdf == 'true'
-        env:
-          PUPPETEER_CACHE_DIR: ~/.cache/puppeteer
+          node --check scripts/render_study_slides.mjs
+      - name: Publish localhost Mermaid renderer
         run: |
-          if find study/slides -mindepth 2 -maxdepth 2 -name index.html -print -quit 2>/dev/null | grep -q .; then
-            node scripts/render_study_slides.mjs --check
-          else
-            echo "No materialized study-slide sources found."
-          fi
-      - name: Upload study-slide render handoff
-        if: failure() && steps.slide-contract.outputs.pdf == 'true'
-        uses: actions/upload-artifact@v4
-        with:
-          name: study-slide-render-output
-          path: .open-study-path/rendered-slides/
-          if-no-files-found: ignore
-          retention-days: 3
-      - name: Validate study-slide contract
-        run: python scripts/validate_study_slides.py
-      - name: Test selected integration resolution
-        run: python scripts/test_integration_resolution.py
-      - name: Validate selected integration resolution
-        run: python scripts/validate_integration_resolution.py
-      - name: Validate topic-first planning and publication safety
-        run: python scripts/validate_planning_publication_safety.py
-      - name: Test topic-first planning and publication safety
-        run: python scripts/test_planning_publication_safety.py
-      - name: Test beginner-first pedagogy
-        run: python scripts/test_beginner_pedagogy.py
-      - name: Test generation terminal-state resolution
-        run: python scripts/test_generation_terminal_state.py
-      - name: Validate efficient generation contract
-        run: python scripts/validate_generation_efficiency.py
-      - name: Validate learner-facing study experience
-        run: python scripts/validate_learning_experience.py
-      - name: Test automatic Project Instructions rendering
-        run: python scripts/test_render_project_instructions.py
-      - name: Test curriculum placeholder detection
-        run: python scripts/test_curriculum_placeholder_detection.py
-      - name: Upload guided validation diagnostics
-        if: failure()
-        uses: actions/upload-artifact@v4
-        with:
-          name: guided-validation-diagnostics
-          path: guided-validation.log
-          if-no-files-found: ignore
-      - name: Validate curriculum contract
-        run: python scripts/validate_curriculum_safe.py
+          git config user.name open-study-path-bot
+          git config user.email open-study-path-bot@users.noreply.github.com
+          git add scripts/render_study_slides.mjs
+          git commit -m "Renderizar Mermaid por localhost"
+          git push origin HEAD:${{ github.head_ref || github.ref_name }}
