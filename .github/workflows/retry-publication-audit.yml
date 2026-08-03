@@ -38,6 +38,7 @@ jobs:
           python /tmp/apply_publication_audit.py
           cp .open-study-path/audit/refresh_review_fingerprints.py scripts/refresh_review_fingerprints.py
           cp .open-study-path/audit/test_refresh_review_fingerprints.py tests/test_refresh_review_fingerprints.py
+          sed -i 's/parents\[3\]/parents[1]/' tests/test_refresh_review_fingerprints.py
       - name: Run focused regression tests
         run: |
           python scripts/test_review_framework.py
