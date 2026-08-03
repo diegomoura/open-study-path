@@ -1,0 +1,38 @@
+name: Fix static SVG PDF publish markers
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  fix:
+    if: github.head_ref == 'agent/static-svg-pdf-slides-final' || github.ref_name == 'agent/static-svg-pdf-slides-final'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout source branch
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: agent/static-svg-pdf-slides-final
+      - name: Correct consolidation markers
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          path = Path('.github/workflows/publish-static-svg-v3.yml')
+          text = path.read_text(encoding='utf-8')
+          text = text.replace("end = text.index('async function diagramSources', start)", "end = text.index('async function findTopics', start)")
+          text = text.replace("end = text.index('async function prepareBuild', start)", "end = text.index('async function readMetaTags', start)")
+          path.write_text(text, encoding='utf-8')
+          PY
+          if git diff --quiet -- .github/workflows/publish-static-svg-v3.yml; then
+            echo 'Markers already corrected.'
+            exit 0
+          fi
+          git config user.name open-study-path-bot
+          git config user.email open-study-path-bot@users.noreply.github.com
+          git add .github/workflows/publish-static-svg-v3.yml
+          git commit -m 'Corrigir marcadores da consolidação PDF'
+          git push origin HEAD:agent/static-svg-pdf-slides-final
