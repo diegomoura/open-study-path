@@ -6,7 +6,7 @@ from pathlib import Path
 import subprocess
 
 ROOT = Path(__file__).resolve().parents[1]
-BASE_COMMIT = "0c3a84e50e710744a3fbccd32f4bbca2057fcf6a"
+TARGET_BRANCH = "agent/static-svg-pdf-slides-final"
 OLD_PDF_COMMIT = "65cd2bdb71709ac812fa516f6c3eefa1e4fb0980"
 RESTORE = (
     "AGENTS.md", "README.md", ".github/workflows/validate-usable-generation.yml",
@@ -71,22 +71,14 @@ def main() -> None:
         shutil.rmtree(cache)
     for pyc in ROOT.rglob("*.pyc"):
         pyc.unlink()
+    run("git", "config", "user.name", "open-study-path-bot")
+    run("git", "config", "user.email", "open-study-path-bot@users.noreply.github.com")
+    run("git", "fetch", "origin", TARGET_BRANCH)
+    run("git", "reset", "--soft", f"origin/{TARGET_BRANCH}")
     run("git", "add", "-A")
-    manifest = subprocess.run(
-        ["git", "diff", "--cached", "--name-status", BASE_COMMIT, "--", "."],
-        cwd=ROOT,
-        check=True,
-        text=True,
-        stdout=subprocess.PIPE,
-    ).stdout
-    Path("/tmp/open-study-path-final-tree.changed-files").write_text(manifest, encoding="utf-8")
-    output = Path("/tmp/open-study-path-final-tree.tar.gz")
-    subprocess.run(
-        ["tar", "--exclude=.git", "--exclude=.open-study-path-final-tree.tar.gz", "-czf", str(output), "-C", str(ROOT), "."],
-        check=True,
-    )
-    print(manifest)
-    print(f"Canonical static SVG/PDF tree exported to {output}.")
+    run("git", "commit", "-m", "Restaurar PDF com Mermaid estático em SVG")
+    run("git", "push", "origin", f"HEAD:{TARGET_BRANCH}")
+    print(f"Canonical static SVG/PDF contract published to {TARGET_BRANCH}.")
 
 
 if __name__ == "__main__":
