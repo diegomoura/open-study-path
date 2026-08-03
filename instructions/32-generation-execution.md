@@ -4,13 +4,13 @@ Apply this contract during initial curriculum generation and later rolling mater
 
 ## Connector-first execution
 
-When connected repository tools already provide file, branch, commit, pull-request, check, job and log access, use them as the authoritative path.
+When connected repository tools already provide file, branch, commit, pull-request, check, job, log and artifact access, use them as the authoritative path.
 
 Do not attempt `gh`, `git clone`, `curl`, raw GitHub URLs or unauthenticated network access merely to duplicate an available connector operation. Do not begin with shell authentication probes when the repository connector is already available. A failed local command is not useful evidence about connector access.
 
 A local checkout is optional acceleration, not a prerequisite. When command execution, DNS or package installation is unavailable, stop probing that unavailable path and continue through the connector and inherited GitHub Actions.
 
-Read reusable slide assets from the instance repository. Do not download `templates/study-slides/` from the canonical repository during an instance operation; those files are already inherited and versioned locally.
+Read reusable slide assets from the instance repository. Do not download templates from the canonical repository during an instance operation; inherited files are already versioned locally.
 
 Do not use fixed `sleep` loops to poll checks. Re-read the workflow or pull request through the connector with bounded attempts. A queued or in-progress check is a pending technical state, not curriculum success and not a learner decision.
 
@@ -20,20 +20,20 @@ Perform one bounded preflight before authoring:
 
 1. confirm repository identity and instance mode through repository files;
 2. confirm connector read and write capabilities without invoking a local CLI;
-3. inspect whether Python, Node and the pinned package dependencies already exist only when local packaging will actually be used;
+3. inspect Python, Node and pinned dependencies only when local validation is actually available;
 4. choose one execution path and do not alternate repeatedly between connector, shell and unauthenticated network attempts.
 
-If local `esbuild` or Mermaid is unavailable, do not use `curl`, a CDN or ad hoc downloaded scripts. Use the CI package handoff described below.
+The curriculum agent does not install Chromium or Mermaid. When the render toolchain is unavailable locally, use the CI render handoff.
 
 ## Build the complete diff before publishing
 
 1. Read the active instance configuration, approved intake, diagnostic summary, roadmap, templates and validators.
 2. Assemble the complete allowed phase diff in memory or an isolated workspace.
-3. Finish every selected topic contract, lesson, assessment, review, slide source and metadata input before the first repository write.
-4. Calculate all review fingerprints in one deterministic pass after authored files are final.
+3. Finish every selected topic contract, lesson, assessment, review, semantic slide source and Mermaid source before the first repository write.
+4. Calculate review fingerprints in one deterministic pass after authored files are final.
 5. Open the pull request only after the complete initial diff exists on its branch.
 
-Do not publish topics, modules, slide sources, rubrics, forms or review files one at a time while the operation is incomplete.
+Do not publish topics, modules, diagrams, rubrics, forms or review files one at a time while the operation is incomplete.
 
 ## Batched GitHub writes
 
@@ -44,13 +44,28 @@ For an operation that changes more than three files, use the Git Data API as one
 3. create one coherent commit;
 4. move the branch with one `update_ref` call.
 
-Use `create_blob`, `create_tree`, `create_commit` and `update_ref` rather than the Contents API for a multi-file generation operation. The Contents API is acceptable only for up to three isolated files or a focused correction.
+Use `create_blob`, `create_tree`, `create_commit` and `update_ref` rather than the Contents API for a multi-file operation. The Contents API is acceptable only for up to three isolated files or a focused correction.
 
-Prefer one authoring commit. Use additional commits only for focused corrections discovered by independent review or CI. A large generation pull request must remain within the commit budget enforced by `scripts/validate_instance_operation_scope.py`; never create one commit per generated file or one commit per refreshed fingerprint.
+Prefer one authoring commit. Use additional commits only for focused corrections discovered by independent review or CI. Never create one commit per generated file, diagram, PDF or refreshed fingerprint.
 
 If a branch was accidentally built through dozens of serial commits, reconstruct its final tree as one commit on top of the pull-request base and force-update the operation branch before merge.
 
 Every intermediate and final commit must respect the phase's allowed-diff contract.
+
+## Slide authoring boundary
+
+The authoring pass creates only lightweight, reviewable sources:
+
+```text
+study/slides/TOPIC-000/
+  index.html
+  slides.css
+  diagrams/*.mmd
+```
+
+Do not author `slides.js`, `slides.zip`, PNG diagrams or complete-slide images. Do not place a Mermaid runtime in learner artifacts. The generated SVG, PDF and render metadata are deterministic build outputs.
+
+A normal 45–90 minute lesson derives 12–24 topic-specific slides according to its estimated effort. The deck must preserve required concepts, at least two worked examples, outcome coverage and the real explanatory depth of the lesson. A fixed ten-slide shell or generic filler does not satisfy the contract.
 
 ## Local validation when available
 
@@ -74,27 +89,26 @@ python scripts/validate_curriculum_safe.py
 
 Never run `scripts/validate_curriculum.py` directly for learner content. The safe validator is the active contract.
 
-When the pinned packages are already available, build the offline ZIPs with:
+When the pinned renderer dependencies are already available, the repository owner may additionally run:
 
 ```text
-python scripts/package_study_slides.py
-python scripts/package_study_slides.py --check
-python scripts/validate_study_slides.py
+node scripts/render_study_slides.mjs
+node scripts/render_study_slides.mjs --check
 ```
 
-Do not install Playwright or Chromium. Do not generate PDF files.
+The curriculum agent must not install Chromium in chat. GitHub Actions is the final rendering environment and final confirmation, not the primary trial-and-error linter.
 
-GitHub Actions is the final confirmation, not the primary trial-and-error linter.
+## CI render handoff
 
-## CI package handoff
+A runtime without local Chromium or Mermaid CLI may open the draft pull request after all pedagogical artifacts, semantic slide sources and both specialized reviews are complete.
 
-A runtime without local `esbuild` or Mermaid may open the draft pull request after all pedagogical artifacts, semantic slide sources and both specialized reviews are complete.
+The inherited workflow installs the pinned renderer, converts every `diagrams/*.mmd` file to static SVG, blocks external requests, checks slide overflow, renders one 1280×720 PDF page per slide and compares the result with committed artifacts.
 
-The inherited workflow installs the pinned lightweight packages, builds the expected deterministic ZIPs and compares them with the committed files. When a ZIP or metadata file is missing or stale, the workflow uploads the internal artifact `study-slide-package-output` containing only the generated `slides.zip` and `slides.meta.json` paths.
+When generated SVGs, `slides.pdf` or `slides.meta.json` are missing or stale, the workflow uploads the internal artifact `study-slide-render-output` containing only those generated paths under `.open-study-path/rendered-slides/`.
 
-Download that workflow artifact through the GitHub connector, add every generated package and metadata file to the existing branch in one batched commit, refresh affected review fingerprints once, and rerun the current-head checks.
+Download that workflow artifact through the GitHub connector, visually inspect the PDFs, add all generated SVG/PDF/metadata files to the existing branch in one batched commit, refresh affected review fingerprints once and rerun current-head checks.
 
-The artifact is an internal transfer mechanism with short retention. It is never a learner resource. Do not attach it to the learner response, and do not ask the learner to build or package slides manually.
+The artifact is an internal transfer mechanism with short retention. It is never a learner resource. Do not attach it to the learner response and do not ask the learner to build or print slides manually.
 
 ## Independent review before final validation
 
@@ -102,8 +116,8 @@ After authoring, run specialized reviews in this order:
 
 1. curriculum architecture through `instructions/35-review-curriculum.md`;
 2. complete lesson, practice and assessment through `instructions/36-review-course-content.md`;
-3. derived visual summary through `instructions/37-review-study-slides.md`;
-4. deterministic ZIP packaging and study-slide validation;
+3. derived visual explanation through `instructions/37-review-study-slides.md`;
+4. static SVG and PDF rendering validation;
 5. `instructions/04-review-generated-artifacts.md` using the phase review profile.
 
 Create or update the shared review only after actively checking the complete operation output. Cover every generated path changed by the pull request with current SHA-256 evidence. Correct blocking findings before approval.
@@ -133,7 +147,7 @@ When CI fails:
 5. batch the correction and refresh fingerprints once;
 6. wait for checks on the new unchanged head.
 
-A failed locator, fingerprint, schema, path, placeholder, package, integration-plan or review-coverage check is internal correction work. It is not a learner blocker.
+A failed locator, fingerprint, schema, path, placeholder, render, link, integration-plan or review-coverage check is internal correction work. It is not a learner blocker.
 
 Batch every failure of the same deterministic class before the next remote run. Do not add instrumentation commits or modify repository infrastructure to diagnose learner content.
 
@@ -164,7 +178,8 @@ The operation is complete only when the current unchanged head has:
 - an allowed, coherent diff;
 - a bounded commit history;
 - complete curriculum, course-content and study-slide reviews;
-- current `slides.zip` and `slides.meta.json` for every materialized topic;
+- current static SVG diagrams, `slides.pdf` and `slides.meta.json` for every materialized topic;
+- direct learner-facing PDF links with no ZIP/HTML instructions;
 - approved shared review coverage;
 - passing required checks;
 - a mergeable pull request with no unresolved review thread;
@@ -174,4 +189,4 @@ At that point, do not perform further research, regenerate content or rerun unch
 
 ## Diagnostic artifacts
 
-Logs and workflow ZIP artifacts are internal debugging aids. Do not attach or list them as primary learner artifacts after success. Mention one only when the final state remains genuinely blocked and the owner must inspect it to make a concrete decision.
+Logs and workflow artifacts are internal debugging aids. Do not attach or list them as primary learner artifacts after success. Mention one only when the final state remains genuinely blocked and the owner must inspect it to make a concrete decision.
