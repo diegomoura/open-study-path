@@ -183,9 +183,20 @@ async function diagnostics(page) {
 }
 
 async function snapshotDeck(page) {
-  return page.evaluate(() => ({
+  return page.evaluate(async () => ({
     styles: Array.from(document.styleSheets).flatMap((sheet) => { try { return Array.from(sheet.cssRules, (rule) => rule.cssText); } catch { return []; } }).join("\n"),
-    slides: Array.from(document.querySelectorAll(".osp-slide"), (slide) => slide.outerHTML),
+    slides: await Promise.all(Array.from(document.querySelectorAll(".osp-slide"), async (slide) => {
+      const clone = slide.cloneNode(true);
+      const originalImages = Array.from(slide.querySelectorAll("img"));
+      const clonedImages = Array.from(clone.querySelectorAll("img"));
+      for (let index = 0; index < clonedImages.length; index += 1) {
+        const response = await fetch(originalImages[index].src);
+        if (!response.ok) throw new Error(`Could not load slide image: ${originalImages[index].src}`);
+        const svg = await response.text();
+        clonedImages[index].setAttribute("src", `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`);
+      }
+      return clone.outerHTML;
+    })),
   }));
 }
 
