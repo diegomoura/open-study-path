@@ -58,7 +58,9 @@ Keep internal `planned` and `materialized` values in metadata. In visible copy u
 
 Read `instructions/31-topic-first-safe-publication.md` before generating or revising a roadmap. `planning.unit: topic` is authoritative. Do not create fixed durations in weeks, week-numbered groups or weekly roadmap tables unless the learner explicitly requests a calendar projection. An optional time constraint may guide priority and feasibility language, but it must not silently remove mastery-required content or redefine partial coverage as completion.
 
-A topic number is not a prerequisite rule. The dependency graph and each topic's direct prerequisite list are authoritative.
+Every approved roadmap topic receives a stable learner-facing lesson number derived from roadmap order. Use `Aula 01 · <título>` in task tools and other navigation surfaces. Keep `TOPIC-001` as the stable internal identifier in files, metadata and links. The visible number helps navigation; it never replaces the dependency graph or direct prerequisite list.
+
+A topic number is not a prerequisite rule. The dependency graph and each topic's direct prerequisite list are authoritative. A later-numbered independent root may be available in parallel while the primary sequence continues through an earlier-numbered dependency chain.
 
 ## Granularity and teaching quality
 
@@ -116,6 +118,8 @@ Read `docs/integration-capabilities.md`, `study.config.yml`, `study/integrations
 GitHub stores curriculum, lessons, assessments and verified progress. Exactly one task backend tracks execution.
 
 - Trello is preferred for rich courses; GitHub Issues is the first fallback, Todoist may be a task backend or reminder-only, and repository Markdown is the final internal fallback.
+- The task backend projects every approved roadmap topic exactly once, including future lessons without learner-resource links.
+- Persist the current ordered roadmap fingerprint with the board or project and reject a stale or different curriculum as the current projection.
 - `integration_preferences.routine.mode: fixed_calendar` uses one calendar provider and its event notification.
 - `integration_preferences.routine.mode: flexible_reminders` uses Todoist and creates no duplicate calendar event.
 - `none` and `decide_later` activate neither routine provider.
@@ -142,7 +146,19 @@ For every repository phase, inspect required checks for the current unchanged PR
 
 Read `instructions/40-publish-tasks.md`, `instructions/42-integration-preflight.md` and `instructions/31-topic-first-safe-publication.md`.
 
-Create one task per topic. By default, use the human lesson title without a numeric prefix. Use `Etapa <n> · <título>` only for a genuinely linear course or an explicit learner preference.
+Create exactly one task per approved roadmap topic. Every visible task title uses `Aula NN · <título>` with the stable roadmap lesson number. Keep topic IDs internal. Numbering is mandatory in task backends even for branched courses, but readiness always follows direct prerequisites.
+
+For Trello, use lists equivalent to:
+
+- Próxima aula;
+- Disponível em paralelo;
+- Planejado;
+- Em estudo;
+- Em avaliação;
+- Revisão necessária;
+- Concluído.
+
+Exactly one unfinished eligible topic occupies **Próxima aula**: the earliest eligible topic in roadmap order. Other eligible materialized roots or branches occupy **Disponível em paralelo**. Topics with unmet prerequisites or without complete reviewed learner resources remain in **Planejado**.
 
 ### Human task titles
 
@@ -150,7 +166,7 @@ A ready card says what the learner will do, how long it may take, where the slid
 
 Show resources in this order: **Slides**, **Aula**, optional **Prática**, **Avaliação**. Do not create a duplicate practice resource when the exercises already live in the lesson.
 
-A future card begins with **Pré-requisitos desta etapa**, lists exactly the direct prerequisite titles and tells the learner to follow that list rather than card numbering. Do not attach nonexistent lesson, slide PDF, practice or assessment links.
+A future card begins with **Pré-requisitos desta aula**, lists exactly the direct prerequisite titles and explains that numbering helps navigation while the list position and prerequisites determine readiness. Do not attach nonexistent lesson, slide PDF, practice or assessment links.
 
 A task backend is not a repository inventory. Do not link topic contracts, rubric YAML, state files, synchronization records, slide sources or review evidence.
 
