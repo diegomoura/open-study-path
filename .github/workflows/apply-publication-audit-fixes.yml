@@ -1,0 +1,1104 @@
+name: Apply publication audit fixes
+
+on:
+  push:
+    branches: [agent/audit-publication-contracts]
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/audit-publication-contracts
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install test dependency
+        run: python -m pip install --quiet --disable-pip-version-check pyyaml
+      - name: Apply audited fixes
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          ROOT = Path('.')
+
+          def replace_once(path: str, old: str, new: str) -> None:
+              target = ROOT / path
+              text = target.read_text(encoding='utf-8')
+              if old not in text:
+                  raise SystemExit(f'expected text not found in {path}: {old[:80]!r}')
+              target.write_text(text.replace(old, new, 1), encoding='utf-8')
+
+          (ROOT / 'scripts/refresh_review_fingerprints.py').write_text(r'''#!/usr/bin/env python3
+"""Validate or refresh only the latest approved review owner of each artifact."""
+from __future__ import annotations
+
+import argparse
+from dataclasses import dataclass
+from datetime import datetime, timezone
+import hashlib
+from pathlib import Path
+import sys
+from typing import Any
+
+import yaml
+
+ROOT = Path(__file__).resolve().parents[1]
+REVIEWS = ROOT / "state" / "reviews"
+
+
+@dataclass
+class ReviewEntry:
+    manifest: Path
+    reviewed_at: datetime
+    artifact: dict[str, Any]
+
+
+def digest(path: Path) -> str:
+    return hashlib.sha256(path.read_bytes()).hexdigest()
+
+
+def parse_reviewed_at(value: Any, manifest: Path) -> datetime:
+    if not isinstance(value, str) or not value.strip():
+        raise ValueError(f"{manifest.relative_to(ROOT)} is missing reviewed_at")
+    normalized = value.strip().replace("Z", "+00:00")
+    try:
+        parsed = datetime.fromisoformat(normalized)
+    except ValueError as exc:
+        raise ValueError(
+            f"{manifest.relative_to(ROOT)} has invalid reviewed_at: {value}"
+        ) from exc
+    if parsed.tzinfo is None:
+        parsed = parsed.replace(tzinfo=timezone.utc)
+    return parsed.astimezone(timezone.utc)
+
+
+def load_entries() -> tuple[dict[Path, dict[str, Any]], list[ReviewEntry], list[str]]:
+    documents: dict[Path, dict[str, Any]] = {}
+    entries: list[ReviewEntry] = []
+    errors: list[str] = []
+    if not REVIEWS.exists():
+        return documents, entries, errors
+
+    for manifest in sorted(REVIEWS.glob("*.yml")):
+        try:
+            data = yaml.safe_load(manifest.read_text(encoding="utf-8")) or {}
+        except Exception as exc:
+            errors.append(f"invalid review manifest {manifest.relative_to(ROOT)}: {exc}")
+            continue
+        if not isinstance(data, dict) or data.get("status") != "approved":
+            continue
+        try:
+            reviewed_at = parse_reviewed_at(data.get("reviewed_at"), manifest)
+        except ValueError as exc:
+            errors.append(str(exc))
+            continue
+        documents[manifest] = data
+        artifacts = data.get("artifacts") or []
+        if not isinstance(artifacts, list):
+            continue
+        for artifact in artifacts:
+            if not isinstance(artifact, dict):
+                continue
+            relative = artifact.get("path")
+            change = artifact.get("change", "current")
+            if not isinstance(relative, str) or change not in {"current", "deleted"}:
+                continue
+            entries.append(ReviewEntry(manifest, reviewed_at, artifact))
+    return documents, entries, errors
+
+
+def select_current_owners(entries: list[ReviewEntry]) -> tuple[dict[str, ReviewEntry], list[str]]:
+    owners: dict[str, ReviewEntry] = {}
+    errors: list[str] = []
+    for entry in entries:
+        relative = str(entry.artifact["path"])
+        previous = owners.get(relative)
+        if previous is None or entry.reviewed_at > previous.reviewed_at:
+            owners[relative] = entry
+            continue
+        if entry.reviewed_at == previous.reviewed_at and entry.manifest != previous.manifest:
+            errors.append(
+                "ambiguous current review owner for "
+                f"{relative}: {previous.manifest.relative_to(ROOT)} and "
+                f"{entry.manifest.relative_to(ROOT)} share reviewed_at"
+            )
+    return owners, errors
+
+
+def validate_or_refresh(write: bool) -> tuple[int, int, list[str]]:
+    documents, entries, errors = load_entries()
+    owners, owner_errors = select_current_owners(entries)
+    errors.extend(owner_errors)
+    stale = 0
+    changed_manifests: set[Path] = set()
+
+    for relative, entry in sorted(owners.items()):
+        target = (ROOT / relative).resolve()
+        try:
+            target.relative_to(ROOT.resolve())
+        except ValueError:
+            errors.append(f"unsafe reviewed artifact path: {relative}")
+            continue
+
+        change = entry.artifact.get("change", "current")
+        label = entry.manifest.relative_to(ROOT)
+        if change == "deleted":
+            if target.exists():
+                stale += 1
+                errors.append(f"{label} is the latest owner of {relative} as deleted, but the file exists")
+            continue
+
+        if not target.is_file():
+            stale += 1
+            errors.append(f"{label} is the latest owner of missing artifact: {relative}")
+            continue
+
+        recorded = entry.artifact.get("sha256")
+        current = digest(target)
+        if recorded == current:
+            continue
+
+        stale += 1
+        print(f"STALE CURRENT OWNER {label}: {relative}: {recorded} -> {current}")
+        if write:
+            entry.artifact["sha256"] = current
+            changed_manifests.add(entry.manifest)
+
+    if write:
+        for manifest in sorted(changed_manifests):
+            manifest.write_text(
+                yaml.safe_dump(documents[manifest], sort_keys=False, allow_unicode=True),
+                encoding="utf-8",
+            )
+    return stale, len(changed_manifests), errors
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "--write",
+        action="store_true",
+        help="refresh only the latest approved review owner for each current artifact",
+    )
+    args = parser.parse_args()
+
+    stale, changed, errors = validate_or_refresh(args.write)
+    for error in errors:
+        print(f"ERROR: {error}", file=sys.stderr)
+
+    if args.write:
+        print(f"Refreshed {changed} current-owner review manifest(s).")
+        return 1 if errors else 0
+    if stale or errors:
+        print(
+            "ERROR: current review ownership is stale; create or refresh the latest operation review",
+            file=sys.stderr,
+        )
+        return 1
+    print("Current review ownership is consistent; historical reviews remain immutable.")
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())
+''', encoding='utf-8')
+
+          (ROOT / 'tests/test_refresh_review_fingerprints.py').write_text(r'''import hashlib
+import subprocess
+import sys
+import tempfile
+from pathlib import Path
+import unittest
+
+import yaml
+
+
+class RefreshReviewFingerprintsTest(unittest.TestCase):
+    def setUp(self):
+        self.source = (
+            Path(__file__).resolve().parents[1] / "scripts" / "refresh_review_fingerprints.py"
+        ).read_text(encoding="utf-8")
+
+    def prepare(self, root: Path) -> Path:
+        (root / "scripts").mkdir()
+        (root / "state" / "reviews").mkdir(parents=True)
+        script = root / "scripts" / "refresh_review_fingerprints.py"
+        script.write_text(self.source, encoding="utf-8")
+        return script
+
+    def write_review(self, root: Path, name: str, reviewed_at: str, artifacts: list[dict]):
+        path = root / "state" / "reviews" / name
+        path.write_text(
+            yaml.safe_dump(
+                {
+                    "status": "approved",
+                    "reviewed_at": reviewed_at,
+                    "artifacts": artifacts,
+                },
+                sort_keys=False,
+            ),
+            encoding="utf-8",
+        )
+        return path
+
+    def test_refreshes_multiple_stale_entries_in_latest_review(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            script = self.prepare(root)
+            (root / "study").mkdir()
+            (root / "study" / "a.md").write_text("A", encoding="utf-8")
+            (root / "study" / "b.md").write_text("B", encoding="utf-8")
+            review = self.write_review(
+                root,
+                "review.yml",
+                "2026-08-03T12:00:00Z",
+                [
+                    {"path": "study/a.md", "change": "current", "sha256": "0" * 64},
+                    {"path": "study/b.md", "change": "current", "sha256": "1" * 64},
+                ],
+            )
+            result = subprocess.run(
+                [sys.executable, str(script), "--write"],
+                cwd=root,
+                text=True,
+                capture_output=True,
+            )
+            self.assertEqual(result.returncode, 0, result.stderr)
+            updated = yaml.safe_load(review.read_text(encoding="utf-8"))
+            self.assertEqual(updated["artifacts"][0]["sha256"], hashlib.sha256(b"A").hexdigest())
+            self.assertEqual(updated["artifacts"][1]["sha256"], hashlib.sha256(b"B").hexdigest())
+
+    def test_stale_historical_review_is_not_rewritten(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            script = self.prepare(root)
+            (root / "state").mkdir(exist_ok=True)
+            artifact = root / "state" / "integrations.json"
+            artifact.write_text('{"status":"current"}', encoding="utf-8")
+            old = self.write_review(
+                root,
+                "setup.yml",
+                "2026-08-01T10:00:00Z",
+                [{"path": "state/integrations.json", "change": "current", "sha256": "0" * 64}],
+            )
+            current_hash = hashlib.sha256(artifact.read_bytes()).hexdigest()
+            self.write_review(
+                root,
+                "publication.yml",
+                "2026-08-03T10:00:00Z",
+                [{"path": "state/integrations.json", "change": "current", "sha256": current_hash}],
+            )
+            result = subprocess.run(
+                [sys.executable, str(script)], cwd=root, text=True, capture_output=True
+            )
+            self.assertEqual(result.returncode, 0, result.stderr)
+            unchanged = yaml.safe_load(old.read_text(encoding="utf-8"))
+            self.assertEqual(unchanged["artifacts"][0]["sha256"], "0" * 64)
+
+    def test_write_updates_only_latest_owner(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            script = self.prepare(root)
+            (root / "study").mkdir()
+            artifact = root / "study" / "a.md"
+            artifact.write_text("current", encoding="utf-8")
+            old = self.write_review(
+                root,
+                "old.yml",
+                "2026-08-01T10:00:00Z",
+                [{"path": "study/a.md", "change": "current", "sha256": "0" * 64}],
+            )
+            latest = self.write_review(
+                root,
+                "latest.yml",
+                "2026-08-03T10:00:00Z",
+                [{"path": "study/a.md", "change": "current", "sha256": "1" * 64}],
+            )
+            result = subprocess.run(
+                [sys.executable, str(script), "--write"],
+                cwd=root,
+                text=True,
+                capture_output=True,
+            )
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertEqual(
+                yaml.safe_load(old.read_text(encoding="utf-8"))["artifacts"][0]["sha256"],
+                "0" * 64,
+            )
+            self.assertEqual(
+                yaml.safe_load(latest.read_text(encoding="utf-8"))["artifacts"][0]["sha256"],
+                hashlib.sha256(b"current").hexdigest(),
+            )
+
+
+if __name__ == "__main__":
+    unittest.main()
+''', encoding='utf-8')
+
+          replace_once(
+              'scripts/generated_instance_contract.py',
+              '''SPECIALIZED_REVIEW_PREFIXES = (\n    "state/content-reviews/",\n    "state/slide-reviews/",\n)\n''',
+              '''SPECIALIZED_REVIEW_PREFIXES = (\n    "state/content-reviews/",\n    "state/slide-reviews/",\n)\n\nINDEPENDENTLY_VALIDATED_PREFIXES = (\n    "state/operations/",\n)\n''',
+          )
+          replace_once(
+              'scripts/generated_instance_contract.py',
+              '''def is_specialized_review_path(path: str) -> bool:\n    normalized = normalize_path(path)\n    return normalized.endswith((".yml", ".yaml")) and normalized.startswith(\n        SPECIALIZED_REVIEW_PREFIXES\n    )\n''',
+              '''def is_specialized_review_path(path: str) -> bool:\n    normalized = normalize_path(path)\n    return normalized.endswith((".yml", ".yaml")) and normalized.startswith(\n        SPECIALIZED_REVIEW_PREFIXES\n    )\n\n\ndef is_independently_validated_path(path: str) -> bool:\n    """Return paths governed by a dedicated validator instead of generic review coverage."""\n\n    normalized = normalize_path(path)\n    return is_specialized_review_path(normalized) or (\n        normalized.endswith(".json")\n        and normalized.startswith(INDEPENDENTLY_VALIDATED_PREFIXES)\n    )\n''',
+          )
+
+          replace_once(
+              'scripts/validate_review_framework.py',
+              'from generated_instance_contract import is_specialized_review_path',
+              'from generated_instance_contract import is_independently_validated_path',
+          )
+          replace_once(
+              'scripts/validate_review_framework.py',
+              'for path in [REVIEW_INSTRUCTION, REVIEW_DOC, REVIEW_TEMPLATE, "scripts/generated_instance_contract.py"]:',
+              'for path in [\n        REVIEW_INSTRUCTION,\n        REVIEW_DOC,\n        REVIEW_TEMPLATE,\n        "scripts/generated_instance_contract.py",\n        "scripts/validate_task_projection.py",\n    ]:',
+          )
+          replace_once(
+              'scripts/validate_review_framework.py',
+              '''    # Content and slide reviews are already validated by their specialized\n    # contracts. Requiring a generic phase review to approve those review files\n    # creates a circular, impossible coverage requirement.\n    coverage_paths = tuple(path for path in paths if not is_specialized_review_path(path))\n''',
+              '''    # Content reviews, slide reviews and operation journals are governed by\n    # dedicated validators. Requiring generic review coverage for those paths\n    # creates circular evidence or conflicts with the lifecycle manifest.\n    coverage_paths = tuple(\n        path for path in paths if not is_independently_validated_path(path)\n    )\n''',
+          )
+
+          replace_once(
+              'scripts/test_review_framework.py',
+              'from review_framework import REVIEW_PROFILES, file_sha256, is_generated_artifact, validate_changed_coverage\n',
+              'from generated_instance_contract import is_independently_validated_path\nfrom review_framework import REVIEW_PROFILES, file_sha256, is_generated_artifact, validate_changed_coverage\n',
+          )
+          replace_once(
+              'scripts/test_review_framework.py',
+              '''def main() -> None:\n''',
+              '''def test_operation_journal_uses_dedicated_validation() -> None:\n    assert is_independently_validated_path("state/operations/publication-v1.json")\n    assert is_independently_validated_path("state/content-reviews/TOPIC-001.yml")\n    assert not is_independently_validated_path("state/integrations.json")\n\n\ndef main() -> None:\n''',
+          )
+          replace_once(
+              'scripts/test_review_framework.py',
+              '''        test_generated_path_classifier,\n    ]\n''',
+              '''        test_generated_path_classifier,\n        test_operation_journal_uses_dedicated_validation,\n    ]\n''',
+          )
+
+          (ROOT / 'scripts/validate_task_projection.py').write_text(r'''#!/usr/bin/env python3
+"""Validate the task-backend projection contract, journals and published state."""
+
+from __future__ import annotations
+
+import json
+import re
+import sys
+from pathlib import Path
+from typing import Any, Mapping
+
+ROOT = Path(__file__).resolve().parents[1]
+CANONICAL_STATES = {
+    "planned",
+    "ready",
+    "in_progress",
+    "in_assessment",
+    "review_required",
+    "completed",
+}
+SUPPORTED_PROVIDERS = {
+    "trello",
+    "todoist",
+    "github_issues",
+    "clickup",
+    "notion",
+    "markdown",
+}
+VISIBLE_LISTS = (
+    "Planejado",
+    "Disponível em paralelo",
+    "Próxima aula",
+    "Em estudo",
+    "Em avaliação",
+    "Revisão necessária",
+    "Concluído",
+)
+VISIBLE_LIST_ORDER = " → ".join(VISIBLE_LISTS)
+OPERATION_ID = re.compile(r"^[a-z0-9][a-z0-9._-]{2,127}$")
+TOPIC_ID = re.compile(r"^TOPIC-[0-9]{3,}$")
+SUCCESS_STATUSES = {"success", "completed", "succeeded"}
+
+
+def display_path(path: Path) -> str:
+    try:
+        return str(path.relative_to(ROOT))
+    except ValueError:
+        return str(path)
+
+
+def fail(message: str) -> None:
+    print(f"ERROR: {message}", file=sys.stderr)
+
+
+def load_json(path: Path) -> Any:
+    try:
+        return json.loads(path.read_text(encoding="utf-8"))
+    except FileNotFoundError:
+        raise ValueError(f"missing file: {display_path(path)}")
+    except json.JSONDecodeError as exc:
+        raise ValueError(
+            f"invalid JSON in {display_path(path)}: {exc.msg} at line {exc.lineno}"
+        ) from exc
+
+
+def mapping(value: Any) -> Mapping[str, Any]:
+    return value if isinstance(value, dict) else {}
+
+
+def text(value: Any) -> str:
+    return str(value or "").strip()
+
+
+def validate_contract() -> list[str]:
+    errors: list[str] = []
+    instruction = ROOT / "instructions/41-task-backend-projection.md"
+    manifest = ROOT / "instructions/manifest.yml"
+    schema = ROOT / "schemas/publication-operation.schema.json"
+
+    for path in (instruction, manifest, schema):
+        if not path.exists():
+            errors.append(f"missing contract artifact: {display_path(path)}")
+
+    if instruction.exists():
+        body = instruction.read_text(encoding="utf-8")
+        for state in CANONICAL_STATES:
+            if f"`{state}`" not in body:
+                errors.append(f"projection contract does not declare canonical state {state}")
+        for provider in ("trello", "todoist", "github_issues"):
+            if f"`{provider}`" not in body:
+                errors.append(f"projection contract does not declare provider {provider}")
+        for fragment in (
+            "content_generation.lookahead_topics",
+            "📌 Leia antes de começar",
+            VISIBLE_LIST_ORDER,
+            "Learner-visible metadata boundary",
+            "HTML comments such as `<!-- ... -->`",
+            "the text `open-study-path` used as a machine marker",
+            "state/integrations.json",
+            "read every managed task back",
+            "visible_internal_marker_count",
+            "lesson_card_count",
+            "managed_card_count",
+        ):
+            if fragment not in body:
+                errors.append(f"projection contract is missing required protection: {fragment}")
+        if body.index("Planejado;") > body.index("Disponível em paralelo;"):
+            errors.append("Trello adapter must place Planejado before Disponível em paralelo")
+        if body.index("Disponível em paralelo;") > body.index("Próxima aula;"):
+            errors.append("Trello adapter must place Disponível em paralelo before Próxima aula")
+
+    if manifest.exists():
+        body = manifest.read_text(encoding="utf-8")
+        reference = "internal_task_projection: instructions/41-task-backend-projection.md"
+        if body.count(reference) < 2:
+            errors.append("publication and evaluation must reference task projection contract")
+        if "state/operations/" not in body:
+            errors.append("manifest must declare state/operations outputs")
+
+    if schema.exists():
+        try:
+            data = load_json(schema)
+        except ValueError as exc:
+            errors.append(str(exc))
+        else:
+            required = set(data.get("required", []))
+            expected = {
+                "operation_id",
+                "operation_type",
+                "provider",
+                "mode",
+                "status",
+                "topics",
+                "attempt",
+                "external_read_count",
+                "external_write_count",
+                "started_at",
+                "updated_at",
+            }
+            missing = expected - required
+            if missing:
+                errors.append(f"operation schema missing required fields: {sorted(missing)}")
+
+    return errors
+
+
+def validate_operation(path: Path) -> list[str]:
+    errors: list[str] = []
+    label = display_path(path)
+    try:
+        data = load_json(path)
+    except ValueError as exc:
+        return [str(exc)]
+
+    if not isinstance(data, dict):
+        return [f"{label} must contain one JSON object"]
+
+    operation_id = data.get("operation_id")
+    if not isinstance(operation_id, str) or not OPERATION_ID.fullmatch(operation_id):
+        errors.append(f"{label} has invalid operation_id")
+
+    provider = data.get("provider")
+    if provider not in SUPPORTED_PROVIDERS:
+        errors.append(f"{label} has unsupported provider {provider!r}")
+
+    if data.get("mode") not in {"active_window", "full_curriculum"}:
+        errors.append(f"{label} has invalid mode")
+
+    if data.get("status") not in {
+        "not_started",
+        "in_progress",
+        "partial",
+        "blocked",
+        "failed",
+        "success",
+    }:
+        errors.append(f"{label} has invalid status")
+
+    topics = data.get("topics")
+    if not isinstance(topics, list) or any(
+        not isinstance(topic, str) or not TOPIC_ID.fullmatch(topic) for topic in topics
+    ):
+        errors.append(f"{label} has invalid topics")
+    elif len(topics) != len(set(topics)):
+        errors.append(f"{label} contains duplicate topics")
+
+    for field in ("attempt", "external_read_count", "external_write_count"):
+        value = data.get(field)
+        minimum = 1 if field == "attempt" else 0
+        if not isinstance(value, int) or isinstance(value, bool) or value < minimum:
+            errors.append(f"{label} has invalid {field}")
+
+    if data.get("status") == "success" and not data.get("completed_at"):
+        errors.append(f"{label} success operation requires completed_at")
+
+    return errors
+
+
+def validate_projection_state(root: Path = ROOT) -> list[str]:
+    state_path = root / "state/integrations.json"
+    marker = root / ".open-study-path/instance.yml"
+    if not marker.is_file() or not state_path.is_file():
+        return []
+
+    try:
+        data = load_json(state_path) if root == ROOT else json.loads(state_path.read_text(encoding="utf-8"))
+    except (ValueError, json.JSONDecodeError) as exc:
+        return [str(exc)]
+    if not isinstance(data, dict):
+        return ["state/integrations.json must contain one JSON object"]
+
+    selected = mapping(data.get("selected_capabilities"))
+    task = mapping(selected.get("task_manager"))
+    status = text(task.get("status")).lower()
+    resolution_status = text(task.get("resolution_status")).lower()
+    sync_status = text(mapping(data.get("sync")).get("status")).lower()
+    if not task or not (
+        status in SUCCESS_STATUSES
+        or resolution_status == "resolved"
+        or sync_status in SUCCESS_STATUSES
+    ):
+        return []
+
+    errors: list[str] = []
+    provider = text(task.get("provider")).lower()
+    projection = mapping(data.get("projection"))
+    resources = data.get("resources")
+    if provider not in SUPPORTED_PROVIDERS:
+        errors.append(f"published task_manager has unsupported provider: {provider or '<missing>'}")
+    if not projection:
+        return errors + ["successful task publication requires projection metadata"]
+    if projection.get("provider") != provider:
+        errors.append("projection.provider must match selected task_manager provider")
+    if not isinstance(resources, list):
+        return errors + ["successful task publication requires a resources list"]
+
+    topic_count = projection.get("topic_count")
+    if not isinstance(topic_count, int) or isinstance(topic_count, bool) or topic_count < 1:
+        errors.append("projection.topic_count must be a positive integer")
+        topic_count = None
+
+    managed = [item for item in resources if isinstance(item, dict)]
+    boards = [
+        item for item in managed
+        if item.get("capability") == "task_manager"
+        and item.get("provider") == provider
+        and item.get("type") == "board"
+    ]
+    if len(boards) != 1:
+        errors.append("published projection must register exactly one task board or project")
+    else:
+        board = boards[0]
+        for field in ("id", "url"):
+            if not text(board.get(field)):
+                errors.append(f"published board is missing {field}")
+        if projection.get("board_id") and board.get("id") != projection.get("board_id"):
+            errors.append("projection.board_id does not match the registered board")
+        if projection.get("board_url") and board.get("url") != projection.get("board_url"):
+            errors.append("projection.board_url does not match the registered board")
+
+    cards = [
+        item for item in managed
+        if item.get("capability") == "task_manager"
+        and item.get("provider") == provider
+        and item.get("type") == "card"
+        and item.get("topic_id")
+    ]
+    if topic_count is not None and len(cards) != topic_count:
+        errors.append(
+            f"projection.topic_count is {topic_count}, but {len(cards)} lesson cards are registered"
+        )
+
+    topic_ids: set[str] = set()
+    card_ids: set[str] = set()
+    lesson_numbers: set[int] = set()
+    primary_count = 0
+    for card in cards:
+        topic_id = card.get("topic_id")
+        card_id = card.get("id")
+        lesson_number = card.get("visible_lesson_number")
+        state = card.get("canonical_state")
+        prerequisites = card.get("direct_prerequisite_ids")
+        content_version = card.get("content_version")
+
+        if not isinstance(topic_id, str) or not TOPIC_ID.fullmatch(topic_id):
+            errors.append(f"registered lesson card has invalid topic_id: {topic_id!r}")
+        elif topic_id in topic_ids:
+            errors.append(f"duplicate lesson card topic_id: {topic_id}")
+        else:
+            topic_ids.add(topic_id)
+        if not text(card_id):
+            errors.append(f"registered lesson card {topic_id} is missing id")
+        elif card_id in card_ids:
+            errors.append(f"duplicate lesson card id: {card_id}")
+        else:
+            card_ids.add(str(card_id))
+        if not isinstance(lesson_number, int) or isinstance(lesson_number, bool) or lesson_number < 1:
+            errors.append(f"registered lesson card {topic_id} has invalid visible_lesson_number")
+        elif lesson_number in lesson_numbers:
+            errors.append(f"duplicate visible lesson number: {lesson_number}")
+        else:
+            lesson_numbers.add(lesson_number)
+        if state not in VISIBLE_LISTS:
+            errors.append(f"registered lesson card {topic_id} has invalid canonical_state: {state!r}")
+        if state == "Próxima aula":
+            primary_count += 1
+        if not isinstance(content_version, int) or isinstance(content_version, bool) or content_version < 0:
+            errors.append(f"registered lesson card {topic_id} has invalid content_version")
+        if not isinstance(prerequisites, list) or any(
+            not isinstance(item, str) or not TOPIC_ID.fullmatch(item) for item in prerequisites
+        ):
+            errors.append(f"registered lesson card {topic_id} has invalid direct_prerequisite_ids")
+        elif len(prerequisites) != len(set(prerequisites)):
+            errors.append(f"registered lesson card {topic_id} has duplicate prerequisites")
+
+    if primary_count != 1:
+        errors.append(f"published projection must contain exactly one Próxima aula card, got {primary_count}")
+
+    if provider == "trello":
+        if projection.get("list_order") != list(VISIBLE_LISTS):
+            errors.append("Trello projection.list_order must match the canonical visual order")
+        list_resources = [
+            item for item in managed
+            if item.get("capability") == "task_manager"
+            and item.get("provider") == "trello"
+            and item.get("type") == "list"
+        ]
+        names = [item.get("name") for item in list_resources]
+        if set(names) != set(VISIBLE_LISTS) or len(names) != len(VISIBLE_LISTS):
+            errors.append("Trello projection must register all seven managed lists exactly once")
+        for item in list_resources:
+            if not text(item.get("id")):
+                errors.append(f"registered Trello list {item.get('name')!r} is missing id")
+
+        orientations = [
+            item for item in managed
+            if item.get("capability") == "task_manager"
+            and item.get("provider") == "trello"
+            and item.get("type") == "orientation"
+        ]
+        if len(orientations) != 1:
+            errors.append("Trello projection must register exactly one orientation card")
+        else:
+            orientation = orientations[0]
+            if not text(orientation.get("id")) or not text(orientation.get("url")):
+                errors.append("registered orientation card requires id and url")
+            if orientation.get("canonical_state") != "Planejado":
+                errors.append("orientation card must remain in Planejado")
+
+        readback = mapping(projection.get("readback"))
+        if not readback:
+            errors.append("successful Trello projection requires readback evidence")
+        else:
+            if readback.get("lesson_card_count") != topic_count:
+                errors.append("projection.readback.lesson_card_count must match topic_count")
+            expected_managed = topic_count + 1 if isinstance(topic_count, int) else None
+            if expected_managed is not None and readback.get("managed_card_count") != expected_managed:
+                errors.append("projection.readback.managed_card_count must include lessons and orientation")
+            if readback.get("visible_internal_marker_count") != 0:
+                errors.append("projection readback found learner-visible internal metadata")
+            if not text(readback.get("verified_at")):
+                errors.append("projection.readback.verified_at is required")
+
+    resolution = mapping(data.get("resolution"))
+    sync = mapping(data.get("sync"))
+    if resolution.get("status") != "resolved":
+        errors.append("successful projection requires resolution.status resolved")
+    if text(sync.get("status")).lower() not in SUCCESS_STATUSES:
+        errors.append("successful projection requires sync.status success")
+    if not text(sync.get("last_success_at")):
+        errors.append("successful projection requires sync.last_success_at")
+
+    reminders = mapping(selected.get("reminders"))
+    if text(reminders.get("status")).lower() in SUCCESS_STATUSES:
+        reminder_resources = [
+            item for item in managed
+            if item.get("capability") == "reminders"
+            and item.get("provider") == text(reminders.get("provider")).lower()
+        ]
+        if not reminder_resources:
+            errors.append("successful reminders capability requires a registered reminder resource")
+        for reminder in reminder_resources:
+            if not text(reminder.get("id")) or not text(reminder.get("target_url")):
+                errors.append("registered reminder resource requires id and target_url")
+
+    return errors
+
+
+def main() -> int:
+    errors = validate_contract()
+    errors.extend(validate_projection_state())
+    operations_dir = ROOT / "state/operations"
+    if operations_dir.exists():
+        for path in sorted(operations_dir.glob("*.json")):
+            errors.extend(validate_operation(path))
+
+    if errors:
+        for error in errors:
+            fail(error)
+        return 1
+
+    print("Task projection contract, journals and published state are valid.")
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
+''', encoding='utf-8')
+
+          (ROOT / 'tests/test_validate_task_projection.py').write_text(r'''import importlib.util
+import json
+import tempfile
+import unittest
+from pathlib import Path
+
+MODULE_PATH = Path(__file__).resolve().parents[1] / "scripts" / "validate_task_projection.py"
+SPEC = importlib.util.spec_from_file_location("validate_task_projection", MODULE_PATH)
+assert SPEC and SPEC.loader
+validator = importlib.util.module_from_spec(SPEC)
+SPEC.loader.exec_module(validator)
+
+
+class TaskProjectionValidationTests(unittest.TestCase):
+    def test_contract_artifacts_are_consistent(self):
+        self.assertEqual([], validator.validate_contract())
+
+    def test_valid_operation(self):
+        operation = {
+            "operation_id": "publication-v1",
+            "operation_type": "publication",
+            "provider": "trello",
+            "mode": "active_window",
+            "status": "in_progress",
+            "current_batch": "batch-001",
+            "topics": ["TOPIC-001", "TOPIC-002"],
+            "attempt": 1,
+            "external_read_count": 1,
+            "external_write_count": 2,
+            "last_checkpoint": "trello.card.TOPIC-002",
+            "last_error": None,
+            "branch": "agent/publication-v1",
+            "pull_request": None,
+            "started_at": "2026-07-31T14:00:00-03:00",
+            "updated_at": "2026-07-31T14:05:00-03:00",
+            "completed_at": None,
+        }
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = Path(temp_dir) / "operation.json"
+            path.write_text(json.dumps(operation), encoding="utf-8")
+            self.assertEqual([], validator.validate_operation(path))
+
+    def test_success_requires_completed_at(self):
+        operation = {
+            "operation_id": "publication-v1",
+            "operation_type": "publication",
+            "provider": "todoist",
+            "mode": "active_window",
+            "status": "success",
+            "topics": ["TOPIC-001"],
+            "attempt": 1,
+            "external_read_count": 0,
+            "external_write_count": 1,
+            "started_at": "2026-07-31T14:00:00-03:00",
+            "updated_at": "2026-07-31T14:05:00-03:00",
+        }
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = Path(temp_dir) / "operation.json"
+            path.write_text(json.dumps(operation), encoding="utf-8")
+            errors = validator.validate_operation(path)
+            self.assertTrue(any("requires completed_at" in error for error in errors))
+
+    def test_duplicate_topics_are_rejected(self):
+        operation = {
+            "operation_id": "reconcile-v1",
+            "operation_type": "reconciliation",
+            "provider": "github_issues",
+            "mode": "active_window",
+            "status": "partial",
+            "topics": ["TOPIC-001", "TOPIC-001"],
+            "attempt": 2,
+            "external_read_count": 3,
+            "external_write_count": 0,
+            "started_at": "2026-07-31T14:00:00-03:00",
+            "updated_at": "2026-07-31T14:05:00-03:00",
+        }
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = Path(temp_dir) / "operation.json"
+            path.write_text(json.dumps(operation), encoding="utf-8")
+            errors = validator.validate_operation(path)
+            self.assertTrue(any("duplicate topics" in error for error in errors))
+
+    def valid_state(self):
+        lists = [
+            {"capability": "task_manager", "provider": "trello", "type": "list", "id": f"list-{index}", "name": name}
+            for index, name in enumerate(validator.VISIBLE_LISTS, 1)
+        ]
+        return {
+            "selected_capabilities": {
+                "task_manager": {"provider": "trello", "status": "success", "resolution_status": "resolved"},
+                "reminders": {"provider": "todoist", "status": "success", "resolution_status": "resolved"},
+            },
+            "projection": {
+                "provider": "trello",
+                "board_id": "board-1",
+                "board_url": "https://trello.example/board-1",
+                "topic_count": 2,
+                "list_order": list(validator.VISIBLE_LISTS),
+                "readback": {
+                    "lesson_card_count": 2,
+                    "managed_card_count": 3,
+                    "visible_internal_marker_count": 0,
+                    "verified_at": "2026-08-03T18:47:30Z",
+                },
+            },
+            "resources": [
+                {"capability": "task_manager", "provider": "trello", "type": "board", "id": "board-1", "url": "https://trello.example/board-1"},
+                *lists,
+                {"capability": "task_manager", "provider": "trello", "type": "orientation", "id": "orientation-1", "url": "https://trello.example/orientation", "canonical_state": "Planejado"},
+                {"capability": "task_manager", "provider": "trello", "type": "card", "id": "card-1", "topic_id": "TOPIC-001", "visible_lesson_number": 1, "direct_prerequisite_ids": [], "content_version": 1, "canonical_state": "Próxima aula"},
+                {"capability": "task_manager", "provider": "trello", "type": "card", "id": "card-2", "topic_id": "TOPIC-002", "visible_lesson_number": 2, "direct_prerequisite_ids": ["TOPIC-001"], "content_version": 0, "canonical_state": "Planejado"},
+                {"capability": "reminders", "provider": "todoist", "type": "task", "id": "reminder-1", "target_url": "https://trello.example/board-1"},
+            ],
+            "resolution": {"status": "resolved"},
+            "sync": {"status": "success", "last_success_at": "2026-08-03T18:47:30Z"},
+        }
+
+    def write_instance(self, root: Path, state: dict):
+        (root / ".open-study-path").mkdir(parents=True)
+        (root / ".open-study-path" / "instance.yml").write_text("kind: instance\n", encoding="utf-8")
+        (root / "state").mkdir()
+        (root / "state" / "integrations.json").write_text(json.dumps(state), encoding="utf-8")
+
+    def test_valid_published_trello_state(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            self.write_instance(root, self.valid_state())
+            self.assertEqual([], validator.validate_projection_state(root))
+
+    def test_missing_orientation_and_list_registry_are_rejected(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            state = self.valid_state()
+            state["resources"] = [
+                item for item in state["resources"]
+                if item.get("type") not in {"orientation", "list"}
+            ]
+            self.write_instance(root, state)
+            errors = validator.validate_projection_state(root)
+            self.assertTrue(any("seven managed lists" in error for error in errors))
+            self.assertTrue(any("orientation card" in error for error in errors))
+
+    def test_visible_marker_readback_blocks_success(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            state = self.valid_state()
+            state["projection"]["readback"]["visible_internal_marker_count"] = 1
+            self.write_instance(root, state)
+            errors = validator.validate_projection_state(root)
+            self.assertTrue(any("learner-visible internal metadata" in error for error in errors))
+
+
+if __name__ == "__main__":
+    unittest.main()
+''', encoding='utf-8')
+
+          (ROOT / '.github/workflows/validate-task-projection.yml').write_text(r'''name: Validate task projection
+
+on:
+  pull_request:
+    paths:
+      - '.open-study-path/instance.yml'
+      - 'state/integrations.json'
+      - 'instructions/41-task-backend-projection.md'
+      - 'instructions/manifest.yml'
+      - 'schemas/publication-operation.schema.json'
+      - 'scripts/validate_task_projection.py'
+      - 'scripts/pedagogical_content_hash.py'
+      - 'tests/test_validate_task_projection.py'
+      - 'tests/test_pedagogical_content_hash.py'
+      - 'state/operations/**'
+  push:
+    branches: [main]
+    paths:
+      - '.open-study-path/instance.yml'
+      - 'state/integrations.json'
+      - 'instructions/41-task-backend-projection.md'
+      - 'instructions/manifest.yml'
+      - 'schemas/publication-operation.schema.json'
+      - 'scripts/validate_task_projection.py'
+      - 'scripts/pedagogical_content_hash.py'
+      - 'tests/test_validate_task_projection.py'
+      - 'tests/test_pedagogical_content_hash.py'
+      - 'state/operations/**'
+  workflow_dispatch:
+
+concurrency:
+  group: task-projection-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Validate projection contract, journals and published state
+        run: python scripts/validate_task_projection.py
+      - name: Run projection and hash tests
+        run: |
+          set -o pipefail
+          python -m unittest \
+            tests/test_validate_task_projection.py \
+            tests/test_pedagogical_content_hash.py 2>&1 | tee task-projection-tests.log
+''', encoding='utf-8')
+
+          (ROOT / '.github/workflows/validate-usable-generation.yml').write_text(r'''name: Validate usable generation
+
+on:
+  pull_request:
+    paths:
+      - '.open-study-path/instance.yml'
+      - 'study.config.yml'
+      - 'instructions/38-complete-usable-generation.md'
+      - 'scripts/refresh_review_fingerprints.py'
+      - 'tests/test_refresh_review_fingerprints.py'
+      - 'state/**'
+      - 'study/**'
+  push:
+    branches: [main]
+    paths:
+      - '.open-study-path/instance.yml'
+      - 'study.config.yml'
+      - 'instructions/38-complete-usable-generation.md'
+      - 'scripts/refresh_review_fingerprints.py'
+      - 'tests/test_refresh_review_fingerprints.py'
+      - 'state/**'
+      - 'study/**'
+  workflow_dispatch:
+
+concurrency:
+  group: usable-generation-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  pedagogical:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install lightweight validation dependencies
+        run: python -m pip install --quiet --disable-pip-version-check pyyaml
+      - name: Verify current review ownership
+        run: python scripts/refresh_review_fingerprints.py
+      - name: Test current-owner fingerprint repair
+        run: |
+          set -o pipefail
+          python -m unittest tests/test_refresh_review_fingerprints.py 2>&1 | tee usable-generation-tests.log
+
+# PDF generation remains in the dedicated study-slide validation path. This job
+# intentionally does not install a browser and represents the durable
+# learning_window_usable gate, not slides_pdf_status.
+''', encoding='utf-8')
+
+          replace_once(
+              'instructions/41-task-backend-projection.md',
+              '''Use a durable operation record under `state/operations/` when the active review profile permits it; otherwise keep the complete resumable checkpoint in `state/integrations.json`.\n\nA publication or assessment projection checkpoint includes:\n''',
+              '''Use a durable operation record under `state/operations/` for publication and assessment projection. Operation journals are validated by the task-projection contract and are excluded from generic review coverage; the semantic publication review continues to cover `state/integrations.json` and `study/integrations.md`.\n\nA publication or assessment projection checkpoint includes:\n''',
+          )
+          replace_once(
+              'instructions/41-task-backend-projection.md',
+              '''Record at least: capability, provider, resource type, safe external ID, URL, topic ID when applicable, visible lesson number, content version, direct prerequisite IDs, canonical state, managed-field version, roadmap fingerprint, sync status and timestamp.\n''',
+              '''Record at least: capability, provider, resource type, safe external ID, URL when returned by the provider, topic ID when applicable, visible lesson number, content version, direct prerequisite IDs, canonical state, managed-field version, roadmap fingerprint, sync status and timestamp.\n\nFor an ordered task backend, `state/integrations.json` must register the board or project, every managed list or section, the orientation resource, every lesson task and each selected reminder. After the final external read-back, store `projection.readback.verified_at`, `lesson_card_count`, `managed_card_count` and `visible_internal_marker_count`. Publication cannot resolve unless the lesson count matches the roadmap projection, the orientation resource is separate, and `visible_internal_marker_count` is zero.\n''',
+          )
+
+          replace_once(
+              'docs/review-framework.md',
+              '''A changed output invalidates its previous fingerprint. The operation must run a new review pass rather than reusing an old approval.\n''',
+              '''A changed output invalidates the fingerprint for the operation that now owns the current state. The operation must run a new review pass rather than reusing an old approval. Historical review files remain immutable evidence of the artifact version they approved; do not rewrite a setup, generation or migration review merely because a later publication or assessment changed the same artifact.\n\nWhen several approved reviews mention the same current artifact, the review with the latest valid `reviewed_at` is the current owner. CI compares the repository file only with that owner. Older fingerprints remain intentionally historical. A tie in `reviewed_at` is ambiguous and must be resolved with a new review.\n''',
+          )
+          replace_once(
+              'docs/review-framework.md',
+              '''- stale fingerprints;\n''',
+              '''- a stale fingerprint in the latest approved review that owns the current artifact;\n''',
+          )
+          replace_once(
+              'docs/review-framework.md',
+              '''Generic reviews under `state/reviews/` and specialized content reviews under `state/content-reviews/` are review evidence, so they are not required to review themselves.\n''',
+              '''Generic reviews under `state/reviews/` and specialized content or slide reviews are review evidence, so they are not required to review themselves. Operation journals under `state/operations/` are resumable technical checkpoints validated by `scripts/validate_task_projection.py`; they are excluded from generic review coverage, while their semantic result remains covered through `state/integrations.json`, `study/integrations.md` and the phase review.\n''',
+          )
+
+          PY
+      - name: Run focused regression tests
+        run: |
+          python scripts/test_review_framework.py
+          python -m unittest tests/test_refresh_review_fingerprints.py
+          python -m unittest tests/test_validate_task_projection.py tests/test_pedagogical_content_hash.py
+          python scripts/validate_task_projection.py
+          python scripts/validate_review_framework.py
+      - name: Publish consolidated change
+        run: |
+          rm .github/workflows/apply-publication-audit-fixes.yml
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add -A
+          git commit -m "Corrigir rastreabilidade da publicação e revisões históricas"
+          git push origin HEAD:agent/audit-publication-contracts
