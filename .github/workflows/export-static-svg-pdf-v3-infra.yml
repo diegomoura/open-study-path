@@ -1,0 +1,61 @@
+name: Export static SVG PDF v3 infrastructure
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  export:
+    if: github.head_ref == 'transfer/static-svg-pdf-v3-infra' || github.ref_name == 'transfer/static-svg-pdf-v3-infra'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout canonical tree
+        uses: actions/checkout@v4
+      - name: Build infrastructure archive
+        run: |
+          paths=(
+            .github/workflows/validate-template.yml
+            .github/workflows/validate-usable-generation.yml
+            AGENTS.md
+            README.md
+            docs/study-slides.md
+            instructions/30-generate-path.md
+            instructions/32-generation-execution.md
+            instructions/36-review-course-content.md
+            instructions/37-review-study-slides.md
+            instructions/38-complete-usable-generation.md
+            instructions/40-publish-tasks.md
+            instructions/57-materialize-next-content.md
+            scripts/package_study_slides.py
+            scripts/render_study_slides.mjs
+            scripts/study_slides.py
+            scripts/study_slides_legacy.py
+            scripts/test_study_slide_renderer.mjs
+            scripts/test_study_slides.py
+            scripts/update_static_svg_slide_contract_text.py
+            scripts/validate_generation_efficiency.py
+            scripts/validate_study_slides.py
+            templates/chatgpt-project-instructions.md
+            templates/instance.yml
+            templates/module.md
+            templates/slide-review.yml
+            templates/study-slides/diagrams/flow.mmd
+            templates/study-slides/index.html
+            templates/study-slides/mermaid-config.json
+            templates/study-slides/puppeteer-config.json
+            templates/study-slides/slides.css
+            templates/study-slides/slides.js
+            templates/topic.md
+          )
+          zip -q static-svg-pdf-v3-infra.zip "${paths[@]}"
+          sha256sum static-svg-pdf-v3-infra.zip
+      - name: Upload infrastructure archive
+        uses: actions/upload-artifact@v4
+        with:
+          name: static-svg-pdf-v3-infra
+          path: static-svg-pdf-v3-infra.zip
+          retention-days: 3
+          compression-level: 0
