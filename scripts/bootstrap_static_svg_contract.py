@@ -52,7 +52,8 @@ def main() -> None:
         payload_dir / "part-001.txt",
         payload_dir / "part-002-003.txt",
         payload_dir / "part-004-005.txt",
-        payload_dir / "part-006-007.txt",
+        payload_dir / "part-006.txt",
+        payload_dir / "part-007.txt",
         payload_dir / "part-008-009.txt",
         payload_dir / "part-010-011.txt",
     ]
