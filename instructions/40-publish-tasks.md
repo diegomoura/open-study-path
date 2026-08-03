@@ -37,7 +37,7 @@ Create exactly one task for every approved roadmap topic in the single selected 
 
 The published topic set must match the current approved roadmap. Before writing, calculate a stable roadmap fingerprint from the ordered topic IDs, visible lesson numbers, titles and direct prerequisite IDs. Persist that fingerprint with the board or project resource in `state/integrations.json`. A missing topic, extra topic, stale fingerprint or card from another curriculum blocks publication success.
 
-### Visible lesson numbering
+### Human card titles and visible lesson numbering
 
 Every learner-facing task title uses the roadmap lesson number and title:
 
@@ -103,6 +103,8 @@ Create a checklist named **Sua sessão de estudo** using the three to seven gran
 ### Future lesson card
 
 Build the copy from the topic contract's direct prerequisites, never from numeric adjacency.
+
+The current visible label is **Pré-requisitos desta aula:**. Accept **Pré-requisitos desta etapa:** only as a migration alias from older task projections and normalize it when updating a card.
 
 Use:
 
