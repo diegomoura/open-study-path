@@ -51,7 +51,17 @@ A fixed block requires days or dates, start time, duration, timezone and selecte
 
 ### Trello, GitHub Issues, Todoist and Markdown
 
-Trello is preferred for rich courses because it can show the roadmap, links, checklists, review and completion states. When Trello is not connected, GitHub Issues is the first operational fallback. Todoist may replace them for a short path or act only as flexible reminder support. Repository Markdown remains the final internal fallback.
+Trello is preferred for rich courses because it can show the complete roadmap, links, checklists, review and completion states. When Trello is not connected, GitHub Issues is the first operational fallback. Todoist may replace them for a short path or act only as flexible reminder support. Repository Markdown remains the final internal fallback.
+
+Every selected task backend projects all approved roadmap topics, not only the lessons already materialized. Visible titles use `Aula NN · <título>`. The number comes from stable roadmap order and helps navigation, while direct prerequisites control readiness.
+
+The task interface distinguishes:
+
+- one **Próxima aula**, the earliest unfinished eligible topic in roadmap order;
+- **Disponível em paralelo**, for other eligible topics whose reviewed learner resources are ready;
+- **Planejado**, for blocked topics or eligible topics whose complete resources are not ready yet.
+
+For Trello, the standard lists are **Próxima aula**, **Disponível em paralelo**, **Planejado**, **Em estudo**, **Em avaliação**, **Revisão necessária** and **Concluído**.
 
 ### Habitify
 
@@ -141,9 +151,11 @@ When a connector has no harmless read action, never create a disposable test res
 
 ## Idempotency
 
-`state/integrations.json` is an index, not a second source of learning truth. Each external resource records capability, provider, safe identifier, URL, topic or routine association, content version when relevant, authority, synchronization status and timestamp.
+`state/integrations.json` is an index, not a second source of learning truth. Each external resource records capability, provider, safe identifier, URL, topic, visible lesson number, direct prerequisite IDs, content version when relevant, authority, synchronization status and timestamp.
 
-Search the state file and provider before creating anything when provider search is supported. An interrupted operation reuses recorded resources.
+A task board or project also stores an ordered roadmap fingerprint derived from topic IDs, visible lesson numbers, titles and direct prerequisites. This prevents a board from another curriculum version from being accepted as the current course.
+
+Search the state file and provider before creating anything when provider search is supported. An interrupted operation reuses recorded resources. Synchronization verifies that every approved topic is projected exactly once, future cards contain no broken links and the board fingerprint still matches the approved roadmap.
 
 ## Completion visibility
 

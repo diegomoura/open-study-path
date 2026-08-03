@@ -25,7 +25,7 @@ Before reporting GitHub intake ready, verify the form contains the current intak
 1. Speak directly and naturally. Tell the person what is ready, where to go and what to do next.
 2. Do not lead successful responses with PR numbers, CI, commit hashes, branches, file counts or internal classifications.
 3. Keep technical audit details in GitHub. Surface them only when requested or when a blocker requires action.
-4. Use lesson titles in commands and visible resources. Keep topic IDs in links and metadata.
+4. Use `Aula NN · <título>` in task tools and visible course navigation. Keep topic IDs in links and metadata. Natural evaluation commands continue using the lesson title without requiring the number.
 5. Present natural commands such as:
    - `Preenchi o formulário. Pode continuar.`
    - `Vamos fazer meu diagnóstico.`
@@ -71,7 +71,9 @@ Preserve the complete learning request separately from the concise subject label
 
 A topic is one coherent independently assessable capability with three to seven focused activities. A checklist is not a lesson.
 
-A topic number is a stable identifier and roadmap aid, not a prerequisite rule. Use only the direct prerequisite list from the topic contract. In a branched course, a later-numbered topic may become ready before the numerically previous topic.
+Every approved roadmap topic receives a stable learner-facing lesson number derived from roadmap order. Task tools and visible course navigation use `Aula 01 · <título>`, while `TOPIC-001` remains the stable internal identifier in files, metadata and URLs.
+
+A visible lesson number is a navigation aid, not a prerequisite rule. Use only the direct prerequisite list from the topic contract. In a branched course, a later-numbered topic may become ready before the numerically previous topic and should be presented as available in parallel rather than as the primary next lesson.
 
 Every ready lesson must include:
 
@@ -147,7 +149,25 @@ Run `instructions/42-integration-preflight.md` before external writes. Optional 
 
 ## Tasks
 
-Use the learner-facing lesson title without a numeric prefix by default. Use `Etapa <n> · <título>` only when the path is genuinely linear or the learner explicitly requests numbering. Treat the selected task tool as a concise learner interface, not an inventory of repository artifacts.
+Create exactly one task for every approved roadmap topic, including future lessons. Every visible task title uses `Aula NN · <título>`, where the stable number comes from approved roadmap order. Keep `TOPIC-000` only in metadata, links and synchronization state.
+
+Numbering helps the learner locate a lesson but never determines readiness. Resolve readiness from direct prerequisite IDs. In a branched course:
+
+- exactly one unfinished eligible topic—the earliest in roadmap order—is the **Próxima aula**;
+- other eligible materialized topics are **Disponível em paralelo**;
+- topics with unmet prerequisites or incomplete learner resources remain **Planejado**.
+
+For Trello, use lists equivalent to:
+
+- Próxima aula;
+- Disponível em paralelo;
+- Planejado;
+- Em estudo;
+- Em avaliação;
+- Revisão necessária;
+- Concluído.
+
+Treat the selected task tool as a concise learner interface, not an inventory of repository artifacts.
 
 Ready tasks say:
 
@@ -164,7 +184,11 @@ Show resources in this order: **Slides**, **Aula**, optional **Prática**, **Ava
 
 Do not link `study/topics/` contracts, slide HTML/CSS/JavaScript, render metadata, slide reviews, rubric YAML, state files or synchronization records from normal learner tasks. Summarize objective, deliverable and completion criteria directly in the task.
 
-Future tasks begin with **Pré-requisitos desta etapa**, list exactly the direct prerequisite titles and say to follow that list rather than card numbering. They say what the person will learn, what they will produce and that the complete lesson and slides will be prepared automatically after those prerequisites. Do not use “todas as etapas anteriores” in a branched graph and do not add nonexistent lesson or slide links.
+Future tasks begin with **Pré-requisitos desta aula**, list exactly the direct prerequisite titles and explain that numbering helps navigation while the prerequisites and list position determine when to begin. They say what the person will learn, what they will produce and that the complete lesson and slides will be prepared automatically after those prerequisites. Do not use “todas as etapas anteriores” in a branched graph and do not add nonexistent lesson or slide links.
+
+Before publication success, read the board or project and tasks back. Verify that task count equals roadmap topic count, every topic appears exactly once, titles follow the numbered contract, exactly one eligible card is in **Próxima aula**, parallel-ready cards are separated, future links are absent and the persisted roadmap fingerprint matches the approved course.
+
+Persist board identity, ordered roadmap fingerprint, task IDs, visible lesson numbers, topic IDs, direct prerequisites and content versions in `state/integrations.json`. A board with a different roadmap fingerprint is not the current course projection.
 
 ## Completion response
 
@@ -184,7 +208,7 @@ Use a response equivalent to:
 >
 > <link do quadro ou tarefa>
 >
-> Comece por **<título da primeira aula>** e mova a tarefa para **Em andamento** quando iniciar.
+> Comece por **Aula 01 · <título da primeira aula>** e mova a tarefa para **Em estudo** quando iniciar.
 >
 > Quando terminar a aula e enviar a avaliação, escreva:
 >

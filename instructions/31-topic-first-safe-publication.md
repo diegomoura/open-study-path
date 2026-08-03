@@ -18,6 +18,21 @@ A time constraint does not authorize silently removing mastery-required topics, 
 
 Without an explicit learner request for a dated projection, show total estimated effort and effort per topic. Say that the pace is flexible and follows prerequisites and verified progress.
 
+## Stable visible lesson order
+
+Assign every approved roadmap topic a stable learner-facing lesson number based on its position in the approved roadmap. Task tools and course navigation use `Aula 01 · <título>`. Internal files, links and state continue using the stable topic ID.
+
+The lesson number helps the learner locate content. It does not create a prerequisite edge and does not mean every lower number must be completed first.
+
+At each publication or progress update:
+
+1. calculate every unfinished topic whose direct prerequisites are satisfied;
+2. choose the earliest eligible topic in roadmap order as the single primary next lesson;
+3. classify other eligible materialized topics as available in parallel;
+4. keep topics with unmet prerequisites or incomplete reviewed learner resources as planned.
+
+A course may materialize more than one independent root in the initial window. That is valid, but the task interface must show one **Próxima aula** and separate the other roots under **Disponível em paralelo**.
+
 ## Routine preference is not a complete schedule
 
 The routine mode determines one support path:
@@ -50,6 +65,8 @@ For a Trello task backend, confirm that the connector exposes operations needed 
 
 A successful board-list read proves connection only. It does not prove that list, card or checklist publication can finish. If any required operation is unavailable or its required identifiers cannot be obtained, stop before creating the board.
 
+The complete required publication set contains exactly one task for every approved roadmap topic, not only materialized topics. Before writing, calculate an ordered roadmap fingerprint from lesson number, topic ID, title and direct prerequisite IDs. Persist it with the board or project resource and verify it after publication.
+
 ## No disposable production probes
 
 Never create `tmp`, `test`, `probe`, numbered variants or any other disposable board, list, card, event or workspace to discover a connector schema or test access.
@@ -60,7 +77,7 @@ Use harmless reads and the exposed tool schema. When no harmless operation exist
 
 After each successful external creation or update, persist its safe identifier, URL, capability, provider, type and status in `state/integrations.json` before the next external write.
 
-For a newly created task board, also set `integrations.task_manager.board_or_project` in `study.config.yml` immediately. This journal is required even when the broader publication later becomes partial or blocked.
+For a newly created task board, also set `integrations.task_manager.board_or_project` in `study.config.yml` immediately. Store the ordered roadmap fingerprint, visible lesson numbers and topic associations with the board. This journal is required even when the broader publication later becomes partial or blocked.
 
 An interrupted run must be resumable from recorded state and must reuse the exact board, lists, cards, reminders or events already created. Never wait until final success to record resources.
 
