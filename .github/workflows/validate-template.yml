@@ -31,6 +31,8 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: open-study-path-static-svg-final-tree
-          path: /tmp/open-study-path-final-tree.tar.gz
+          path: |
+            /tmp/open-study-path-final-tree.tar.gz
+            /tmp/open-study-path-final-tree.changed-files
           if-no-files-found: error
           retention-days: 1
