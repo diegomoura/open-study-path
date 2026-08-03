@@ -45,7 +45,7 @@ Every learner-facing task title uses the roadmap lesson number and title:
 
 Use at least two digits and expand naturally for paths with one hundred or more lessons. The visible lesson number is derived from the approved roadmap order and remains stable during synchronization. Keep `TOPIC-000` only in metadata, URLs and synchronization state; do not expose it in normal card titles.
 
-Numbering is a navigation aid, not a prerequisite rule. Readiness, movement between lists and automatic materialization continue to use the dependency graph and each topic's direct prerequisite IDs.
+Numbering is a navigation aid, not a prerequisite rule. Readiness, movement between lists and automatic materialization continue to use the dependency graph and each topic's direct prerequisite IDs. A numeração dos cartões ajuda a localizar a aula, mas nunca substitui os pré-requisitos diretos ou a posição do cartão no quadro.
 
 ### One primary resource per capability
 
