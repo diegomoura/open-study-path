@@ -28,13 +28,13 @@ jobs:
         run: |
           python - <<'PY'
           from pathlib import Path
-          from textwrap import dedent
           source = Path('.github/workflows/apply-publication-audit-fixes.yml').read_text(encoding='utf-8')
           marker = "          python - <<'PY'\n"
           start = source.index(marker) + len(marker)
           end = source.index("\n          PY\n", start)
-          script = dedent(source[start:end])
-          Path('/tmp/apply_publication_audit.py').write_text(script, encoding='utf-8')
+          lines = source[start:end].splitlines()
+          script = "\n".join(line[10:] if line.startswith("          ") else line for line in lines)
+          Path('/tmp/apply_publication_audit.py').write_text(script + "\n", encoding='utf-8')
           PY
           python /tmp/apply_publication_audit.py
       - name: Run focused regression tests
