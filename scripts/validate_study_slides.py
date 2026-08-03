@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Validate reusable study-slide contracts and generated offline ZIP artifacts."""
+"""Validate semantic slide sources, static SVG diagrams and learner-facing PDFs."""
 from pathlib import Path
 import sys
 from study_slides import validate_repository
@@ -13,7 +13,7 @@ def main() -> None:
         for error in result.errors:
             print(f"ERROR: {error}", file=sys.stderr)
         raise SystemExit(1)
-    print("Study-slide HTML, independent review and offline ZIP contract passed.")
+    print("Study-slide HTML, static Mermaid SVG, independent review and PDF contract passed.")
 
 
 if __name__ == "__main__":

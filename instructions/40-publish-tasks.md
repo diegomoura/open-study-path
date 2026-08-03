@@ -1,6 +1,6 @@
 # Publish tasks and selected integrations
 
-Use the approved roadmap, topic contracts, ready lessons, reviewed slide ZIP packages, integration plan and current state. Publication creates only the external organization that helps the learner act now. It must not regenerate pedagogical content, slide sources or ZIP packages.
+Use the approved roadmap, topic contracts, ready lessons, reviewed slide PDFs, integration plan and current state. Publication creates only the external organization that helps the learner act now. It must not regenerate pedagogical content, slide sources or PDFs.
 
 Read `docs/learner-facing-language.md` and `docs/study-slides.md` before writing task descriptions or the completion response.
 
@@ -18,7 +18,7 @@ Do not advertise, probe or summarize tools merely because they were mentioned in
 
 ## Authority model
 
-GitHub stores approved curriculum, lessons, slide ZIP packages, assessments and verified progress. Exactly one task backend tracks operational execution. Reminders and calendars support routine only; they never establish learning completion.
+GitHub stores approved curriculum, lessons, slide PDFs, assessments and verified progress. Exactly one task backend tracks operational execution. Reminders and calendars support routine only; they never establish learning completion.
 
 ## Standard assessment labels
 
@@ -39,7 +39,7 @@ Create one task per topic in the single selected backend. The task is the learne
 
 For every ready topic, show these learner-facing capabilities in this order:
 
-1. one **Slides** link to the current reviewed ZIP package;
+1. one **Slides** link to the current reviewed PDF;
 2. one **Aula** link to the complete module;
 3. one **Prática** link only when a separate approved exercise or laboratory is useful;
 4. one direct **Avaliação** link.
@@ -49,10 +49,10 @@ When practice is already contained in the lesson, do not create or link a duplic
 Build the slide URL from the exact instance identity and topic contract:
 
 ```text
-https://github.com/OWNER/REPOSITORY/raw/HEAD/study/slides/TOPIC-000/slides.zip
+https://github.com/OWNER/REPOSITORY/raw/HEAD/study/slides/TOPIC-000/slides.pdf
 ```
 
-Describe it as an arquivo ZIP and tell the learner to extract it and open `slides.html` in a browser. Do not show internal HTML source, CSS, JavaScript, package metadata, slide reviews, topic contracts, rubric YAML, state files or synchronization records.
+Do not show internal HTML, CSS, Mermaid source, generated SVG and render metadata, slide reviews, topic contracts, rubric YAML, state files or synchronization records.
 
 ### Human card titles
 
@@ -73,7 +73,7 @@ Use a description equivalent to:
 >
 > **Recursos**
 >
-> - **Slides:** <link direto para o arquivo ZIP da versão atual> — extraia e abra `slides.html`
+> - **Slides:** <link direto para o PDF da versão atual>
 > - **Aula:** <link direto para o módulo completo>
 > - **Prática:** <somente quando houver um exercício separado útil>
 > - **Avaliação:** <link direto para o formulário>
@@ -102,9 +102,9 @@ Use:
 > **Tempo sugerido:** <estimativa>  
 > **O que você vai produzir:** <entregável>
 >
-> A aula completa será preparada automaticamente quando todos os pré-requisitos acima estiverem concluídos. O pacote de slides será gerado junto com ela. Você não precisa pedir a geração manualmente.
+> A aula completa será preparada automaticamente quando todos os pré-requisitos acima estiverem concluídos. Os slides serão gerados junto com ela. Você não precisa pedir a geração manualmente.
 
-The future card must stand on its own. Do not link nonexistent modules, ZIP packages, assessments or internal contracts.
+The future card must stand on its own. Do not link nonexistent modules, PDFs, assessments or internal contracts.
 
 ### Trello structure
 
@@ -173,7 +173,6 @@ Before publication success, read every created or updated task back when support
 - prerequisite copy contains exactly the direct prerequisite titles;
 - ready status comes from satisfied dependencies;
 - resource order is Slides, Aula, optional Prática, Avaliação;
-- the Slides resource identifies the ZIP and `slides.html` opening step;
 - links point to current reviewed content;
 - no internal artifact or inactive provider is exposed.
 

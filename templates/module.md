@@ -9,9 +9,7 @@ Explique em poucas linhas o que a pessoa vai aprender, por que isso importa para
 <!-- open-study-path:slides-link:start -->
 ## Slides da aula
 
-[Baixar os slides desta aula (arquivo ZIP)](https://github.com/OWNER/REPOSITORY/raw/HEAD/study/slides/TOPIC-000/slides.zip)
-
-Depois do download, extraia o arquivo e abra `slides.html` no navegador.
+[Ver os slides desta aula em PDF](https://github.com/OWNER/REPOSITORY/raw/HEAD/study/slides/TOPIC-000/slides.pdf)
 <!-- open-study-path:slides-link:end -->
 
 ## Sua sessão de estudo
