@@ -33,7 +33,19 @@ Do not create empty assessment issues during publication.
 
 ## Task backend
 
-Create one task per topic in the single selected backend. The task is the learner's concise entry point into the lesson, practice and assessment. It is not an inventory of repository artifacts or integrations.
+Create exactly one task for every approved roadmap topic in the single selected backend, including future topics whose detailed lesson is not materialized yet. The task is the learner's concise entry point into the path, lesson, practice and assessment. It is not an inventory of repository artifacts or integrations.
+
+The published topic set must match the current approved roadmap. Before writing, calculate a stable roadmap fingerprint from the ordered topic IDs, visible lesson numbers, titles and direct prerequisite IDs. Persist that fingerprint with the board or project resource in `state/integrations.json`. A missing topic, extra topic, stale fingerprint or card from another curriculum blocks publication success.
+
+### Visible lesson numbering
+
+Every learner-facing task title uses the roadmap lesson number and title:
+
+`Aula 01 · <título da aula>`
+
+Use at least two digits and expand naturally for paths with one hundred or more lessons. The visible lesson number is derived from the approved roadmap order and remains stable during synchronization. Keep `TOPIC-000` only in metadata, URLs and synchronization state; do not expose it in normal card titles.
+
+Numbering is a navigation aid, not a prerequisite rule. Readiness, movement between lists and automatic materialization continue to use the dependency graph and each topic's direct prerequisite IDs.
 
 ### One primary resource per capability
 
@@ -54,13 +66,13 @@ https://github.com/OWNER/REPOSITORY/raw/HEAD/study/slides/TOPIC-000/slides.pdf
 
 Do not show internal HTML, CSS, Mermaid source, generated SVG and render metadata, slide reviews, topic contracts, rubric YAML, state files or synchronization records.
 
-### Human card titles
+### Primary next lesson and parallel availability
 
-Prefer the learner-facing lesson title without a numeric prefix:
+Resolve all topics whose direct prerequisites are currently satisfied. Among eligible topics, choose exactly one **primary next lesson**: the earliest unfinished eligible topic in approved roadmap order. Place only that card in **Próxima aula**.
 
-`<título da aula>`
+Other unfinished eligible topics that already have complete reviewed learner resources belong in **Disponível em paralelo**. This makes independent roots visible without implying that a later-numbered lesson must be completed before an earlier dependency chain.
 
-Use `Etapa <n> · <título>` only when the course is genuinely linear or the learner explicitly prefers numbering. Do not use `[TOPIC-001]` in visible titles by default.
+Eligible topics without complete reviewed learner resources remain in **Planejado** until automatic materialization finishes. Topics with unsatisfied direct prerequisites also remain in **Planejado**.
 
 ### Ready lesson card
 
@@ -94,9 +106,9 @@ Build the copy from the topic contract's direct prerequisites, never from numeri
 
 Use:
 
-> **Pré-requisitos desta etapa:** <títulos dos pré-requisitos diretos em linguagem simples>.
+> **Pré-requisitos desta aula:** <títulos numerados dos pré-requisitos diretos em linguagem simples>.
 >
-> Siga esta lista de pré-requisitos, não apenas a numeração dos cartões.
+> A numeração ajuda a localizar a aula. Para saber quando começar, siga os pré-requisitos acima e a posição do cartão no quadro.
 >
 > **O que você vai aprender:** <objetivo>  
 > **Tempo sugerido:** <estimativa>  
@@ -110,18 +122,19 @@ The future card must stand on its own. Do not link nonexistent modules, PDFs, as
 
 For a rich course, create or reuse one course board with lists equivalent to:
 
+- Próxima aula;
+- Disponível em paralelo;
 - Planejado;
-- Pronto para estudar;
-- Em andamento;
+- Em estudo;
 - Em avaliação;
 - Revisão necessária;
 - Concluído.
 
-Use “Revisão necessária” in visible copy instead of “Recuperação” when the latter could sound punitive.
+Only one unfinished card may be in **Próxima aula**. Preserve roadmap order inside **Disponível em paralelo** and **Planejado**. Use “Revisão necessária” in visible copy instead of “Recuperação” when the latter could sound punitive.
 
 ### Todoist or GitHub Issues
 
-When another task backend is selected, preserve the same human structure and projection rules. Todoist used as the primary task backend is distinct from Todoist used only for flexible reminders.
+When another task backend is selected, preserve the same numbered title, primary-next indicator, parallel-ready distinction and projection rules. Todoist used as the primary task backend is distinct from Todoist used only for flexible reminders.
 
 ## Routine activation
 
@@ -166,23 +179,28 @@ Never finish with a section equivalent to “O restante ficou assim”. Do not l
 
 ## Task projection review
 
-Before publication success, read every created or updated task back when supported and verify:
+Before publication success, read the board or project and every created or updated task back when supported and verify:
 
-- visible title matches the topic title;
+- the external task count equals the approved roadmap topic count;
+- every approved topic ID appears exactly once in synchronization metadata;
+- visible titles follow `Aula NN · <título>` and match roadmap order;
+- exactly one unfinished eligible card is in **Próxima aula**;
+- other materialized eligible cards are in **Disponível em paralelo**;
+- blocked or not-yet-materialized cards are in **Planejado**;
 - objective, effort and deliverable match;
 - prerequisite copy contains exactly the direct prerequisite titles;
-- ready status comes from satisfied dependencies;
 - resource order is Slides, Aula, optional Prática, Avaliação;
-- links point to current reviewed content;
-- no internal artifact or inactive provider is exposed.
+- links point to current reviewed content and future cards contain no broken resource links;
+- no internal artifact or inactive provider is exposed;
+- the persisted roadmap fingerprint matches the current approved roadmap.
 
-Correct mismatches before continuing. Persist direct prerequisite IDs and current content version with the task resource so later synchronization can detect drift.
+Correct mismatches before continuing. Persist direct prerequisite IDs, visible lesson number and current content version with each task resource so later synchronization can detect drift.
 
 ## Idempotency and state
 
-Inspect `state/integrations.json` and matching provider resources before writing. Reuse or update exact resources when supported. Store capability, provider, safe ID, URL, topic, content version, direct prerequisite IDs, authority, sync status and timestamp. Never persist credentials, tokens, OAuth details, raw submissions or unnecessary identity data.
+Inspect `state/integrations.json` and matching provider resources before writing. Reuse or update exact resources when supported. Store capability, provider, safe ID, URL, topic, visible lesson number, content version, direct prerequisite IDs, roadmap fingerprint, authority, sync status and timestamp. Never persist credentials, tokens, OAuth details, raw submissions or unnecessary identity data.
 
-Task synchronization is idempotent. An interrupted publication must report and reuse what was actually created.
+Task synchronization is idempotent. An interrupted publication must report and reuse what was actually created. A board whose persisted roadmap fingerprint differs from the approved roadmap is stale: do not silently treat its cards as the current course. Update it only when the learner asked to synchronize that board; otherwise create the newly requested canonical board and record its identity.
 
 ## Persist publication completion
 
@@ -222,7 +240,7 @@ A good response is equivalent to:
 >
 > <link do quadro ou tarefa>
 >
-> Comece por **<título da primeira aula>** e mova a tarefa para **Em andamento** quando iniciar.
+> Comece por **Aula 01 · <título da primeira aula>** e mova a tarefa para **Em estudo** quando iniciar.
 >
 > Quando terminar a aula e enviar a avaliação, escreva:
 >
