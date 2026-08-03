@@ -30,6 +30,10 @@ SUPPORTED_PROVIDERS = {
     "notion",
     "markdown",
 }
+VISIBLE_LIST_ORDER = (
+    "Planejado → Disponível em paralelo → Próxima aula → Em estudo → "
+    "Em avaliação → Revisão necessária → Concluído"
+)
 OPERATION_ID = re.compile(r"^[a-z0-9][a-z0-9._-]{2,127}$")
 TOPIC_ID = re.compile(r"^TOPIC-[0-9]{3,}$")
 
@@ -78,6 +82,23 @@ def validate_contract() -> list[str]:
             errors.append("projection contract must use content_generation.lookahead_topics")
         if "📌 Leia antes de começar" not in text:
             errors.append("projection contract must define the orientation resource")
+        if VISIBLE_LIST_ORDER not in text:
+            errors.append("projection contract must define the exact learner-facing list order")
+        for fragment in (
+            "Learner-visible metadata boundary",
+            "HTML comments such as `<!-- ... -->`",
+            "the text `open-study-path` used as a machine marker",
+            "state/integrations.json",
+            "read every managed task back",
+        ):
+            if fragment not in text:
+                errors.append(
+                    f"projection contract is missing learner-visible metadata protection: {fragment}"
+                )
+        if text.index("Planejado;") > text.index("Disponível em paralelo;"):
+            errors.append("Trello adapter must place Planejado before Disponível em paralelo")
+        if text.index("Disponível em paralelo;") > text.index("Próxima aula;"):
+            errors.append("Trello adapter must place Disponível em paralelo before Próxima aula")
 
     if manifest.exists():
         text = manifest.read_text(encoding="utf-8")
