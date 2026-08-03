@@ -160,7 +160,18 @@ Before every write, read `state/integrations.json` and inspect the exact provide
 - journal every successful external write before the next write;
 - re-running an unchanged operation must create no duplicate resource.
 
-Record at least: capability, provider, resource type, safe external ID, URL, topic ID when applicable, visible lesson number, content version, direct prerequisite IDs, canonical state, managed-field version, roadmap fingerprint, sync status and timestamp.
+Record at least: capability, provider, resource type, safe external ID, URL when returned by the provider, topic ID when applicable, visible lesson number, content version, direct prerequisite IDs, canonical state, managed-field version, roadmap fingerprint, sync status and timestamp.
+
+For an ordered task backend, `state/integrations.json` must register the board or project, every managed list or section, the orientation resource, every lesson task and each selected reminder. The orientation resource remains separate from the lesson count.
+
+After the final external read-back, store these fields under `projection.readback`:
+
+- `verified_at`;
+- `lesson_card_count`;
+- `managed_card_count`;
+- `visible_internal_marker_count`.
+
+Publication cannot resolve unless the lesson count matches the roadmap projection, the managed count includes the orientation resource, exactly one lesson is in **Próxima aula**, and `visible_internal_marker_count` is zero.
 
 ## Assessment result notification
 
@@ -189,7 +200,7 @@ Never include raw learner answers or unnecessary personal data. Record provider 
 
 ## Operational checkpoints
 
-Use a durable operation record under `state/operations/` when the active review profile permits it; otherwise keep the complete resumable checkpoint in `state/integrations.json`.
+Use a durable operation record under `state/operations/` for publication and assessment projection. The journal is a resumable technical checkpoint validated by the task-projection contract; the phase review covers the semantic publication state in `state/integrations.json` and the learner-facing integration plan.
 
 A publication or assessment projection checkpoint includes:
 

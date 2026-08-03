@@ -3,6 +3,8 @@ name: Validate task projection
 on:
   pull_request:
     paths:
+      - '.open-study-path/instance.yml'
+      - 'state/integrations.json'
       - 'instructions/41-task-backend-projection.md'
       - 'instructions/manifest.yml'
       - 'schemas/publication-operation.schema.json'
@@ -14,6 +16,8 @@ on:
   push:
     branches: [main]
     paths:
+      - '.open-study-path/instance.yml'
+      - 'state/integrations.json'
       - 'instructions/41-task-backend-projection.md'
       - 'instructions/manifest.yml'
       - 'schemas/publication-operation.schema.json'
@@ -40,7 +44,7 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-      - name: Validate projection contract and operation state
+      - name: Validate contract, journals and published projection
         run: python scripts/validate_task_projection.py
       - name: Run projection and hash tests
         run: |
