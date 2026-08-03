@@ -42,7 +42,10 @@ def fail(message: str) -> None:
 
 
 def normalize(path: str) -> str:
-    return Path(path).as_posix().lstrip("./")
+    normalized = Path(path).as_posix()
+    while normalized.startswith("./"):
+        normalized = normalized[2:]
+    return normalized
 
 
 def is_protected(path: str) -> bool:
