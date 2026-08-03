@@ -107,7 +107,9 @@ jobs:
         if: steps.slide-contract.outputs.pdf == 'true'
         env:
           PUPPETEER_CACHE_DIR: ~/.cache/puppeteer
-        run: npm install --no-save --package-lock=false puppeteer@25.3.0 mermaid@11.12.2 pdf-lib@1.17.1
+        run: |
+          npm install --no-save --package-lock=false puppeteer@25.3.0 mermaid@11.12.2 pdf-lib@1.17.1
+          npx puppeteer browsers install chrome-headless-shell
       - name: Parse repository YAML contracts
         run: python scripts/validate_template.py yaml
       - name: Validate repository mode guard
