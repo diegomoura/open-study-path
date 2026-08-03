@@ -1,28 +1,60 @@
 # Efficient curriculum generation execution
 
-Apply this contract during initial curriculum generation and later rolling materialization. It governs how repository work is performed; the pedagogical and integration requirements remain in the phase-specific instructions.
+Apply this contract during initial curriculum generation and later rolling materialization. It governs repository execution; pedagogical and integration requirements remain in the phase-specific instructions.
 
 ## Connector-first execution
 
-When connected repository tools already provide file, pull-request, check, job and log access, use them as the authoritative execution path. Do not attempt `gh`, `git clone`, `curl` or direct unauthenticated network access merely to duplicate an available connector operation.
+When connected repository tools already provide file, branch, commit, pull-request, check, job and log access, use them as the authoritative path.
 
-A local checkout is optional acceleration, not a prerequisite for safe repository work. When command execution or network access is unavailable, continue through the connector and the inherited GitHub Actions validation instead of spending turns proving that the unavailable path still fails.
+Do not attempt `gh`, `git clone`, `curl`, raw GitHub URLs or unauthenticated network access merely to duplicate an available connector operation. Do not begin with shell authentication probes when the repository connector is already available. A failed local command is not useful evidence about connector access.
 
-Do not use fixed `sleep` loops to poll checks. Re-read the workflow or pull request through the connector with bounded attempts. A timeout, queued job or in-progress check is a pending technical state, not curriculum success and not a learner decision.
+A local checkout is optional acceleration, not a prerequisite. When command execution, DNS or package installation is unavailable, stop probing that unavailable path and continue through the connector and inherited GitHub Actions.
 
-## Build before publishing
+Read reusable slide assets from the instance repository. Do not download `templates/study-slides/` from the canonical repository during an instance operation; those files are already inherited and versioned locally.
 
-1. Work in an isolated checkout or proposal branch.
-2. Read the active instance configuration, approved intake, diagnostic summary, templates and validators before generating files.
-3. Assemble the complete allowed phase diff before opening the pull request. Do not publish topics, modules, slide sources, PDFs, rubrics or forms one file at a time while they are still incomplete.
-4. Prefer one coherent proposal commit. Use additional commits only for focused corrections discovered by review or CI.
-5. Every intermediate and final commit must respect the phase's allowed-diff contract.
+Do not use fixed `sleep` loops to poll checks. Re-read the workflow or pull request through the connector with bounded attempts. A queued or in-progress check is a pending technical state, not curriculum success and not a learner decision.
 
-For each materialized topic, the complete proposal includes the lesson, practice, assessment, approved course-content review, internal HTML slide sources, approved slide review, rendered PDF, render metadata and learner-facing PDF link. Do not merge a lesson first and add its PDF in a later operation.
+## Capability preflight
 
-## Local preflight
+Perform one bounded preflight before authoring:
 
-When a checkout and command execution are available, run the complete local validation suite before the first remote push or pull request:
+1. confirm repository identity and instance mode through repository files;
+2. confirm connector read and write capabilities without invoking a local CLI;
+3. inspect whether Python, Node and the pinned package dependencies already exist only when local packaging will actually be used;
+4. choose one execution path and do not alternate repeatedly between connector, shell and unauthenticated network attempts.
+
+If local `esbuild` or Mermaid is unavailable, do not use `curl`, a CDN or ad hoc downloaded scripts. Use the CI package handoff described below.
+
+## Build the complete diff before publishing
+
+1. Read the active instance configuration, approved intake, diagnostic summary, roadmap, templates and validators.
+2. Assemble the complete allowed phase diff in memory or an isolated workspace.
+3. Finish every selected topic contract, lesson, assessment, review, slide source and metadata input before the first repository write.
+4. Calculate all review fingerprints in one deterministic pass after authored files are final.
+5. Open the pull request only after the complete initial diff exists on its branch.
+
+Do not publish topics, modules, slide sources, rubrics, forms or review files one at a time while the operation is incomplete.
+
+## Batched GitHub writes
+
+For an operation that changes more than three files, use the Git Data API as one batch:
+
+1. create every required blob;
+2. create one tree from the branch base;
+3. create one coherent commit;
+4. move the branch with one `update_ref` call.
+
+Use `create_blob`, `create_tree`, `create_commit` and `update_ref` rather than the Contents API for a multi-file generation operation. The Contents API is acceptable only for up to three isolated files or a focused correction.
+
+Prefer one authoring commit. Use additional commits only for focused corrections discovered by independent review or CI. A large generation pull request must remain within the commit budget enforced by `scripts/validate_instance_operation_scope.py`; never create one commit per generated file or one commit per refreshed fingerprint.
+
+If a branch was accidentally built through dozens of serial commits, reconstruct its final tree as one commit on top of the pull-request base and force-update the operation branch before merge.
+
+Every intermediate and final commit must respect the phase's allowed-diff contract.
+
+## Local validation when available
+
+When a usable local environment already exists, run the lightweight suite before the first push:
 
 ```text
 python scripts/validate_template.py all
@@ -30,6 +62,8 @@ python scripts/validate_intake_resolution.py
 python scripts/validate_guided_lifecycle.py
 python scripts/test_review_framework.py
 python scripts/validate_review_framework.py
+python scripts/test_instance_operation_scope.py
+python scripts/validate_instance_operation_scope.py
 python scripts/validate_generation_efficiency.py
 python scripts/test_generation_terminal_state.py
 python scripts/test_curriculum_placeholder_detection.py
@@ -38,114 +72,106 @@ python scripts/validate_study_slides.py
 python scripts/validate_curriculum_safe.py
 ```
 
-After lesson and slide reviews pass, render current slide sources with the pinned browser toolchain:
+Never run `scripts/validate_curriculum.py` directly for learner content. The safe validator is the active contract.
+
+When the pinned packages are already available, build the offline ZIPs with:
 
 ```text
-npm install --no-save --package-lock=false playwright@1.62.0 mermaid@11.16.0 pdf-lib@1.17.1
-npx playwright install chromium
-node scripts/render_study_slides.mjs
+python scripts/package_study_slides.py
+python scripts/package_study_slides.py --check
 python scripts/validate_study_slides.py
 ```
 
-Fix locally detectable YAML types, topic-contract frontmatter dates, durations, paths, placeholders, graph errors, slide overflow, Mermaid errors, stale PDF metadata and scope violations before the first remote CI run.
-
-Keep operational metadata in `study/topics/TOPIC-000.md`. Generated learner modules under `study/modules/` must begin directly with their title and must not contain YAML frontmatter rendered as a table by GitHub. Slide HTML, CSS, JavaScript and render metadata are internal build sources; only `slides.pdf` is learner-facing.
+Do not install Playwright or Chromium. Do not generate PDF files.
 
 GitHub Actions is the final confirmation, not the primary trial-and-error linter.
 
-## Browser-render fallback
+## CI package handoff
 
-A runtime without a usable local Chromium may open the draft pull request only after the lesson, slide sources and both semantic reviews are complete. The inherited workflow then renders the same sources into the internal `study-slide-render-output` artifact.
+A runtime without local `esbuild` or Mermaid may open the draft pull request after all pedagogical artifacts, semantic slide sources and both specialized reviews are complete.
 
-The agent must download that artifact, add `slides.pdf` and `slides.meta.json` to the existing branch, rerun the semantic and deterministic checks, and wait for the current unchanged head to pass. The artifact is an internal transfer mechanism with short retention; it is never a learner resource and the learner never downloads or prints it manually.
+The inherited workflow installs the pinned lightweight packages, builds the expected deterministic ZIPs and compares them with the committed files. When a ZIP or metadata file is missing or stale, the workflow uploads the internal artifact `study-slide-package-output` containing only the generated `slides.zip` and `slides.meta.json` paths.
 
-Do not report generation success, publish tasks or merge while the current topic lacks the committed PDF and metadata. Do not let the workflow create a later commit after merge.
+Download that workflow artifact through the GitHub connector, add every generated package and metadata file to the existing branch in one batched commit, refresh affected review fingerprints once, and rerun the current-head checks.
+
+The artifact is an internal transfer mechanism with short retention. It is never a learner resource. Do not attach it to the learner response, and do not ask the learner to build or package slides manually.
 
 ## Independent review before final validation
 
-After the authoring pass, run specialized reviews in this order:
+After authoring, run specialized reviews in this order:
 
 1. curriculum architecture through `instructions/35-review-curriculum.md`;
 2. complete lesson, practice and assessment through `instructions/36-review-course-content.md`;
-3. the derived visual summary through `instructions/37-review-study-slides.md`;
-4. PDF rendering and deterministic slide validation;
-5. `instructions/04-review-generated-artifacts.md` using the phase's `review_profile`.
+3. derived visual summary through `instructions/37-review-study-slides.md`;
+4. deterministic ZIP packaging and study-slide validation;
+5. `instructions/04-review-generated-artifacts.md` using the phase review profile.
 
-Create or update the review artifact under `state/reviews/` only after actively checking the complete operation output. Cover every generated path changed by the pull request with its current SHA-256 fingerprint. Correct blocking findings before setting the review to approved.
+Create or update the shared review only after actively checking the complete operation output. Cover every generated path changed by the pull request with current SHA-256 evidence. Correct blocking findings before approval.
 
-A review file is part of the allowed phase diff. It is evidence, not learner-facing curriculum, and must not be linked as a study resource.
+## Immutable infrastructure in instance mode
+
+During curriculum generation or materialization, never modify reusable infrastructure, even temporarily:
+
+- `AGENTS.md`;
+- `.github/workflows/`;
+- `scripts/`;
+- `instructions/`;
+- `templates/`;
+- `schemas/`;
+- reusable `docs/`.
+
+A canonical defect belongs in a separate template change and migration. Do not change a validator to make generated content pass. `scripts/validate_instance_operation_scope.py` rejects mixed curriculum and infrastructure changes.
 
 ## Failure handling
 
 When CI fails:
 
-1. inspect the exact failed step and its log once;
-2. reproduce the failure locally when possible;
-3. correct the root cause in the allowed curriculum or slide files;
-4. rerun the complete local suite and every affected independent review when a covered artifact changed;
-5. push one focused correction and wait for the new head's checks.
+1. inspect the exact failed step and log once;
+2. resolve the complete deterministic failure class;
+3. correct only allowed operation files;
+4. rerun every affected specialized review;
+5. batch the correction and refresh fingerprints once;
+6. wait for checks on the new unchanged head.
 
-A failed locator, fingerprint, schema, path, placeholder, render, integration-plan or review-coverage check is internal correction work. It is not a learner blocker and does not justify ending the operation with an open draft pull request.
+A failed locator, fingerprint, schema, path, placeholder, package, integration-plan or review-coverage check is internal correction work. It is not a learner blocker.
 
-Batch every failure of the same deterministic class before the next remote run. When one planned topic has an invalid source locator, inspect every planned topic for that rule. When one fingerprint is stale, recalculate every artifact changed by the correction. Do not wait for CI to reveal equivalent files one at a time.
+Batch every failure of the same deterministic class before the next remote run. Do not add instrumentation commits or modify repository infrastructure to diagnose learner content.
 
-Do not search Gists, generic web pages or unrelated repositories for validator behavior when the active repository code and exact CI log are available.
-
-Do not add instrumentation commits or temporarily modify repository infrastructure to diagnose learner content.
-
-## Immutable infrastructure in instance mode
-
-During curriculum generation or materialization in an instance repository, never modify these paths, even temporarily:
-
-- `.github/workflows/`;
-- `scripts/validate_*.py` or validator tests;
-- `instructions/`;
-- `templates/`;
-- `schemas/`;
-- reusable documentation belonging to the template.
-
-If validation appears to expose a canonical template defect, use a semantically neutral curriculum wording adjustment only when it preserves the intended teaching content. Record the reusable defect for the canonical template separately; do not patch the instance's validation infrastructure.
-
-## Bounded remote correction loop
-
-Avoid repeated remote CI experimentation. After a second remote failure on the same operation, inspect the exact current log and resolve the complete deterministic failure class before another push. Never create workflow changes merely to print more diagnostics for curriculum content.
-
-Do not emit a learner-facing completion response between correction runs. A pending or failed current head means the active operation is still internal unless a concrete material decision or an unavailable required capability genuinely prevents correction.
+After a second remote failure, stop speculative edits and inspect the exact current log before another push.
 
 ## Final current-head read-back
 
-Apply `scripts/generation_terminal_state.py` before composing the response. The expected head SHA, pull-request state, required checks and unresolved-thread state must come from one final current read-back.
+Apply `scripts/generation_terminal_state.py` before composing the response. The expected head SHA, pull-request state, required checks and unresolved-thread state must come from one final read-back.
 
 The resolver may return:
 
 - `correct_and_revalidate` for failed editorial or deterministic checks;
 - `wait_and_reread` for queued or in-progress checks;
-- `merge_current_head` for a green open or draft pull request;
-- `refresh_current_state` when the head moved or evidence is stale;
+- `merge_current_head` for a green open pull request;
+- `refresh_current_state` when the head moved;
 - `owner_action_required` only for a concrete material decision;
-- `technical_blocked` only when current-head verification or safe repository execution is genuinely unavailable;
-- `success` only for the exact checked head after merge confirmation.
+- `technical_blocked` only when safe execution is genuinely unavailable;
+- `success` only after merge confirmation.
 
-Never say that the trail is generated while the pull request is open or draft. Never describe an auto-correctable editorial failure as the final result. Never compose the final response from a failed head after a newer head exists.
+Never say that the trail is generated while the pull request remains open. Never describe an auto-correctable technical failure as the final result.
 
-After the merge call, fetch the pull request again and read the persisted instance state from the default branch. The response must reflect that latest read-back. If the PR merged between two observations, report the merged result rather than repeating the earlier blocker.
+After merge, fetch the pull request again and read persisted instance state from the default branch. If the pull request merged between observations, report the merged result rather than an earlier pending state.
 
 ## Terminal condition
 
-The operation is complete when all of the following are true for the current, unchanged PR head:
+The operation is complete only when the current unchanged head has:
 
-- the final diff is within the allowed phase scope;
-- specialized curriculum, course-content and study-slide reviews are complete;
-- every materialized topic has a current rendered PDF and render metadata;
-- an approved shared review artifact covers every generated change;
-- required local or contract checks pass;
-- required GitHub Actions checks succeed;
-- the pull request is mergeable;
-- no unresolved review thread remains;
-- no pedagogical or integration-policy decision requires owner input.
+- an allowed, coherent diff;
+- a bounded commit history;
+- complete curriculum, course-content and study-slide reviews;
+- current `slides.zip` and `slides.meta.json` for every materialized topic;
+- approved shared review coverage;
+- passing required checks;
+- a mergeable pull request with no unresolved review thread;
+- no pedagogical or integration-policy decision requiring owner input.
 
-At that point, do not perform further research, regenerate content or rerun unchanged checks. Mark the draft ready, merge according to the configured policy, perform the final current-head read-back and return the phase-completion response only when the resolver allows learner success.
+At that point, do not perform further research, regenerate content or rerun unchanged checks. Merge according to policy, perform the final read-back and return the learner-facing completion response.
 
 ## Diagnostic artifacts
 
-Logs, rendered slide artifacts and ZIP artifacts produced by failed CI runs are internal debugging aids. Do not attach or list them as primary learner artifacts after the final operation succeeds. Mention a diagnostic artifact only when the final state remains blocked and the owner must inspect it to make a concrete decision.
+Logs and workflow ZIP artifacts are internal debugging aids. Do not attach or list them as primary learner artifacts after success. Mention one only when the final state remains genuinely blocked and the owner must inspect it to make a concrete decision.

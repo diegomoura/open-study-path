@@ -50,6 +50,12 @@ jobs:
           package-manager-cache: false
       - name: Install validation dependencies
         run: python -m pip install --quiet --disable-pip-version-check pyyaml jsonschema
+      - name: Test instance operation scope guard
+        run: python scripts/test_instance_operation_scope.py
+      - name: Validate instance operation scope and commit budget
+        env:
+          REVIEW_BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
+        run: python scripts/validate_instance_operation_scope.py
       - name: Install lightweight study-slide package dependencies
         run: npm install --no-save --package-lock=false esbuild@0.25.8 mermaid@11.16.0
       - name: Parse repository YAML contracts
@@ -78,6 +84,26 @@ jobs:
         run: python scripts/validate_course_content_review.py
       - name: Test study-slide contract
         run: python scripts/test_study_slides.py
+      - name: Build expected offline slide packages
+        run: |
+          python scripts/package_study_slides.py
+          if ! git diff --quiet -- study/slides; then
+            rm -rf .open-study-path/generated-slide-packages
+            mkdir -p .open-study-path/generated-slide-packages
+            find study/slides -type f \( -name slides.zip -o -name slides.meta.json \) \
+              -exec cp --parents {} .open-study-path/generated-slide-packages/ \;
+            echo "Committed slide ZIP packages are missing or stale." >&2
+            git diff --stat -- study/slides >&2
+            exit 1
+          fi
+      - name: Upload generated slide package handoff
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: study-slide-package-output
+          path: .open-study-path/generated-slide-packages/
+          if-no-files-found: ignore
+          retention-days: 3
       - name: Verify committed offline slide packages
         run: python scripts/package_study_slides.py --check
       - name: Validate study-slide contract
