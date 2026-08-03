@@ -30,7 +30,7 @@ Task projections show resources in this order: slides, complete lesson, optional
 
 Deck size follows the estimated study effort: normally 12 slides for 45–60 minutes, about 15 for 75 minutes and about 18 for 90 minutes, with a hard maximum of 24. Slide count is not a quota: every page must carry a real explanatory move.
 
-Required narrative roles are `title`, `map`, `concept`, `diagram`, `example`, `misconception`, `application`, `recap` and `summary`. At least two worked examples appear before learner application.
+Required narrative roles are `title`, `map`, `concept`, `diagram`, `example`, `misconception`, `application`, `recap` and `summary`; at least two worked examples appear before learner application.
 
 Slides with substantive roles identify the reviewed lesson section through `data-lesson-section`. Every approved outcome appears on at least two substantive slides through honest `data-outcome-ids`.
 
@@ -51,7 +51,7 @@ Author diagrams as `diagrams/*.mmd`. HTML references the corresponding generated
 >
 ```
 
-The CI renderer converts Mermaid to SVG before opening the HTML. Learner artifacts contain no Mermaid runtime and execute no JavaScript. PNG diagrams and full-slide raster images are outside the contract.
+The CI renderer loads the pinned local Mermaid package through a restricted localhost page and writes SVG before opening the slide HTML. Learner artifacts contain no Mermaid runtime and execute no JavaScript. PNG diagrams and full-slide raster images are outside the contract.
 
 Generated SVGs must contain no script or external asset. Each diagram needs alternative text and an explanatory caption that states both interpretation and relevant limit.
 
@@ -59,15 +59,16 @@ Generated SVGs must contain no script or external asset. Each diagram needs alte
 
 The renderer:
 
-1. converts each `.mmd` file to SVG with the pinned Mermaid CLI;
-2. serves only the generated local build tree;
+1. converts each `.mmd` file to SVG with the pinned local Mermaid package;
+2. serves only the generated local build tree and renderer dependencies from localhost;
 3. blocks external requests and records browser errors;
 4. waits for fonts and SVG images;
 5. checks overflow at 1280×720;
-6. renders each slide as an isolated PDF page;
-7. merges pages with fixed metadata and provenance;
-8. writes `slides.pdf` and `slides.meta.json`;
-9. verifies that committed artifacts match current sources.
+6. embeds SVG data into a deterministic isolated-page snapshot;
+7. renders each slide as an isolated PDF page;
+8. merges pages with fixed metadata and provenance;
+9. writes `slides.pdf` and `slides.meta.json`;
+10. verifies that committed artifacts match current sources.
 
 The learner-facing URL is:
 
