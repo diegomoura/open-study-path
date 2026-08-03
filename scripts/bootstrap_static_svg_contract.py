@@ -46,10 +46,18 @@ def main() -> None:
     (ROOT / "scripts/study_slides_legacy.py").write_bytes((ROOT / "scripts/study_slides.py").read_bytes())
     for relative in RESTORE:
         restore(relative)
-    payload_dir = ROOT / ".open-study-path/bootstrap-payload"
-    parts = [payload_dir / f"part-{index:03d}.txt" for index in range(4)] + sorted(payload_dir.glob("fixed-part-*.txt"))
+    payload_dir = ROOT / ".open-study-path/exact-payload"
+    parts = [
+        payload_dir / "part-000.txt",
+        payload_dir / "part-001.txt",
+        payload_dir / "part-002-003.txt",
+        payload_dir / "part-004-005.txt",
+        payload_dir / "part-006-007.txt",
+        payload_dir / "part-008-009.txt",
+        payload_dir / "part-010-011.txt",
+    ]
     archive = ROOT / ".open-study-path-static-svg-payload.tar.gz"
-    archive.write_bytes(base64.b64decode("".join(path.read_text() for path in parts)))
+    archive.write_bytes(base64.b64decode("".join(path.read_text() for path in parts), validate=True))
     import hashlib
     expected_archive_sha256 = "9b7d6f2be6d8bc044c23c0226d2c077a0d28b6c3eed89d63433bee578800e0a7"
     actual_archive_sha256 = hashlib.sha256(archive.read_bytes()).hexdigest()
@@ -60,6 +68,7 @@ def main() -> None:
     for obsolete in (
         ROOT / "scripts/package_study_slides.py", ROOT / "templates/study-slides/slides.js",
         ROOT / "scripts/bootstrap_static_svg_contract.py", ROOT / ".open-study-path/bootstrap-payload",
+        ROOT / ".open-study-path/exact-payload",
     ):
         if obsolete.is_dir():
             import shutil; shutil.rmtree(obsolete)
