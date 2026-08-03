@@ -61,3 +61,4 @@ jobs:
           git add scripts/render_study_slides.mjs
           git commit -m 'Preservar URLs dos SVGs na composição do PDF'
           git push origin HEAD:agent/static-svg-pdf-slides-v3
+# trigger after workflow registration
