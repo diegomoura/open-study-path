@@ -46,7 +46,7 @@ For an operation that changes more than three files, use the Git Data API as one
 
 Use `create_blob`, `create_tree`, `create_commit` and `update_ref` rather than the Contents API for a multi-file operation. The Contents API is acceptable only for up to three isolated files or a focused correction.
 
-Prefer one authoring commit. Use additional commits only for focused corrections discovered by independent review or CI. Never create one commit per generated file, diagram, PDF or refreshed fingerprint.
+Prefer one authoring commit. Use additional commits only for focused corrections discovered by independent review or CI; never create one commit per generated file, diagram, PDF or refreshed fingerprint.
 
 If a branch was accidentally built through dozens of serial commits, reconstruct its final tree as one commit on top of the pull-request base and force-update the operation branch before merge.
 
