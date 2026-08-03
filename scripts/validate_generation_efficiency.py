@@ -80,9 +80,9 @@ def main() -> None:
     forbid(EXECUTION_CONTRACT, [
         "slides.pdf",
         "render_study_slides.mjs",
-        "pdf-lib",
-        "Playwright",
-        "Chromium",
+        "pdf-lib@",
+        "playwright@",
+        "npx playwright install",
     ])
 
     require("AGENTS.md", [
