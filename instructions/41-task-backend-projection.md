@@ -15,16 +15,29 @@ Resolve exactly one primary task backend:
 
 Do not require an external account. When no external backend is selected or available, use `github_issues` and keep the course usable.
 
-Use these canonical states:
+Use these internal canonical states:
 
 - `planned` — Planejado;
-- `ready` — Pronto para estudar;
-- `in_progress` — Em andamento;
+- `ready` — ready for the learner;
+- `in_progress` — Em estudo;
 - `in_assessment` — Em avaliação;
 - `review_required` — Revisão necessária;
 - `completed` — Concluído.
 
+A task backend may split internal `ready` into two visible locations:
+
+- **Próxima aula** — exactly one primary next lesson;
+- **Disponível em paralelo** — other eligible materialized lessons.
+
 Provider adapters may represent states as lists, sections, labels, status fields or completion flags, but they must preserve the same meaning.
+
+## Learner-facing visual order
+
+When the provider supports ordered columns or sections, use this exact left-to-right order:
+
+`Planejado → Disponível em paralelo → Próxima aula → Em estudo → Em avaliação → Revisão necessária → Concluído`
+
+The order presents the course from backlog to available choices, then to the primary action and execution. It does not change prerequisite semantics. Exactly one unfinished eligible lesson is placed in **Próxima aula**; other eligible materialized lessons are placed in **Disponível em paralelo**.
 
 ## Active learning window
 
@@ -35,17 +48,16 @@ This is the single source of truth for the number of complete, non-mastered less
 For large curricula:
 
 1. materialize, review, render and publish up to `lookahead_topics` eligible lessons;
-2. place every complete eligible lesson in `ready`;
-3. never place a lesson in `in_progress` automatically;
-4. after mastery, materialize only enough eligible lessons to restore the window;
-5. do not count recovery material as a normal lookahead topic;
-6. do not materialize blocked topics merely to fill the number.
+2. select the earliest unfinished eligible lesson in roadmap order as **Próxima aula**;
+3. place other complete eligible lessons in **Disponível em paralelo**;
+4. never place a lesson in `in_progress` automatically;
+5. after mastery, materialize only enough eligible lessons to restore the window;
+6. do not count recovery material as a normal lookahead topic;
+7. do not materialize blocked topics merely to fill the number.
 
 ## Learner responsibility
 
-The only normal manual state transition is:
-
-`ready` → `in_progress`
+The only normal manual state transition is from **Próxima aula** or **Disponível em paralelo** to **Em estudo**.
 
 The learner performs it when study actually begins.
 
@@ -55,7 +67,7 @@ The course performs all later transitions after durable GitHub evidence exists:
 - mastered result: `in_assessment` → `completed`;
 - insufficient result: `in_assessment` → `review_required`;
 - valid recovery submission: `review_required` → `in_assessment`;
-- replacement lesson: new task enters `ready`.
+- replacement lesson: new task enters **Próxima aula** or **Disponível em paralelo**, according to roadmap order.
 
 Manual movement to `completed` never establishes mastery. Reconcile it from GitHub state.
 
@@ -69,33 +81,64 @@ Visible title:
 
 It must:
 
-- explain every canonical state in simple language;
-- explain that normally two complete lessons remain ready, subject to roadmap dependencies;
-- explain that lessons, slides, practice, assessments, recovery and replacement tasks are prepared automatically;
+- explain the visible lists or states in their exact visual order;
+- explain that normally two complete lessons remain available, subject to roadmap dependencies;
+- explain the difference between **Próxima aula** and **Disponível em paralelo**;
+- explain that lessons, slides, practice, assessments, review and replacement tasks are prepared automatically;
 - ask the learner not to create or rename managed states, create lesson tasks manually, or alter managed titles, descriptions, labels, checklists and links;
-- state that the only expected manual movement is from `Pronto para estudar` to `Em andamento`;
+- state that the only expected manual movement is from an available lesson to **Em estudo**;
 - tell the learner to submit the assessment and use the command shown in the lesson task;
 - explain that GitHub assessment evidence, not task position, determines approval;
 - remain throughout the course and be updated in place.
 
 When supported, apply a distinctive `Instruções do curso` label or equivalent visual marker and keep the resource first. Identification must also use a stable title and a durable external ID recorded in `state/integrations.json`; color or ordering support is optional.
 
+The orientation resource is auxiliary. It does not count as one of the roadmap topic tasks when validating projection completeness.
+
+## Learner-visible metadata boundary
+
+Task titles and descriptions are learner interfaces. Never expose synchronization metadata in them.
+
+Do not place any of the following in a visible title, description, checklist or comment:
+
+- HTML comments such as `<!-- ... -->`;
+- the text `open-study-path` used as a machine marker;
+- raw `TOPIC-000` identifiers used only for synchronization;
+- `content_version` fields;
+- serialized prerequisite arrays;
+- roadmap fingerprints, provider IDs or other internal state.
+
+Store topic IDs, visible lesson numbers, content versions, direct prerequisite IDs, roadmap fingerprints and provider resource IDs in `state/integrations.json` or in genuinely non-visible provider metadata when the provider supports it. Do not use a hidden-looking HTML comment as a substitute for private metadata: Trello and similar tools may render or expose it.
+
+After writing, read every managed task back. Publication fails when a learner-visible field contains `<!--`, `open-study-path`, a raw synchronization marker or another internal metadata fragment. Correct the provider resource before reporting success.
+
 ## Provider adapters
 
 ### Trello
 
-Use lists equivalent to the six canonical states. Keep the orientation card first in `Planejado`. Lesson cards use the normal resource order: Slides, Aula, Prática, Avaliação.
+Create or reuse lists in this exact left-to-right order:
+
+1. Planejado;
+2. Disponível em paralelo;
+3. Próxima aula;
+4. Em estudo;
+5. Em avaliação;
+6. Revisão necessária;
+7. Concluído.
+
+Keep the orientation card first in **Planejado**. Lesson cards use the normal resource order: Slides, Aula, optional Prática, Avaliação. There must be exactly one lesson card in **Próxima aula**. Other eligible materialized lessons belong in **Disponível em paralelo**.
 
 ### Todoist
 
-Create or reuse one project. Use sections equivalent to the canonical states. Keep the orientation task first in `Planejado`; make it uncompletable when supported. Move tasks by section. A native Todoist completion is only a projection and must be reconciled from GitHub mastery.
+Create or reuse one project. Use sections that preserve the same learner-facing order and ready-state distinction when supported. Keep the orientation task first in **Planejado**; make it uncompletable when supported. Move tasks by section. A native Todoist completion is only a projection and must be reconciled from GitHub mastery.
 
 ### GitHub Issues
 
-Use one issue per materialized lesson. Represent state with exactly one managed status label:
+Use one issue per roadmap lesson. Represent execution state with exactly one managed status label:
 
 - `study:planned`;
-- `study:ready`;
+- `study:ready-primary`;
+- `study:ready-parallel`;
 - `study:in-progress`;
 - `study:in-assessment`;
 - `study:review-required`;
@@ -117,7 +160,7 @@ Before every write, read `state/integrations.json` and inspect the exact provide
 - journal every successful external write before the next write;
 - re-running an unchanged operation must create no duplicate resource.
 
-Record at least: capability, provider, resource type, safe external ID, URL, topic ID when applicable, content version, canonical state, managed-field version, sync status and timestamp.
+Record at least: capability, provider, resource type, safe external ID, URL, topic ID when applicable, visible lesson number, content version, direct prerequisite IDs, canonical state, managed-field version, roadmap fingerprint, sync status and timestamp.
 
 ## Assessment result notification
 
@@ -131,7 +174,7 @@ For mastery, include:
 - score and approval;
 - direct link to the durable response-by-response correction;
 - confirmation that the task moved to `Concluído`;
-- lessons currently in `Pronto para estudar`;
+- lessons currently in **Próxima aula** and **Disponível em paralelo**;
 - accurate wording about automatic window replacement.
 
 For an insufficient result, include:
@@ -140,13 +183,15 @@ For an insufficient result, include:
 - `Revisão necessária` language;
 - direct correction link;
 - focused recovery task or reassessment link;
-- the other ready lesson when one exists.
+- the other available lesson when one exists.
 
 Never include raw learner answers or unnecessary personal data. Record provider message ID, attempt, result type, status and timestamp. Do not send the same notification twice. Optional email failure must not undo assessment, task movement or materialization.
 
 ## Operational checkpoints
 
-Use a durable operation record under `state/operations/` for publication and assessment projection. It must include:
+Use a durable operation record under `state/operations/` when the active review profile permits it; otherwise keep the complete resumable checkpoint in `state/integrations.json`.
+
+A publication or assessment projection checkpoint includes:
 
 - `operation_id`;
 - operation type;
@@ -164,8 +209,8 @@ One operation ID maps to one convergent branch and pull request. Resume the same
 
 ## Completion response
 
-After initial publication, show the task-backend link, orientation resource and ready lessons. Say:
+After initial publication, show the task-backend link, orientation resource and available lessons. Say:
 
-`Quando começar uma aula, mova somente esse cartão ou tarefa para Em andamento.`
+`Quando começar uma aula, mova somente esse cartão ou tarefa para Em estudo.`
 
-After evaluation, report score, result, correction link and either focused review or the ready lessons. Do not require a separate command to replace the learning window.
+After evaluation, report score, result, correction link and either focused review or the available lessons. Do not require a separate command to replace the learning window.
