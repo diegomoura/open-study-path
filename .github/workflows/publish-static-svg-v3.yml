@@ -9,33 +9,39 @@ permissions:
 
 jobs:
   publish:
+    if: github.head_ref == 'agent/static-svg-pdf-slides-final' || github.ref_name == 'agent/static-svg-pdf-slides-final'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout source branch
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
-          ref: ${{ github.head_ref || github.ref_name }}
-      - name: Ensure localhost Mermaid renderer
+          ref: agent/static-svg-pdf-slides-final
+
+      - name: Build localhost Mermaid renderer
         run: |
           python - <<'PY'
           from pathlib import Path
 
           path = Path('scripts/render_study_slides.mjs')
           text = path.read_text(encoding='utf-8')
-          if '__OSP_MERMAID__' not in text:
-              text = text.replace('import { execFile } from "node:child_process";\n', '')
-              text = text.replace('import { createRequire } from "node:module";\n', '')
-              text = text.replace('import { promisify } from "node:util";\n', '')
-              text = text.replace('const execFileAsync = promisify(execFile);\nconst require = createRequire(import.meta.url);\n', '')
-              text = text.replace('const MERMAID_CLI_VERSION = installedPackageVersion("@mermaid-js", "mermaid-cli");', 'const MERMAID_VERSION = installedPackageVersion("mermaid");')
-              text = text.replace(
-                  'return { ".html": "text/html; charset=utf-8", ".css": "text/css; charset=utf-8", ".svg": "image/svg+xml" }[path.extname(file).toLowerCase()] || "application/octet-stream";',
-                  'return { ".html": "text/html; charset=utf-8", ".css": "text/css; charset=utf-8", ".svg": "image/svg+xml", ".mjs": "text/javascript; charset=utf-8", ".js": "text/javascript; charset=utf-8", ".json": "application/json; charset=utf-8" }[path.extname(file).toLowerCase()] || "application/octet-stream";',
-              )
-              start = text.index('async function startServer(root) {')
-              end = text.index('async function diagramSources', start)
-              text = text[:start] + '''async function startServer(root) {
+
+          text = text.replace('import { execFile } from "node:child_process";\n', '')
+          text = text.replace('import { createRequire } from "node:module";\n', '')
+          text = text.replace('import { promisify } from "node:util";\n', '')
+          text = text.replace('const execFileAsync = promisify(execFile);\nconst require = createRequire(import.meta.url);\n', '')
+          text = text.replace(
+              'const MERMAID_CLI_VERSION = installedPackageVersion("@mermaid-js", "mermaid-cli");',
+              'const MERMAID_VERSION = installedPackageVersion("mermaid");',
+          )
+          text = text.replace(
+              'return { ".html": "text/html; charset=utf-8", ".css": "text/css; charset=utf-8", ".svg": "image/svg+xml" }[path.extname(file).toLowerCase()] || "application/octet-stream";',
+              'return { ".html": "text/html; charset=utf-8", ".css": "text/css; charset=utf-8", ".svg": "image/svg+xml", ".mjs": "text/javascript; charset=utf-8", ".js": "text/javascript; charset=utf-8", ".json": "application/json; charset=utf-8" }[path.extname(file).toLowerCase()] || "application/octet-stream";',
+          )
+
+          start = text.index('async function startServer(root) {')
+          end = text.index('async function findTopics', start)
+          text = text[:start] + '''async function startServer(root) {
             const resolvedRoot = path.resolve(root);
             const mermaidRoot = path.resolve(TOOL_ROOT, "node_modules", "mermaid", "dist");
             const server = createServer(async (request, response) => {
@@ -59,16 +65,22 @@ jobs:
                 const file = stat.isDirectory() ? path.join(candidate, "index.html") : candidate;
                 response.writeHead(200, { "Content-Type": contentType(file), "Cache-Control": "no-store", "X-Content-Type-Options": "nosniff" });
                 response.end(await fs.readFile(file));
-              } catch (error) { response.writeHead(error?.code === "ENOENT" ? 404 : 500).end(String(error)); }
+              } catch (error) {
+                response.writeHead(error?.code === "ENOENT" ? 404 : 500).end(String(error));
+              }
             });
-            await new Promise((resolve, reject) => { server.once("error", reject); server.listen(0, "127.0.0.1", resolve); });
+            await new Promise((resolve, reject) => {
+              server.once("error", reject);
+              server.listen(0, "127.0.0.1", resolve);
+            });
             return { server, origin: `http://127.0.0.1:${server.address().port}` };
           }
 
           ''' + text[end:]
-              start = text.index('async function renderDiagrams(')
-              end = text.index('async function prepareBuild', start)
-              text = text[:start] + '''async function renderDiagrams(browser, origin, root, sourceDir, buildDir) {
+
+          start = text.index('async function renderDiagrams(')
+          end = text.index('async function readMetaTags', start)
+          text = text[:start] + '''async function renderDiagrams(browser, origin, root, sourceDir, buildDir) {
             const config = JSON.parse(await fs.readFile(path.join(root, "templates", "study-slides", "mermaid-config.json"), "utf8"));
             const sources = await diagramSources(sourceDir);
             if (!sources.length) throw new Error(`${path.basename(sourceDir)}: no Mermaid sources found`);
@@ -81,8 +93,10 @@ jobs:
             await page.setRequestInterception(true);
             page.on("request", (request) => {
               const requestUrl = new URL(request.url());
-              if (requestUrl.origin !== origin) { externalRequests.push(request.url()); request.abort("blockedbyclient"); }
-              else request.continue();
+              if (requestUrl.origin !== origin) {
+                externalRequests.push(request.url());
+                request.abort("blockedbyclient");
+              } else request.continue();
             });
             try {
               await page.goto(`${origin}/__osp_tools__/mermaid-renderer.html`, { waitUntil: "networkidle0" });
@@ -103,38 +117,36 @@ jobs:
                 await fs.writeFile(output, value, "utf8");
                 outputs.push(output);
               }
-            } finally { await page.close(); }
+            } finally {
+              await page.close();
+            }
             if (consoleErrors.length) throw new Error(`${path.basename(sourceDir)}: Mermaid browser errors: ${consoleErrors.join(" | ")}`);
             if (externalRequests.length) throw new Error(`${path.basename(sourceDir)}: Mermaid requested external resources: ${externalRequests.join(" | ")}`);
             return { sources, outputs };
           }
 
           ''' + text[end:]
-              text = text.replace('const diagrams = await renderDiagrams(root, topicDir, buildDir);', 'const diagrams = await renderDiagrams(browser, origin, root, topicDir, buildDir);')
-              text = text.replace(
-                  'renderer: { id: RENDERER_ID, puppeteer: PUPPETEER_VERSION, mermaid_cli: MERMAID_CLI_VERSION, pdf_lib: PDF_LIB_VERSION, strategy: "static_svg_isolated_page_merge" },',
-                  'renderer: { id: RENDERER_ID, puppeteer: PUPPETEER_VERSION, mermaid: MERMAID_VERSION, pdf_lib: PDF_LIB_VERSION, strategy: "localhost_static_svg_isolated_page_merge" },',
-              )
-              path.write_text(text, encoding='utf-8')
+
+          text = text.replace(
+              'const diagrams = await renderDiagrams(root, topicDir, buildDir);',
+              'const diagrams = await renderDiagrams(browser, origin, root, topicDir, buildDir);',
+          )
+          text = text.replace(
+              'renderer: { id: RENDERER_ID, puppeteer: PUPPETEER_VERSION, mermaid_cli: MERMAID_CLI_VERSION, pdf_lib: PDF_LIB_VERSION, strategy: "static_svg_isolated_page_merge" },',
+              'renderer: { id: RENDERER_ID, puppeteer: PUPPETEER_VERSION, mermaid: MERMAID_VERSION, pdf_lib: PDF_LIB_VERSION, strategy: "localhost_static_svg_isolated_page_merge" },',
+          )
+          path.write_text(text, encoding='utf-8')
 
           validator = Path('scripts/validate_generation_efficiency.py')
-          value = validator.read_text(encoding='utf-8').replace('@mermaid-js/mermaid-cli@11.16.0', 'mermaid@11.12.2')
-          validator.write_text(value, encoding='utf-8')
-
-          Path('templates/study-slides/puppeteer-config.json').write_text('''{
-            "headless": true,
-            "args": [
-              "--no-sandbox",
-              "--disable-setuid-sandbox",
-              "--disable-dev-shm-usage",
-              "--font-render-hinting=none"
-            ]
-          }
-          ''', encoding='utf-8')
+          validator.write_text(
+              validator.read_text(encoding='utf-8').replace('@mermaid-js/mermaid-cli@11.16.0', 'mermaid@11.12.2'),
+              encoding='utf-8',
+          )
           PY
           node --check scripts/render_study_slides.mjs
           python -m py_compile scripts/validate_generation_efficiency.py
-      - name: Publish one consolidated non-workflow commit
+
+      - name: Publish consolidated non-workflow tree
         run: |
           git config user.name open-study-path-bot
           git config user.email open-study-path-bot@users.noreply.github.com
