@@ -51,7 +51,7 @@ Author diagrams as `diagrams/*.mmd`. HTML references the corresponding generated
 >
 ```
 
-The CI renderer loads the pinned local Mermaid package through a restricted localhost page and writes SVG before opening the slide HTML. Learner artifacts contain no Mermaid runtime and execute no JavaScript. PNG diagrams and full-slide raster images are outside the contract.
+The CI renderer loads the pinned local Mermaid package through a restricted localhost page and writes SVG before opening the slide HTML. The learner PDF contains no Mermaid runtime and executes no JavaScript. PNG diagrams and full-slide raster images are outside the contract.
 
 Generated SVGs must contain no script or external asset. Each diagram needs alternative text and an explanatory caption that states both interpretation and relevant limit.
 
