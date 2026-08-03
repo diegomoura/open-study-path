@@ -2,9 +2,10 @@
 import { createHash } from "node:crypto";
 import { createServer } from "node:http";
 import { execFile } from "node:child_process";
-import { promises as fs } from "node:fs";
+import { promises as fs, readFileSync } from "node:fs";
 import { createRequire } from "node:module";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 import process from "node:process";
 import { promisify } from "node:util";
 import { PDFDocument } from "pdf-lib";
@@ -12,9 +13,16 @@ import puppeteer from "puppeteer";
 
 const execFileAsync = promisify(execFile);
 const require = createRequire(import.meta.url);
-const PUPPETEER_VERSION = require("puppeteer/package.json").version;
-const MERMAID_CLI_VERSION = require("@mermaid-js/mermaid-cli/package.json").version;
-const PDF_LIB_VERSION = require("pdf-lib/package.json").version;
+const TOOL_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
+
+function installedPackageVersion(...segments) {
+  const packageJson = path.join(TOOL_ROOT, "node_modules", ...segments, "package.json");
+  return JSON.parse(readFileSync(packageJson, "utf8")).version;
+}
+
+const PUPPETEER_VERSION = installedPackageVersion("puppeteer");
+const MERMAID_CLI_VERSION = installedPackageVersion("@mermaid-js", "mermaid-cli");
+const PDF_LIB_VERSION = installedPackageVersion("pdf-lib");
 const RENDERER_ID = "open-study-path-html-svg-pdf-v3";
 const PDF_PRODUCER = "Open Study Path static SVG PDF renderer v3";
 const FIXED_PDF_DATE = new Date("2000-01-01T00:00:00.000Z");
@@ -96,7 +104,7 @@ async function diagramSources(sourceDir) {
 }
 
 async function renderDiagrams(root, sourceDir, buildDir) {
-  const mmdc = path.join(root, "node_modules", ".bin", process.platform === "win32" ? "mmdc.cmd" : "mmdc");
+  const mmdc = path.join(TOOL_ROOT, "node_modules", ".bin", process.platform === "win32" ? "mmdc.cmd" : "mmdc");
   const config = path.join(root, "templates", "study-slides", "mermaid-config.json");
   const puppeteerConfig = path.join(root, "templates", "study-slides", "puppeteer-config.json");
   const sources = await diagramSources(sourceDir);
