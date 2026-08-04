@@ -5,27 +5,43 @@ on:
     paths:
       - '.open-study-path/instance.yml'
       - 'state/integrations.json'
-      - 'instructions/41-task-backend-projection.md'
-      - 'instructions/manifest.yml'
-      - 'schemas/publication-operation.schema.json'
-      - 'scripts/validate_task_projection.py'
-      - 'scripts/pedagogical_content_hash.py'
-      - 'tests/test_validate_task_projection.py'
-      - 'tests/test_pedagogical_content_hash.py'
       - 'state/operations/**'
+      - 'study/integrations.md'
+      - 'instructions/41-task-backend-projection.md'
+      - 'schemas/publication-operation.schema.json'
+      - 'schemas/integrations-state.schema.json'
+      - 'templates/integrations-state.json'
+      - 'templates/publication-operation.json'
+      - 'scripts/task_projection_*.py'
+      - 'scripts/operation_branch.py'
+      - 'scripts/render_integration_summary.py'
+      - 'scripts/render_project_instructions.py'
+      - 'scripts/validate_task_projection.py'
+      - 'tests/test_task_projection_engine_*.py'
+      - 'tests/test_operation_branch.py'
+      - 'tests/test_render_project_instructions.py'
+      - 'tests/test_validate_task_projection.py'
   push:
     branches: [main]
     paths:
       - '.open-study-path/instance.yml'
       - 'state/integrations.json'
-      - 'instructions/41-task-backend-projection.md'
-      - 'instructions/manifest.yml'
-      - 'schemas/publication-operation.schema.json'
-      - 'scripts/validate_task_projection.py'
-      - 'scripts/pedagogical_content_hash.py'
-      - 'tests/test_validate_task_projection.py'
-      - 'tests/test_pedagogical_content_hash.py'
       - 'state/operations/**'
+      - 'study/integrations.md'
+      - 'instructions/41-task-backend-projection.md'
+      - 'schemas/publication-operation.schema.json'
+      - 'schemas/integrations-state.schema.json'
+      - 'templates/integrations-state.json'
+      - 'templates/publication-operation.json'
+      - 'scripts/task_projection_*.py'
+      - 'scripts/operation_branch.py'
+      - 'scripts/render_integration_summary.py'
+      - 'scripts/render_project_instructions.py'
+      - 'scripts/validate_task_projection.py'
+      - 'tests/test_task_projection_engine_*.py'
+      - 'tests/test_operation_branch.py'
+      - 'tests/test_render_project_instructions.py'
+      - 'tests/test_validate_task_projection.py'
   workflow_dispatch:
 
 concurrency:
@@ -44,11 +60,9 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-      - name: Validate contract, journals and published projection
+      - name: Validate executable contract and durable state
         run: python scripts/validate_task_projection.py
-      - name: Run projection and hash tests
+      - name: Run behavioral adapter, migration and workflow tests
         run: |
           set -o pipefail
-          python -m unittest \
-            tests/test_validate_task_projection.py \
-            tests/test_pedagogical_content_hash.py 2>&1 | tee task-projection-tests.log
+          PYTHONPATH=scripts python -m unittest discover -s tests -v 2>&1 | tee task-projection-tests.log
