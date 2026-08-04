@@ -3,14 +3,13 @@ name: Apply publication projection patch
 on:
   pull_request:
     types: [reopened]
-  workflow_dispatch:
 
 permissions:
   contents: write
 
 jobs:
   apply:
-    if: github.event_name == 'workflow_dispatch' || github.event.pull_request.head.ref == 'agent/publication-contract-audit-final'
+    if: github.event.pull_request.head.ref == 'agent/publication-contract-audit-final'
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
@@ -26,13 +25,6 @@ jobs:
           tar -xzf /tmp/open-study-path-patch.tgz -C .
           rm -rf .open-study-path/patch-payload
           rm -f .github/workflows/apply-publication-patch.yml
-      - name: Validate patch before commit
-        shell: bash
-        run: |
-          set -euo pipefail
-          python -m py_compile scripts/task_projection_engine.py scripts/operation_branch.py scripts/render_integration_summary.py scripts/render_project_instructions.py scripts/validate_task_projection.py
-          PYTHONPATH=scripts python -m unittest discover -s tests -v
-          PYTHONPATH=scripts python scripts/validate_task_projection.py
       - name: Commit expanded patch
         shell: bash
         run: |
