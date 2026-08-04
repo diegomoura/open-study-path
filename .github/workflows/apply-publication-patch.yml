@@ -21,10 +21,11 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          cp .github/workflows/validate-task-projection.yml /tmp/validate-task-projection.yml
           cat .open-study-path/patch-payload/part-* | tr -d '\n' | base64 --decode > /tmp/open-study-path-patch.tgz
           tar -xzf /tmp/open-study-path-patch.tgz -C .
+          cp /tmp/validate-task-projection.yml .github/workflows/validate-task-projection.yml
           rm -rf .open-study-path/patch-payload
-          rm -f .github/workflows/apply-publication-patch.yml
       - name: Commit expanded patch
         shell: bash
         run: |
