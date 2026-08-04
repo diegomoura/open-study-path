@@ -13,13 +13,18 @@ import yaml
 
 from generated_instance_contract import is_specialized_review_path
 from review_framework import REVIEW_PROFILES, changed_files, validate_changed_coverage
-from review_framework_guard import instance_transition_errors, review_path_errors, review_phases
+from review_framework_guard import (
+    instance_transition_errors,
+    review_path_errors,
+    review_phases,
+)
 
 ROOT = Path(__file__).resolve().parents[1]
 INSTANCE_MARKER = ".open-study-path/instance.yml"
 REVIEW_INSTRUCTION = "instructions/04-review-generated-artifacts.md"
 REVIEW_DOC = "docs/review-framework.md"
 REVIEW_TEMPLATE = "templates/review.yml"
+OPERATION_PREFIX = "state/operations/"
 
 LIFECYCLE_PHASE_PROFILES = {
     "bootstrap_instance": "setup",
@@ -72,11 +77,28 @@ def load_instance_from_base(base_sha: str | None) -> Any:
     try:
         return yaml.safe_load(completed.stdout)
     except yaml.YAMLError as exc:
-        fail(f"could not parse base instance marker for review enforcement: {exc}")
+        fail(
+            f"could not parse base instance marker for review enforcement: {exc}"
+        )
+
+
+def uses_dedicated_validation(path: str) -> bool:
+    """Return technical evidence paths governed by their own validators."""
+
+    normalized = Path(path).as_posix()
+    return is_specialized_review_path(normalized) or (
+        normalized.startswith(OPERATION_PREFIX) and normalized.endswith(".json")
+    )
 
 
 def validate_reusable_contract() -> None:
-    for path in [REVIEW_INSTRUCTION, REVIEW_DOC, REVIEW_TEMPLATE, "scripts/generated_instance_contract.py"]:
+    for path in [
+        REVIEW_INSTRUCTION,
+        REVIEW_DOC,
+        REVIEW_TEMPLATE,
+        "scripts/generated_instance_contract.py",
+        "scripts/validate_task_projection.py",
+    ]:
         read(path)
 
     instance_template = load_yaml("templates/instance.yml")
@@ -94,24 +116,38 @@ def validate_reusable_contract() -> None:
     if framework.get("require_generated_diff_coverage") is not True:
         fail("new instances must require generated diff coverage")
     required_profiles = framework.get("required_profiles")
-    if not isinstance(required_profiles, list) or set(required_profiles) != set(REVIEW_PROFILES):
-        fail("review_framework.required_profiles must list every supported profile")
+    if not isinstance(required_profiles, list) or set(required_profiles) != set(
+        REVIEW_PROFILES
+    ):
+        fail(
+            "review_framework.required_profiles must list every supported profile"
+        )
 
     manifest = load_yaml("instructions/manifest.yml")
-    phases = {phase.get("id"): phase for phase in manifest.get("phases", []) if isinstance(phase, dict)}
+    phases = {
+        phase.get("id"): phase
+        for phase in manifest.get("phases", [])
+        if isinstance(phase, dict)
+    }
     for phase_id, profile in LIFECYCLE_PHASE_PROFILES.items():
         phase = phases.get(phase_id)
         if not phase:
             fail(f"lifecycle manifest is missing phase: {phase_id}")
         if phase.get("phase_review") != REVIEW_INSTRUCTION:
-            fail(f"{phase_id} must reference the shared phase review instruction")
+            fail(
+                f"{phase_id} must reference the shared phase review instruction"
+            )
         if phase.get("review_profile") != profile:
             fail(f"{phase_id} must use review_profile: {profile}")
         if phase.get("review_outputs") != ["state/reviews/"]:
-            fail(f"{phase_id} must declare state/reviews/ as dedicated review output")
+            fail(
+                f"{phase_id} must declare state/reviews/ as dedicated review output"
+            )
         outputs = phase.get("outputs", [])
         if "state/reviews/" in outputs:
-            fail(f"{phase_id} must keep review evidence separate from phase outputs")
+            fail(
+                f"{phase_id} must keep review evidence separate from phase outputs"
+            )
 
     review_template = load_yaml(REVIEW_TEMPLATE)
     if not isinstance(review_template, dict):
@@ -141,7 +177,9 @@ def validate_reusable_contract() -> None:
         "python scripts/validate_review_framework.py",
     ]:
         if term not in workflow:
-            fail(f"validation workflow is missing review-framework term: {term}")
+            fail(
+                f"validation workflow is missing review-framework term: {term}"
+            )
 
     agents = read("AGENTS.md")
     for term in [
@@ -154,7 +192,11 @@ def validate_reusable_contract() -> None:
             fail(f"AGENTS.md is missing review-framework term: {term}")
 
     completion = read("instructions/phase-completion.md")
-    for term in [REVIEW_INSTRUCTION, "approved review artifact", "generated diff coverage"]:
+    for term in [
+        REVIEW_INSTRUCTION,
+        "approved review artifact",
+        "generated diff coverage",
+    ]:
         if term not in completion:
             fail(f"phase completion is missing review-framework term: {term}")
 
@@ -162,7 +204,11 @@ def validate_reusable_contract() -> None:
 def validate_instance_diff() -> None:
     base_sha = os.getenv("REVIEW_BASE_SHA") or None
     head_marker = ROOT / INSTANCE_MARKER
-    head_document = yaml.safe_load(head_marker.read_text(encoding="utf-8")) if head_marker.is_file() else None
+    head_document = (
+        yaml.safe_load(head_marker.read_text(encoding="utf-8"))
+        if head_marker.is_file()
+        else None
+    )
     base_document = load_instance_from_base(base_sha)
 
     # A reviewed instance cannot disable the gate by deleting its marker. Legacy
@@ -185,10 +231,12 @@ def validate_instance_diff() -> None:
             print(f"REVIEW ERROR: {error}", file=sys.stderr)
         raise SystemExit(1)
 
-    # Content and slide reviews are already validated by their specialized
-    # contracts. Requiring a generic phase review to approve those review files
-    # creates a circular, impossible coverage requirement.
-    coverage_paths = tuple(path for path in paths if not is_specialized_review_path(path))
+    # Specialized review evidence and operation journals are validated by their
+    # dedicated contracts. Requiring generic phase coverage creates circular
+    # evidence or conflicts with the lifecycle manifest.
+    coverage_paths = tuple(
+        path for path in paths if not uses_dedicated_validation(path)
+    )
     result = validate_changed_coverage(
         ROOT,
         coverage_paths,

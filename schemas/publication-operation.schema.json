@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://open-study-path.dev/schemas/publication-operation.schema.json",
-  "title": "Open Study Path task projection operation",
+  "title": "Open Study Path projection operation journal",
   "type": "object",
   "additionalProperties": false,
   "required": [
@@ -12,32 +12,49 @@
     "status",
     "topics",
     "attempt",
+    "checkpoints",
     "external_read_count",
     "external_write_count",
+    "commit_budget",
+    "warnings",
+    "errors",
     "started_at",
     "updated_at"
   ],
   "properties": {
     "operation_id": {"type": "string", "pattern": "^[a-z0-9][a-z0-9._-]{2,127}$"},
-    "operation_type": {"enum": ["publication", "assessment_projection", "reconciliation"]},
-    "provider": {"enum": ["trello", "todoist", "github_issues", "clickup", "notion", "markdown"]},
+    "operation_type": {"enum": ["publication", "assessment_projection", "reconciliation", "migration"]},
+    "provider": {"enum": ["trello", "todoist", "github_issues"]},
     "mode": {"enum": ["active_window", "full_curriculum"]},
     "status": {"enum": ["not_started", "in_progress", "partial", "blocked", "failed", "success"]},
-    "current_batch": {"type": ["string", "null"]},
     "topics": {
       "type": "array",
       "uniqueItems": true,
       "items": {"type": "string", "pattern": "^TOPIC-[0-9]{3,}$"}
     },
     "attempt": {"type": "integer", "minimum": 1},
+    "checkpoints": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["name", "at"],
+        "properties": {
+          "name": {"type": "string", "minLength": 1},
+          "at": {"type": "string", "format": "date-time"}
+        },
+        "additionalProperties": true
+      }
+    },
     "external_read_count": {"type": "integer", "minimum": 0},
     "external_write_count": {"type": "integer", "minimum": 0},
-    "last_checkpoint": {"type": ["string", "null"]},
-    "last_error": {"type": ["string", "null"], "maxLength": 500},
+    "roadmap_fingerprint": {"type": ["string", "null"]},
     "branch": {"type": ["string", "null"]},
     "pull_request": {"type": ["integer", "null"], "minimum": 1},
-    "started_at": {"type": "string", "format": "date-time"},
-    "updated_at": {"type": "string", "format": "date-time"},
+    "commit_budget": {"type": "integer", "minimum": 1},
+    "warnings": {"type": "array", "items": {"type": "string"}},
+    "errors": {"type": "array", "items": {"type": "string"}},
+    "started_at": {"type": ["string", "null"], "format": "date-time"},
+    "updated_at": {"type": ["string", "null"], "format": "date-time"},
     "completed_at": {"type": ["string", "null"], "format": "date-time"}
   }
 }

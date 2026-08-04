@@ -1,11 +1,13 @@
 {
-  "version": 2,
+  "version": 3,
   "source_of_truth": {
     "provider": "github",
     "repository": "OWNER/REPOSITORY"
   },
   "selected_capabilities": {},
   "resources": [],
+  "projection": null,
+  "operations": {},
   "resolution": {
     "status": "not_started",
     "unresolved_capabilities": [],
