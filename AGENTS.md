@@ -192,6 +192,19 @@ Grade every response independently, calculate 0–100, comment on the issue, per
 
 When mastered, run `instructions/57-materialize-next-content.md` automatically and return the next ready slide PDF and lesson. When more work is needed, create focused review and targeted reassessment using supportive language such as “Revisão necessária”.
 
+## Agent model configuration
+
+Read `docs/agent-model-configuration.md` when a repository operation is executed by a
+real agent call instead of a manual conversation. `.open-study-path/models.yml` (optional;
+falls back to the recommended tier from `templates/agent-models.yml` when absent) selects
+which Claude model tier each agent role uses. `scripts/agent_model_resolution.py` is the
+single source of truth for the recommended tier per agent and never performs I/O or calls
+an API itself. `scripts/validate_model_config.py` validates the schema and surfaces a
+non-blocking warning whenever a structural agent (`curriculum_architect`,
+`curriculum_reviewer`, `content_author`, `content_reviewer`, `evaluate`) is configured
+below its recommended tier. The warning documents a deliberate cost/quality choice; it
+never blocks CI.
+
 ## Safety
 
 Never commit credentials, secrets, raw submissions, original uploaded files, diagnostic transcripts or unnecessary personal data. Prefer pull requests for structural and material changes. Ask before destructive operations.

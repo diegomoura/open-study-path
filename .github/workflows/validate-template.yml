@@ -165,6 +165,10 @@ jobs:
         run: python scripts/test_integration_resolution.py
       - name: Validate selected integration resolution
         run: python scripts/validate_integration_resolution.py
+      - name: Test agent model resolution
+        run: python scripts/test_agent_model_resolution.py
+      - name: Validate agent model configuration
+        run: python scripts/validate_model_config.py
       - name: Validate topic-first planning and publication safety
         run: python scripts/validate_planning_publication_safety.py
       - name: Test topic-first planning and publication safety
