@@ -97,25 +97,28 @@ usage into one number per run and:
 
 This is what a course creator publishing an instance can point learners (or
 their own budget planning) to for a real estimate, rather than a guess.
-Sample record shape:
+Sample record shape (real, from `state/agent-pilot-usage.jsonl` after a
+`bootstrap_instance` run with prompt caching active):
 
 ```json
-{"phase": "bootstrap_instance", "target_repo": "owner/course", "author": {"model": "claude-haiku-4-5-20251001", "input_tokens": 5312, "output_tokens": 812, "cache_creation_input_tokens": 0, "cache_read_input_tokens": 0, "total_tokens": 6124, "estimated_cost_usd": 0.009372}, "reviewer": {"model": "claude-haiku-4-5-20251001", "input_tokens": 6890, "output_tokens": 1024, "cache_creation_input_tokens": 0, "cache_read_input_tokens": 0, "total_tokens": 7914, "estimated_cost_usd": 0.012010}, "combined_tokens": 14038, "combined_estimated_cost_usd": 0.021382, "recorded_at": "2026-08-14T18:00:00+00:00"}
+{"phase": "bootstrap_instance", "target_repo": "owner/course", "author": {"model": "claude-haiku-4-5-20251001", "input_tokens": 31, "output_tokens": 3866, "cache_creation_input_tokens": 22439, "cache_read_input_tokens": 64375, "total_tokens": 90711, "estimated_cost_usd": 0.05384725}, "reviewer": {"model": "claude-haiku-4-5-20251001", "input_tokens": 51, "output_tokens": 2665, "cache_creation_input_tokens": 22381, "cache_read_input_tokens": 131429, "total_tokens": 156526, "estimated_cost_usd": 0.05449515}, "combined_tokens": 247237, "combined_estimated_cost_usd": 0.1083424, "recorded_at": "2026-08-14T19:12:00+00:00"}
 ```
 
-Both pilot phases run on Haiku 4.5 (the cheapest tier). A real
-`bootstrap_instance` run before prompt caching was enabled cost **$0.24** for
-215,290 combined tokens (author + reviewer) -- higher than a rough guess
-would suggest, because every round trip of the tool-use loop was resending
-the full system prompt and growing conversation history from scratch, with
-zero cache reuse (`cache_creation_input_tokens` and `cache_read_input_tokens`
-were both 0 in that run's `state/agent-pilot-usage.jsonl` record).
+Both pilot phases run on Haiku 4.5 (the cheapest tier). Two real
+`bootstrap_instance` runs against the same disposable test repository:
 
-Prompt caching is now enabled (see below), which should cut most of that
-`$0.24` since the bulk of it was repeated, cacheable input. Until a fresh
-timed run confirms the post-caching number, treat the pre-caching figure as
-the pessimistic upper bound for `bootstrap_instance`/`configure_intake` on
-Haiku 4.5, not the expected steady-state cost.
+| Run | Combined tokens | Estimated cost | Notes |
+|---|---|---|---|
+| Before prompt caching | 215,290 | **$0.24** | `cache_creation_input_tokens` and `cache_read_input_tokens` both 0 -- every round trip resent the full system prompt and growing history from scratch |
+| After prompt caching | 247,237 | **$0.108** | `input_tokens` dropped to near-zero (31 / 51); almost everything became `cache_read_input_tokens` at 10% of input price |
+
+Caching roughly **halved the cost** despite the token *count* going up (more
+total tokens counted, but the overwhelming majority now bill at the 10%
+cache-read rate instead of full input price). Treat $0.10-$0.25 per
+`bootstrap_instance`/`configure_intake` run as the realistic range on Haiku
+4.5 today, not a guess of "well under a cent" -- an instruction contract this
+size, re-read every round trip of an agentic loop, is genuinely more tokens
+than it looks like from the file count alone.
 
 ### Prompt caching
 
