@@ -246,3 +246,14 @@ Correção sugerida para uma iteração futura: mover (ou duplicar) o upload do
 resumo do author para antes do check de diff vazio, ou imprimir
 `next_action` diretamente no job summary (`$GITHUB_STEP_SUMMARY`)
 independente do resultado do diff.
+
+**Corrigido nesta mesma etapa.** Novo step "Publish author result to the job
+summary" (`scripts/publish_author_summary.py`) roda logo após "Extract
+author summary for the reviewer" e antes de "Fail if the author produced no
+diff" -- imprime `summary`/`next_action` no `$GITHUB_STEP_SUMMARY` e no log
+puro, incondicionalmente. "Upload author artifacts" ganhou `if: always()`
+pelo mesmo motivo: o JSON bruto do author fica disponível mesmo quando o job
+falha de propósito por diff vazio. Seguindo a mesma convenção de
+`scripts/format_pr_body.py`, a lógica ficou num script Python próprio, não
+inline no YAML. Teste offline novo:
+`scripts/test_publish_author_summary.py` (2 casos).
