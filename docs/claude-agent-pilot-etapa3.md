@@ -1,13 +1,14 @@
 # Agent pilot: Etapa 3 — medição de custo e qualidade de revisão
 
-Status: primeira passada de medição, com dados reais puxados do repositório de
-teste descartável (`diegomoura/open-study-path-agent-test-20260814152628`),
-onde as 5 execuções reais do piloto (Etapa 2, PRs #74–#79) rodaram. Nenhum
-desses números vivia em `docs/claude-agent-pilot.md` ou em
+Status: **fechada**. Dados reais puxados do repositório de teste descartável
+(`diegomoura/open-study-path-agent-test-20260814152628`), cobrindo as 5
+execuções da Etapa 2 (PRs #74–#79) mais uma 6ª execução de `configure_intake`
+rodada especificamente para fechar a lacuna descrita nas seções 2 e 3.2
+abaixo (repo de teste, PR #6, run `31833350501`, sucesso). Nenhum desses
+números vivia em `docs/claude-agent-pilot.md` ou em
 `state/agent-pilot-usage.jsonl` do template canônico — o template nunca roda
-`bootstrap_instance` nele mesmo, então o histórico só existe no repo
-descartável. Este documento consolida o que já existe e nomeia
-explicitamente o que ainda falta, em vez de estimar.
+`bootstrap_instance`/`configure_intake` nele mesmo, então o histórico só
+existe no repo descartável. Este documento consolida o que existe.
 
 ## 1. Linha do tempo real das 5 execuções
 
@@ -38,29 +39,25 @@ Números batem exatamente com os já publicados em
 novo aqui além de confirmar a fonte primária (corpo do PR + commit
 `state/agent-pilot-usage.jsonl` no repo de teste).
 
-### `configure_intake` — **não temos número comparável**
+### `configure_intake` — resolvido nesta revisão do documento
 
-A única execução real de `configure_intake` (PR #2, 15:44) é **anterior**
-ao commit que adicionou rastreio de custo (`134cdaf`, PR #77) e ao commit de
-caching (`c86d189`, PR #78). O corpo do PR #2 não tem bloco de "Combined
-usage" porque esse recurso ainda não existia quando ele rodou —
-`state/agent-pilot-usage.jsonl` nem chegou a ser criado nesse run.
+A execução original (PR #2, 15:44) é **anterior** ao commit que adicionou
+rastreio de custo (`134cdaf`, PR #77) e ao commit de caching (`c86d189`, PR
+#78), então não tinha número comparável. Rodei uma execução nova
+(`workflow_dispatch`, `phase: configure_intake`, mesmo repo de teste, com
+#75/#76/#77/#78 todos presentes) para fechar essa lacuna. Resultado real,
+repo de teste PR #6:
 
-Consequência prática: **não é seguro estimar o custo de `configure_intake`
-extrapolando de `bootstrap_instance`.** São instruções diferentes
-(`instructions/05-configure-intake.md` vs. `instructions/00-bootstrap.md`),
-com contratos de tamanhos diferentes, e o próprio
-`docs/claude-agent-pilot.md` já avisa que a proporção entre "tamanho do
-arquivo" e "tokens realmente gastos por um loop agentic com múltiplas
-idas-e-voltas" não é linear — foi exatamente essa suposição errada que gerou
-o número pré-caching de $0.24 em vez do estimado inicial.
+| Run | Combined tokens | Custo estimado | Caching |
+|---|---|---|---|
+| `configure_intake`, run atual (19:28) | 165.957 | $0.0759 | sim |
 
-**Ação pendente, não feita neste documento:** disparar
-`.github/workflows/agent-pilot-setup.yml` com `phase: configure_intake`
-contra o mesmo repo de teste, agora com #75/#76/#77/#78 todos presentes, e
-registrar o número real. Não fiz esse dispatch agora porque ele gasta
-dinheiro de verdade da sua conta Anthropic sem confirmação explícita sua
-neste chat — ver seção 5.
+Comparando com `bootstrap_instance` pós-caching (247.237 tokens / $0.108):
+`configure_intake` é mais barato, como esperado — a instrução
+(`instructions/05-configure-intake.md`) é menor e o author lida com menos
+arquivos de saída (2 artefatos vs. 6 em `bootstrap_instance`). Faixa
+realista hoje para as duas fases do piloto, com caching ativo: **$0.07–$0.11
+por execução em Haiku 4.5.**
 
 ## 3. Qualidade de revisão: evidência real, não simulada
 
@@ -117,60 +114,66 @@ run de `bootstrap_instance` cinco minutos depois.
 Isso não é surpresa olhando a ordem dos commits: PR #2 rodou **antes** de
 #76 adicionar a tool `compute_sha256` ao reviewer. O bug que #76 corrigiu
 foi descoberto justamente a partir do run de `bootstrap_instance` (PR #3),
-que rodou *depois* de PR #2. `configure_intake` nunca voltou a rodar para
-confirmar que a correção também vale para essa fase — é uma suposição
-razoável (o harness e a tool são compartilhados entre as duas fases,
-`scripts/agent_runtime.py` não diferencia por fase), mas é uma suposição,
-não uma medição.
+que rodou *depois* de PR #2.
+
+**Resolvido nesta revisão:** rodei `configure_intake` de novo (mesma
+execução da seção 2, PR #6 no repo de teste) especificamente para checar
+se a correção realmente se aplica a esta fase, em vez de assumir. Baixei os
+dois artefatos gerados (`instance.yml`, `study.config.yml`) e recomputei o
+SHA-256 de cada um localmente:
+
+```
+62e2205b5d384091dabc4881e0194b09d3b2c2c547ae44c200aa02fed8dcc932  instance.yml
+65b9e265a27f4dd6f8a93627045c47caceb38db35860a3115ca504571a1de04c  study.config.yml
+```
+
+Os dois batem exatamente com o que `state/reviews/agent-pilot-configure_intake.yml`
+registrou, e o reviewer aprovou (`status: approved`, `blocking_findings: []`).
+Confirmado: a correção de #76 vale para `configure_intake` também — não é
+mais suposição.
 
 ### 3.3 Tabela-resumo
 
 | Fase | Author inventou hash? | Reviewer isolado calculou de verdade? | Resultado |
 |---|---|---|---|
 | `bootstrap_instance`, pré-#76 (PR #3) | sim | **sim** (recomputou e comparou) | `action_required` — pegou a falha |
-| `configure_intake`, pré-#76 (PR #2, único run existente) | sim | **não** (copiou o valor do author) | `approved` — não pegou |
+| `configure_intake`, pré-#76 (PR #2) | sim | **não** (copiou o valor do author) | `approved` — não pegou |
 | `bootstrap_instance`, pós-#76 (PRs #4, #5) | n/a (author não escreve mais seu review, ver `docs/claude-agent-pilot.md` §"Author self-review") | n/a | `approved`, sem findings sobre hash |
+| `configure_intake`, pós-#76 (PR #6, run novo) | n/a (mesma razão) | **sim** — hashes conferidos manualmente contra os bytes reais | `approved`, sem findings sobre hash |
 
-A linha 3 confirma que a correção estrutural (#77: `state/reviews/` fora da
-allowlist de escrita do author) elimina a classe inteira de problema para
-`bootstrap_instance` — o author não escreve mais um review fabricado, então
-não há mais nada pra reviewer "aceitar por engano". Essa mesma correção
-também se aplica a `configure_intake` (é a mesma allowlist,
-`scripts/agent_runtime.py`), mas **isso nunca foi confirmado com uma
-execução real da fase**, só inferido do código.
+A linha 3 e a linha 4 juntas confirmam que a correção estrutural (#77:
+`state/reviews/` fora da allowlist de escrita do author, mais #76: tool
+`compute_sha256` real) elimina a classe inteira de problema nas **duas**
+fases do piloto, não só em `bootstrap_instance` como estava confirmado
+antes desta revisão.
 
 ## 4. O que isso significa para a decisão da Etapa 4
 
 A proposta (seção 7, etapa 4) pergunta se estende para `intake`,
-`diagnostic`, `publish` depois do piloto. Com os dados reais que existem
-hoje:
+`diagnostic`, `publish` depois do piloto. Com os dados reais de hoje, as
+**duas fases do piloto estão validadas**:
 
-- **`bootstrap_instance` está validado**: custo dentro da faixa
-  $0.10–$0.25 documentada, e há evidência real (não hipotética) de que o
-  reviewer isolado pega uma classe de falha que o fluxo manual de hoje
-  deixaria passar.
-- **`configure_intake` não está validado da mesma forma.** Custo: zero dados
-  pós-tracking. Qualidade: a única medição existente é *anterior* às
-  correções estruturais e mostra exatamente o modo de falha que essas
-  correções deveriam prevenir — sem uma execução nova, não dá pra afirmar
-  que `configure_intake` está no mesmo nível de confiabilidade que
-  `bootstrap_instance` hoje.
+- Custo: `bootstrap_instance` $0.108–$0.24 (com/sem cache);
+  `configure_intake` $0.076 (com cache, único número que existe, já que a
+  execução original é anterior ao tracking). Faixa combinada realista:
+  **$0.07–$0.25 por execução em Haiku 4.5**, dependendo da fase e de
+  caching.
+- Qualidade: há evidência real, não hipotética, de que o reviewer isolado
+  pega uma classe de falha (fingerprint fabricado) que o padrão de
+  auto-review do fluxo manual de hoje deixaria passar — confirmado nas duas
+  fases, não só em uma.
 
-Recomendação: **não declarar a Etapa 3 completa até existir pelo menos uma
-execução nova de `configure_intake` com o harness atual** (pós-#75, #76,
-#77, #78). Sem isso, estender para `intake`/`diagnostic`/`publish` (Etapa 4)
-herdaria a mesma lacuna sem ninguém perceber — exatamente o tipo de "escolha
-silenciosa" que a seção 4 da proposta original quis evitar para troca de
-modelo, e que vale igualmente para "harness nunca validado numa fase
-específica".
+Isso fecha a pergunta central da Etapa 3: **o piloto está pronto para virar
+a base da Etapa 4** (`intake`, `diagnostic`, `publish`). Duas ressalvas que
+valem carregar para lá, não bloqueiam o avanço:
 
-## 5. O que não fiz agora, e por quê
-
-Não disparei um novo `workflow_dispatch` de `configure_intake` contra o
-repo de teste para fechar a lacuna da seção 2/3.2. O workflow chama a API
-real da Anthropic (custo estimado $0.10–$0.25 pelo padrão de
-`bootstrap_instance`, mas configure_intake é uma instrução menor, então
-pode ser mais barato — não sei até rodar) usando o secret já configurado
-nesse repo. Isso é uma ação com efeito colateral real e custo monetário na
-sua conta, não uma leitura — por isso não executei sem confirmar com você
-primeiro.
+1. Cada fase nova precisa da mesma checagem que fiz aqui antes de ser
+   considerada "validada" — o harness é compartilhado, mas cada instrução
+   (`instructions/NN-*.md`) tem um contrato de escrita e um formato de
+   artefato diferentes, e só uma execução real confirma que a allowlist e o
+   `compute_sha256` cobrem os caminhos daquela fase especificamente.
+2. `configure_intake` só tem uma amostra pós-correção (n=1). O intervalo de
+   custo é uma referência, não uma garantia estatística — vale registrar
+   mais execuções reais (via `state/agent-pilot-usage.jsonl`, que já
+   acumula por natureza) conforme a Etapa 4 avança, em vez de tratar este
+   número único como definitivo.

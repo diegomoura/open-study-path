@@ -104,21 +104,25 @@ Sample record shape (real, from `state/agent-pilot-usage.jsonl` after a
 {"phase": "bootstrap_instance", "target_repo": "owner/course", "author": {"model": "claude-haiku-4-5-20251001", "input_tokens": 31, "output_tokens": 3866, "cache_creation_input_tokens": 22439, "cache_read_input_tokens": 64375, "total_tokens": 90711, "estimated_cost_usd": 0.05384725}, "reviewer": {"model": "claude-haiku-4-5-20251001", "input_tokens": 51, "output_tokens": 2665, "cache_creation_input_tokens": 22381, "cache_read_input_tokens": 131429, "total_tokens": 156526, "estimated_cost_usd": 0.05449515}, "combined_tokens": 247237, "combined_estimated_cost_usd": 0.1083424, "recorded_at": "2026-08-14T19:12:00+00:00"}
 ```
 
-Both pilot phases run on Haiku 4.5 (the cheapest tier). Two real
-`bootstrap_instance` runs against the same disposable test repository:
+Both pilot phases run on Haiku 4.5 (the cheapest tier). Real runs against the
+same disposable test repository (see `docs/claude-agent-pilot-etapa3.md` for
+the full Etapa 3 writeup and sourcing):
 
-| Run | Combined tokens | Estimated cost | Notes |
-|---|---|---|---|
-| Before prompt caching | 215,290 | **$0.24** | `cache_creation_input_tokens` and `cache_read_input_tokens` both 0 -- every round trip resent the full system prompt and growing history from scratch |
-| After prompt caching | 247,237 | **$0.108** | `input_tokens` dropped to near-zero (31 / 51); almost everything became `cache_read_input_tokens` at 10% of input price |
+| Phase | Run | Combined tokens | Estimated cost | Notes |
+|---|---|---|---|---|
+| `bootstrap_instance` | Before prompt caching | 215,290 | **$0.24** | `cache_creation_input_tokens` and `cache_read_input_tokens` both 0 -- every round trip resent the full system prompt and growing history from scratch |
+| `bootstrap_instance` | After prompt caching | 247,237 | **$0.108** | `input_tokens` dropped to near-zero (31 / 51); almost everything became `cache_read_input_tokens` at 10% of input price |
+| `configure_intake` | After prompt caching (n=1) | 165,957 | **$0.076** | Smaller instruction contract and fewer output artifacts (2 vs. 6) than `bootstrap_instance`, so cheaper even with caching factored in the same way |
 
-Caching roughly **halved the cost** despite the token *count* going up (more
-total tokens counted, but the overwhelming majority now bill at the 10%
-cache-read rate instead of full input price). Treat $0.10-$0.25 per
-`bootstrap_instance`/`configure_intake` run as the realistic range on Haiku
-4.5 today, not a guess of "well under a cent" -- an instruction contract this
-size, re-read every round trip of an agentic loop, is genuinely more tokens
-than it looks like from the file count alone.
+Caching roughly **halved the cost** on `bootstrap_instance` despite the token
+*count* going up (more total tokens counted, but the overwhelming majority
+now bill at the 10% cache-read rate instead of full input price). Treat
+$0.07-$0.25 per `bootstrap_instance`/`configure_intake` run as the realistic
+range on Haiku 4.5 today, not a guess of "well under a cent" -- an
+instruction contract this size, re-read every round trip of an agentic loop,
+is genuinely more tokens than it looks like from the file count alone. The
+`configure_intake` number is a single sample so far; treat it as a reference
+point, not a statistically settled figure.
 
 ### Prompt caching
 
