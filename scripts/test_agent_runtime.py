@@ -12,13 +12,19 @@ from __future__ import annotations
 import tempfile
 from pathlib import Path
 
+import json
+
 from agent_runtime import (
     AgentBudgetExceeded,
     AllowlistViolation,
+    INTAKE_AUTHOR_ALLOWED_LABEL,
     PHASE_ALLOWLISTS,
+    RepoTools,
+    author_tools,
     is_write_allowed,
     normalize_relative_path,
     resolve_phase_reviewer_model,
+    reviewer_tools,
     run_agent,
 )
 
@@ -445,6 +451,126 @@ def test_cache_breakpoint_moves_forward_without_mutating_stored_messages() -> No
 def test_every_pilot_phase_has_an_allowlist() -> None:
     assert "bootstrap_instance" in PHASE_ALLOWLISTS
     assert "configure_intake" in PHASE_ALLOWLISTS
+    assert "intake" in PHASE_ALLOWLISTS
+
+
+def test_intake_allowlist_matches_pull_request_and_merge_contract() -> None:
+    # instructions/10-intake.md, "Pull request and merge": limited to the
+    # instance marker, study.config.yml and state/intake-summary.json (the
+    # fourth item, the review artifact, is never author-writable -- same
+    # reasoning as SETUP_ALLOWED_* excluding state/reviews/).
+    assert is_write_allowed("intake", ".open-study-path/instance.yml")
+    assert is_write_allowed("intake", "study.config.yml")
+    assert is_write_allowed("intake", "state/intake-summary.json")
+    assert not is_write_allowed("intake", "state/reviews/agent-pilot-intake.yml")
+    assert not is_write_allowed("intake", "state/diagnostic-summary.json")
+    assert not is_write_allowed("intake", "study/roadmap.md")
+
+
+def _fake_github_issue_transport(issues: list[dict], label_calls: list[tuple]):
+    def transport(method: str, path: str, payload):
+        if path.startswith("/repos/o/r/issues?"):
+            return issues
+        for issue in issues:
+            if path == f"/repos/o/r/issues/{issue['number']}" and method == "GET":
+                return issue
+            if path == f"/repos/o/r/issues/{issue['number']}/labels" and method == "POST":
+                label_calls.append((issue["number"], tuple(payload["labels"])))
+                return {"ok": True}
+        raise AssertionError(f"unexpected GitHub call: {method} {path}")
+
+    return transport
+
+
+def test_github_issues_tools_are_gated_to_the_intake_phase() -> None:
+    with tempfile.TemporaryDirectory() as tmp:
+        root = Path(tmp)
+        tools = RepoTools(root=root, phase="bootstrap_instance", role="author")
+        try:
+            tools.list_intake_issues()
+            assert False, "expected AllowlistViolation"
+        except AllowlistViolation:
+            pass
+
+        assert "list_intake_issues" not in {t["name"] for t in author_tools("bootstrap_instance")}
+        assert "list_intake_issues" in {t["name"] for t in author_tools("intake")}
+        assert "list_intake_issues" in {t["name"] for t in reviewer_tools("intake")}
+
+
+def test_resolve_intake_candidates_uses_real_algorithm_not_model_judgment() -> None:
+    issues = [
+        {
+            "number": 5,
+            "title": "Aprender Go do zero",
+            "labels": [{"name": "study-request"}],
+            "user": {"login": "diegomoura"},
+            "created_at": "2026-08-14T10:00:00Z",
+            "body": "### O que você quer aprender?\n\nGo do zero\n\n### Consentimento\n\n- [x] Concordo",
+        },
+        {
+            "number": 6,
+            "title": "",
+            "labels": [{"name": "study-request"}],
+            "user": {"login": "diegomoura"},
+            "created_at": "2026-08-14T11:00:00Z",
+            "body": "### O que você quer aprender?\n\nRust\n\n### Consentimento\n\n- [x] Concordo",
+        },
+    ]
+    label_calls: list[tuple] = []
+    transport = _fake_github_issue_transport(issues, label_calls)
+
+    with tempfile.TemporaryDirectory() as tmp:
+        root = Path(tmp)
+        tools = RepoTools(root=root, phase="intake", role="author", github_request=transport, github_repository="o/r")
+        result = json.loads(
+            tools.resolve_intake_candidates(
+                expected_headings=["### O que você quer aprender?"],
+                required_response_headings=["### O que você quer aprender?"],
+                consent_heading="### Consentimento",
+            )
+        )
+        # Issue #6 has no title (missing_course_title) -- rejected
+        # deterministically by scripts/intake_resolution.py, not by anything
+        # the model decided.
+        assert result["state"] == "unique", result
+        assert [c["issue_number"] for c in result["accepted"]] == [5]
+        rejected_numbers = {c["issue_number"] for c in result["rejected"]}
+        assert 6 in rejected_numbers
+
+
+def test_label_github_issue_refuses_any_label_other_than_imported() -> None:
+    with tempfile.TemporaryDirectory() as tmp:
+        root = Path(tmp)
+        tools = RepoTools(
+            root=root,
+            phase="intake",
+            role="author",
+            github_request=_fake_github_issue_transport([], []),
+            github_repository="o/r",
+        )
+        try:
+            tools.label_github_issue(5, "wontfix")
+            assert False, "expected AllowlistViolation"
+        except AllowlistViolation:
+            pass
+
+
+def test_reviewer_cannot_label_github_issues() -> None:
+    assert "label_github_issue" not in {t["name"] for t in reviewer_tools("intake")}
+    with tempfile.TemporaryDirectory() as tmp:
+        root = Path(tmp)
+        tools = RepoTools(
+            root=root,
+            phase="intake",
+            role="reviewer",
+            github_request=_fake_github_issue_transport([], []),
+            github_repository="o/r",
+        )
+        try:
+            tools.label_github_issue(5, INTAKE_AUTHOR_ALLOWED_LABEL)
+            assert False, "expected AllowlistViolation"
+        except AllowlistViolation:
+            pass
 
 
 def main() -> None:
@@ -464,6 +590,11 @@ def main() -> None:
         test_budget_exceeded_when_agent_never_finishes,
         test_stops_cleanly_when_model_returns_no_tool_calls,
         test_every_pilot_phase_has_an_allowlist,
+        test_intake_allowlist_matches_pull_request_and_merge_contract,
+        test_github_issues_tools_are_gated_to_the_intake_phase,
+        test_resolve_intake_candidates_uses_real_algorithm_not_model_judgment,
+        test_label_github_issue_refuses_any_label_other_than_imported,
+        test_reviewer_cannot_label_github_issues,
     ]
     for test in tests:
         test()
