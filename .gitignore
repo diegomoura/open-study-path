@@ -18,3 +18,5 @@ intake/uploads/
 node_modules/
 npm-debug.log*
 .open-study-path/rendered-slides/
+__pycache__/
+*.pyc
