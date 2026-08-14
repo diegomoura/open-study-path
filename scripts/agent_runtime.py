@@ -35,6 +35,7 @@ import sys
 import urllib.error
 import urllib.request
 from dataclasses import dataclass, field
+from hashlib import sha256
 from pathlib import Path
 from typing import Any, Callable, Mapping, Sequence
 
@@ -165,6 +166,20 @@ class RepoTools:
             raise AllowlistViolation(f"no such file: {path!r}")
         return target.read_text(encoding="utf-8")
 
+    def compute_sha256(self, path: str) -> str:
+        """Return the real sha256 of a file's exact current bytes.
+
+        Exists so the reviewer never has to guess or invent a fingerprint --
+        docs/review-framework.md binds review approval to exact byte
+        fingerprints specifically so a stale review can't authorize a changed
+        output; a model-generated hex string that merely looks like a sha256
+        defeats that guarantee silently.
+        """
+        target = normalize_relative_path(self.root, path)
+        if not target.is_file():
+            raise AllowlistViolation(f"no such file: {path!r}")
+        return sha256(target.read_bytes()).hexdigest()
+
     def list_dir(self, path: str) -> str:
         target = normalize_relative_path(self.root, path or ".")
         if not target.is_dir():
@@ -213,6 +228,8 @@ class RepoTools:
             return self.read_file(tool_input["path"])
         if name == "list_dir":
             return self.list_dir(tool_input.get("path", "."))
+        if name == "compute_sha256":
+            return self.compute_sha256(tool_input["path"])
         if name == "write_file":
             return self.write_file(tool_input["path"], tool_input["content"])
         if name == "finish_phase":
@@ -294,6 +311,19 @@ def reviewer_tools() -> list[dict[str, Any]]:
                 "type": "object",
                 "properties": {"path": {"type": "string"}},
                 "required": [],
+            },
+        },
+        {
+            "name": "compute_sha256",
+            "description": (
+                "Compute the real sha256 of a file's exact current bytes, path relative to "
+                "repo root. Always use this for the 'artifacts[].sha256' fields in the review "
+                "document -- never write a hex string from memory or estimation."
+            ),
+            "input_schema": {
+                "type": "object",
+                "properties": {"path": {"type": "string"}},
+                "required": ["path"],
             },
         },
         {
