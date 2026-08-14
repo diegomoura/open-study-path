@@ -573,6 +573,48 @@ def test_reviewer_cannot_label_github_issues() -> None:
             pass
 
 
+def test_intake_summary_write_blocked_without_a_unique_resolution() -> None:
+    # Regression for docs/claude-agent-pilot-etapa4.md section 5.2: a real
+    # dispatch showed the author writing state/intake-summary.json as an ad
+    # hoc status object in the `ambiguous` state instead of leaving it
+    # untouched. This must now fail closed, not just be discouraged in the
+    # prompt.
+    with tempfile.TemporaryDirectory() as tmp:
+        root = Path(tmp)
+        tools = RepoTools(root=root, phase="intake", role="author")
+
+        # Never called resolve_intake_candidates at all.
+        try:
+            tools.write_file("state/intake-summary.json", "{}")
+            assert False, "expected AllowlistViolation"
+        except AllowlistViolation:
+            pass
+
+        # Simulate an ambiguous resolution, then a none resolution.
+        tools._last_candidate_resolution_state = "ambiguous"
+        try:
+            tools.write_file("state/intake-summary.json", "{}")
+            assert False, "expected AllowlistViolation"
+        except AllowlistViolation:
+            pass
+
+        tools._last_candidate_resolution_state = "none"
+        try:
+            tools.write_file("state/intake-summary.json", "{}")
+            assert False, "expected AllowlistViolation"
+        except AllowlistViolation:
+            pass
+
+        # A unique resolution allows the write, same as before this guard existed.
+        tools._last_candidate_resolution_state = "unique"
+        result = tools.write_file("state/intake-summary.json", "{}")
+        assert "wrote" in result
+        assert (root / "state/intake-summary.json").is_file()
+
+        # The other two domain files were never gated by this check.
+        assert tools.write_file("study.config.yml", "version: 2") == "wrote 10 bytes to study.config.yml"
+
+
 def main() -> None:
     tests = [
         test_write_allowlist_matches_setup_execution_contract,
@@ -595,6 +637,7 @@ def main() -> None:
         test_resolve_intake_candidates_uses_real_algorithm_not_model_judgment,
         test_label_github_issue_refuses_any_label_other_than_imported,
         test_reviewer_cannot_label_github_issues,
+        test_intake_summary_write_blocked_without_a_unique_resolution,
     ]
     for test in tests:
         test()

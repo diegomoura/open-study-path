@@ -191,11 +191,17 @@ de qualquer forma, mas isso confirma que o reviewer bloquearia mesmo se
 houvesse merge automático configurado.
 
 Nenhum efeito colateral externo aconteceu, mas o prompt de `intake` (Etapa 4)
-tem um ponto a apertar: a instrução não deixa claro onde/como reportar um
-estado `ambiguous` sem escrever num caminho de schema fixo. Correção sugerida
-para uma iteração futura: adicionar ao `AUTHOR_INTAKE_TOOL_NOTE` uma
-instrução explícita — em `state: ambiguous` ou `state: none`, não escrever
-nenhum arquivo de domínio; comunicar o resultado só via `finish_phase`.
+tinha um ponto a apertar: a instrução não deixava claro onde/como reportar um
+estado `ambiguous` sem escrever num caminho de schema fixo. **Corrigido**:
+`AUTHOR_INTAKE_TOOL_NOTE` agora instrui explicitamente a não escrever nenhum
+arquivo de domínio em `none`/`ambiguous`, e — mais importante — `write_file`
+em `agent_runtime.py` agora **recusa estruturalmente** escrever
+`state/intake-summary.json` na fase `intake` a menos que
+`resolve_intake_candidates` tenha retornado `state="unique"` na mesma
+execução. Isso segue o mesmo princípio que já valia para o allowlist de
+caminho: falhar numa fronteira de código, não só confiar na instrução do
+prompt. Teste de regressão:
+`test_intake_summary_write_blocked_without_a_unique_resolution`.
 
 Custo real: 188.740 tokens combinados, **$0.0765**.
 
@@ -212,6 +218,42 @@ Os 4 passos listados originalmente nesta seção foram cumpridos:
    repo de teste — $0.0765–$0.1225 por execução em Haiku 4.5, faixa
    compatível com `bootstrap_instance`/`configure_intake` da Etapa 3.
 
-Pendência aberta (não bloqueante, mas registrada): apertar o prompt do
-author para não escrever `state/intake-summary.json` em estado
-`ambiguous`/`none`.
+Pendência resolvida nesta mesma etapa: apertado o prompt e, mais
+estruturalmente, adicionado um guard de código em `write_file` que recusa
+`state/intake-summary.json` fora do estado `unique` -- não depende só do
+prompt se comportar bem.
+
+### 5.4 Confirmação fim-a-fim do fix (PR #83)
+
+Terceiro dispatch, mesmas issues #9/#10 (ainda livres, sem `intake:imported`
+na época do teste). Resultado: `git status --porcelain` vazio -- o author
+não escreveu **nada**, nem `state/intake-summary.json`. O step `Fail if the
+author produced no diff` disparou de propósito, o mesmo comportamento que já
+existia para qualquer fase antes de `intake` existir. Custo real:
+**$0.0293** (bem mais barato que o run anterior de `ambiguous`, $0.0765 --
+o modelo não tentou mais escrever e recuar). Confirma o fix fim-a-fim, não
+só a lógica testada offline.
+
+Achado secundário, não corrigido ainda: o resumo do author (`finish_phase`'s
+`summary`/`next_action`, que explicaria qual é a ambiguidade e pediria a
+decisão do dono) é extraído para `/tmp/author-summary.txt` no step "Extract
+author summary for the reviewer" -- **antes** do step "Fail if the author
+produced no diff". Mas "Upload author artifacts" (que tornaria esse resumo
+visível) vem depois do step que falha, então é pulado. Um dono da instância
+vendo esse run só enxerga "author agent finished without writing any allowed
+file" no log bruto do Actions, sem a explicação de qual issue escolher.
+Correção sugerida para uma iteração futura: mover (ou duplicar) o upload do
+resumo do author para antes do check de diff vazio, ou imprimir
+`next_action` diretamente no job summary (`$GITHUB_STEP_SUMMARY`)
+independente do resultado do diff.
+
+**Corrigido nesta mesma etapa.** Novo step "Publish author result to the job
+summary" (`scripts/publish_author_summary.py`) roda logo após "Extract
+author summary for the reviewer" e antes de "Fail if the author produced no
+diff" -- imprime `summary`/`next_action` no `$GITHUB_STEP_SUMMARY` e no log
+puro, incondicionalmente. "Upload author artifacts" ganhou `if: always()`
+pelo mesmo motivo: o JSON bruto do author fica disponível mesmo quando o job
+falha de propósito por diff vazio. Seguindo a mesma convenção de
+`scripts/format_pr_body.py`, a lógica ficou num script Python próprio, não
+inline no YAML. Teste offline novo:
+`scripts/test_publish_author_summary.py` (2 casos).

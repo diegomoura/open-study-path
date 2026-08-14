@@ -115,7 +115,19 @@ same repository, scoped to the intake discovery label:
   "similarity or newest-issue heuristic" instructions/10-intake.md forbids.
   Trust this tool's `state` field (`unique`, `none`, or `ambiguous`) and act
   on `accepted`/`rejected` exactly as instructions/10-intake.md's Selection
-  and import section describes for each state.
+  and import section describes for each state:
+  - `unique`: proceed with the normal import -- write the three domain-output
+    files, then call label_github_issue on the accepted candidate.
+  - `none` or `ambiguous`: do **not** write any domain-output file, including
+    `state/intake-summary.json`. That file is governed by the same allowed
+    domain-output list as the other two and holds the canonical intake
+    summary schema when (and only when) an import actually happened -- it is
+    not a scratchpad for reporting a classification result. Report the
+    outcome only through `finish_phase`'s `summary`/`next_action` fields: for
+    `none`, return the direct form link as instructions/10-intake.md
+    describes; for `ambiguous`, list each candidate's number, title and
+    creation time and ask the owner to choose. Do not call
+    label_github_issue in either case.
 - label_github_issue(number, label): the only label you may ever pass here is
   `intake:imported`. Call it once, on the accepted candidate's issue number,
   only after every domain-output file has already been written -- this is a

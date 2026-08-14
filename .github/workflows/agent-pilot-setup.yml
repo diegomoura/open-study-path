@@ -125,6 +125,19 @@ jobs:
         run: |
           python -c "import json; open('/tmp/author-summary.txt', 'w', encoding='utf-8').write(json.load(open('/tmp/author-result.json', encoding='utf-8'))['summary'])"
 
+      - name: Publish author result to the job summary
+        # Runs unconditionally, before the no-diff check below. An
+        # ambiguous/none intake classification correctly writes nothing and
+        # makes the next step fail on purpose -- this step is what keeps the
+        # author's explanation (which candidates, what to do next) visible
+        # on the run's summary page instead of being discarded along with
+        # everything else in /tmp when the job ends. See
+        # docs/claude-agent-pilot-etapa4.md, section 5.4.
+        run: |
+          python scripts/publish_author_summary.py \
+            --author-result /tmp/author-result.json \
+            --phase "$PHASE"
+
       - name: Fail if the author produced no diff
         run: |
           # git diff alone misses brand-new files (bootstrap's whole point is
@@ -144,6 +157,12 @@ jobs:
           git push origin "${{ steps.branch.outputs.name }}"
 
       - name: Upload author artifacts
+        # if: always() so the raw JSON stays downloadable even when "Fail if
+        # the author produced no diff" failed the job on purpose (ambiguous/
+        # none intake classification) -- the job summary step above already
+        # covers the human-readable case, this covers anyone who wants the
+        # exact tool-call transcript.
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: author-result
