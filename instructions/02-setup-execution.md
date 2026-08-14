@@ -68,6 +68,8 @@ Assemble one coherent setup proposal, compare the final head against the base, r
 
 Do not repeatedly publish one file at a time and then attempt to validate each partial state. The branch head used for review, required checks, merge and the learner-facing response must be the same unchanged complete head.
 
+Under the isolated multi-agent harness (`docs/claude-agent-pilot.md`), "run the setup reviewer" means a separate, independent agent call with no access to the author's reasoning — not the same context re-checking its own work. In that mode the author does not write a `state/reviews/<setup-operation>.yml` itself; the independent reviewer's artifact is the one review this section requires.
+
 ## Validation and merge gate
 
 A setup pull request may be merged when:

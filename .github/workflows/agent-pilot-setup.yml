@@ -183,23 +183,40 @@ jobs:
         run: |
           mkdir -p state/reviews
           python -c "import json, os; open('state/reviews/agent-pilot-' + os.environ['PHASE'] + '.yml', 'w', encoding='utf-8').write(json.load(open('/tmp/reviewer-result.json', encoding='utf-8'))['review_yaml'])"
+
+      - name: Summarize combined token usage and cost
+        run: |
+          python scripts/summarize_agent_pilot_usage.py \
+            --author-result /tmp/author-result.json \
+            --reviewer-result /tmp/reviewer-result.json \
+            --phase "$PHASE" \
+            --target-repo "$TARGET_REPO" \
+            --out-summary-json /tmp/usage-summary.json \
+            --append-log state/agent-pilot-usage.jsonl
+          cat /tmp/usage-summary.json
+
+      - name: Commit review artifact and usage log
+        run: |
           git config user.name "open-study-path-agent"
           git config user.email "agent@users.noreply.github.com"
-          git add state/reviews/
-          git commit -m "agent(${PHASE}): independent review" || echo "nothing to commit"
+          git add state/reviews/ state/agent-pilot-usage.jsonl
+          git commit -m "agent(${PHASE}): independent review + usage record" || echo "nothing to commit"
           git push origin "$BRANCH"
 
       - name: Open pull request
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          status=$(python -c "import json;print(json.load(open('/tmp/reviewer-result.json'))['status'])")
+          python scripts/format_pr_body.py \
+            --reviewer-result /tmp/reviewer-result.json \
+            --usage-summary /tmp/usage-summary.json \
+            > /tmp/pr-body.md
           gh pr create \
             --repo "${{ github.repository }}" \
             --head "$BRANCH" \
             --base "${{ github.ref_name }}" \
             --title "agent pilot: ${PHASE} for ${TARGET_REPO}" \
-            --body "Author and reviewer ran as two isolated Claude API calls (see docs/claude-agent-pilot.md). Reviewer status: **${status}**. This pilot does not auto-merge -- please review before merging."
+            --body-file /tmp/pr-body.md
 
       - name: Fail the job if the reviewer did not approve
         run: |
