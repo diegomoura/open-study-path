@@ -107,7 +107,10 @@ jobs:
 
       - name: Fail if the author produced no diff
         run: |
-          if git diff --quiet; then
+          # git diff alone misses brand-new files (bootstrap's whole point is
+          # creating files that don't exist yet), so check the working tree
+          # status instead of the tracked-file diff.
+          if [ -z "$(git status --porcelain)" ]; then
             echo "::error::author agent finished without writing any allowed file"
             exit 1
           fi
