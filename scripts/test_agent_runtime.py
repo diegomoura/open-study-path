@@ -395,6 +395,53 @@ def test_usage_accumulates_across_tool_round_trips_and_estimates_cost() -> None:
         assert run.usage.estimated_cost_usd("some-unknown-model") is None
 
 
+def test_cache_breakpoint_moves_forward_without_mutating_stored_messages() -> None:
+    with tempfile.TemporaryDirectory() as tmp:
+        root = Path(tmp)
+        captured_payloads = []
+
+        def transport(payload, api_key):
+            captured_payloads.append(payload)
+            if len(captured_payloads) == 1:
+                return {
+                    "content": [_tool_use("call_1", "list_dir", {"path": "."})],
+                    "usage": {"input_tokens": 500, "output_tokens": 20},
+                }
+            return {
+                "content": [_tool_use("call_2", "finish_phase", {"summary": "done", "next_action": "n/a"})],
+                "usage": {"input_tokens": 100, "output_tokens": 15, "cache_read_input_tokens": 500},
+            }
+
+        run_agent(
+            root=root,
+            phase="bootstrap_instance",
+            role="author",
+            model="claude-haiku-4-5-20251001",
+            system_prompt="a fairly long system prompt",
+            user_prompt="do the thing",
+            transport=transport,
+        )
+
+        assert len(captured_payloads) == 2
+        # System prompt always carries its own cache breakpoint.
+        assert captured_payloads[0]["system"][0]["cache_control"] == {"type": "ephemeral"}
+        assert captured_payloads[1]["system"][0]["cache_control"] == {"type": "ephemeral"}
+
+        # First call: only the initial user message exists, so it gets the breakpoint.
+        first_messages = captured_payloads[0]["messages"]
+        assert first_messages[-1]["content"][-1]["cache_control"] == {"type": "ephemeral"}
+
+        # Second call: the breakpoint moved to the newly-appended tool_results
+        # message (round 2's addition), not the original first message.
+        second_messages = captured_payloads[1]["messages"]
+        assert second_messages[-1]["role"] == "user"
+        assert second_messages[-1]["content"][-1]["cache_control"] == {"type": "ephemeral"}
+        # The first message, now buried earlier in history, must NOT carry a
+        # breakpoint on this call -- only content itself should be preserved
+        # unmodified (still a plain string, never mutated in place).
+        assert second_messages[0]["content"] == "do the thing"
+
+
 def test_every_pilot_phase_has_an_allowlist() -> None:
     assert "bootstrap_instance" in PHASE_ALLOWLISTS
     assert "configure_intake" in PHASE_ALLOWLISTS
@@ -413,6 +460,7 @@ def main() -> None:
         test_reviewer_compute_sha256_matches_real_file_hash,
         test_author_agent_has_no_compute_sha256_tool,
         test_usage_accumulates_across_tool_round_trips_and_estimates_cost,
+        test_cache_breakpoint_moves_forward_without_mutating_stored_messages,
         test_budget_exceeded_when_agent_never_finishes,
         test_stops_cleanly_when_model_returns_no_tool_calls,
         test_every_pilot_phase_has_an_allowlist,
