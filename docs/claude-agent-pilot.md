@@ -8,16 +8,34 @@ Anthropic API and acts on what comes back.
 
 ## Scope
 
-Two manifest phases only, chosen because their allowed diff is small and
-mechanical (`instructions/02-setup-execution.md`, "Allowed setup diff"):
+Three manifest phases wired to a real agent call so far:
 
-- `bootstrap_instance`
-- `configure_intake`
+- `bootstrap_instance`, `configure_intake` -- stage 2/Etapa 3, allowed diff
+  small and mechanical (`instructions/02-setup-execution.md`, "Allowed setup
+  diff"). Validated with real dispatches; see
+  `docs/claude-agent-pilot-etapa3.md`.
+- `intake` -- Etapa 4 (proposal, section 7, step 4). Design complete (see
+  `docs/claude-agent-pilot-etapa4.md`), **not yet validated with a real
+  dispatch** -- follow the same "run for real + check the hash/read-back by
+  hand" criterion Etapa 3 used before treating it as trustworthy.
 
-Nothing else in `instructions/manifest.yml` is wired to a real agent call
-yet. Extending to `intake`, `diagnostic`, `publish`, and eventually `generate`
-is later work (proposal, section 7, steps 4-6) and should follow the same
-pattern once this pilot's cost/quality numbers are measured.
+`diagnostic` is deliberately not wired yet: `instructions/20-diagnostic.md`
+requires a real, multi-turn interactive placement session with the learner
+("ask exactly one short question at a time"), which does not fit this
+harness's one-shot `run_agent()` -> `finish_phase()` shape. Extending to it
+needs a separate design decision (turn-based harness vs. staying manual),
+not just a new allowlist entry.
+
+`publish` is also not wired yet. `instructions/40-publish-tasks.md` covers
+Trello, Todoist, Google/Outlook Calendar and Gmail, all of which need their
+own Secret and their own tool set beyond this harness's current GitHub-only
+scope, and the work proposal's section 6 (key security) only ever addressed
+`ANTHROPIC_API_KEY` -- it does not yet say anything about third-party
+provider Secrets. When `publish` is picked up, the plan is to start scoped to
+`task manager: GitHub Issues` only (reuses the same `GITHUB_TOKEN` this
+Etapa 4 GitHub Issues tooling already established, no new Secret), and add
+Trello/Todoist/Notion as later, explicit, incremental steps -- each with its
+own Secret and its own review of section 6.
 
 `configure_intake` in this pilot always resolves as if the owner already
 selected the `github_issue` provider. The instruction file
@@ -26,7 +44,9 @@ among three providers; an unattended GitHub Actions run has no one to ask, so
 the author prompt does not present a choice. If your instance needs Jotform
 or manual YAML intake, run that phase manually (ChatGPT Project or a Claude
 chat) until a later stage adds a `workflow_dispatch` input for provider
-selection.
+selection. `intake` (Etapa 4) inherits the same restriction: only the
+`github_issue` provider path is wired to a real agent call; Jotform and
+manual YAML intake still need the manual flow.
 
 ## Files
 

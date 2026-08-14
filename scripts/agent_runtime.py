@@ -24,6 +24,21 @@ Design choices that matter for safety, not just style:
 - The HTTP transport is injectable (`transport` parameter) purely so this
   module can be unit-tested offline, without an API key or network access.
   Production code paths always go through `anthropic_transport`.
+
+Stage: Etapa 4 (proposal, section 7, step 4) adds a second, narrower tool
+group -- GitHub Issues read/label access -- gated to the `intake` phase only.
+The repository these tools operate against is always resolved from the
+`GITHUB_REPOSITORY` environment variable that GitHub Actions sets
+automatically for the workflow's own repository, never from a
+workflow_dispatch input: `instructions/10-intake.md` requires searching only
+"the instance repository", and taking that identity from user-controlled
+input would let a crafted dispatch point the tool at an unrelated repo. Issue
+*classification* itself is never left to the model's judgment: the
+`resolve_intake_candidates` tool calls the existing deterministic
+`scripts/intake_resolution.py` algorithm directly, exactly as
+`instructions/10-intake.md` requires ("Apply the algorithm in
+scripts/intake_resolution.py; do not replace it with similarity or
+newest-issue heuristics").
 """
 
 from __future__ import annotations
@@ -40,6 +55,11 @@ from pathlib import Path
 from typing import Any, Callable, Mapping, Sequence
 
 from agent_model_resolution import AGENT_CATALOG, resolve_effective_models
+from ensure_repository_labels import github_request_factory
+from intake_resolution import DISCOVERY_LABEL, IMPORTED_LABEL, IntakeIssue, resolve_candidates
+
+GITHUB_API_URL_DEFAULT = "https://api.github.com"
+RequestJson = Callable[[str, str, dict[str, Any] | None], Any]
 
 API_URL = "https://api.anthropic.com/v1/messages"
 API_VERSION = "2023-06-01"
@@ -93,19 +113,48 @@ SETUP_ALLOWED_PREFIXES: tuple[str, ...] = ()
 # "independent" review, which is exactly the failure mode this whole
 # author/reviewer split exists to prevent. See docs/claude-agent-pilot.md.
 
-# Which allowlist applies to which manifest phase. Only the two pilot phases
-# are wired up in stage 2; extending PHASE_ALLOWLISTS is exactly the work of
-# later steps in the proposal's rollout plan (section 7, steps 4-6).
+# The exact intake domain-output list from instructions/10-intake.md ("Pull
+# request and merge": "a PR limited to the instance marker, study.config.yml,
+# state/intake-summary.json and one intake review artifact"). The review
+# artifact itself is excluded here for the same reason state/reviews/ is
+# excluded from SETUP_ALLOWED_*: only the reviewer's submit_review result,
+# recorded by the workflow, writes there.
+INTAKE_ALLOWED_EXACT_PATHS: tuple[str, ...] = (
+    ".open-study-path/instance.yml",
+    "study.config.yml",
+    "state/intake-summary.json",
+)
+INTAKE_ALLOWED_PREFIXES: tuple[str, ...] = ()
+
+# Which allowlist applies to which manifest phase. Etapa 4 (proposal, section
+# 7, step 4) adds `intake` to the two pilot phases wired up in stage 2.
 PHASE_ALLOWLISTS: dict[str, tuple[tuple[str, ...], tuple[str, ...]]] = {
     "bootstrap_instance": (SETUP_ALLOWED_EXACT_PATHS, SETUP_ALLOWED_PREFIXES),
     "configure_intake": (SETUP_ALLOWED_EXACT_PATHS, SETUP_ALLOWED_PREFIXES),
+    "intake": (INTAKE_ALLOWED_EXACT_PATHS, INTAKE_ALLOWED_PREFIXES),
 }
 
 # Agent ids that exist as real rows in AGENT_CATALOG for the pilot phases.
 PHASE_AUTHOR_AGENT: dict[str, str] = {
     "bootstrap_instance": "bootstrap",
     "configure_intake": "configure_intake",
+    "intake": "intake_resolution",
 }
+
+# Phases where the RepoTools instance also gets a small, separate GitHub
+# Issues tool group (list/read/resolve/label), in addition to the repo-file
+# tools every phase gets. Kept as its own set -- rather than folding into
+# PHASE_ALLOWLISTS -- because it gates a different resource (the GitHub API,
+# not the local checkout) with its own authorization model (GITHUB_TOKEN,
+# not filesystem paths).
+PHASES_WITH_GITHUB_ISSUES: frozenset[str] = frozenset({"intake"})
+
+# The only label the intake author is ever allowed to apply. Restricting this
+# at the tool layer (not just in the prompt) means a model that misreads its
+# own instructions cannot label an unrelated issue or invent a new label --
+# the same "fail closed on a code boundary, not a prompt boundary" posture
+# `write_file`'s allowlist check already applies to file writes.
+INTAKE_AUTHOR_ALLOWED_LABEL = IMPORTED_LABEL
 
 
 class AllowlistViolation(RuntimeError):
@@ -226,15 +275,32 @@ class RepoTools:
 
     `role` gates which tools are actually offered: authors get write_file and
     finish_phase, reviewers get submit_review instead of write access.
+
+    `github_request`/`github_repository` are only required when `phase` is in
+    PHASES_WITH_GITHUB_ISSUES. They stay optional constructor args (rather
+    than always-on) so every other phase's tests keep working without a
+    GitHub token or network access -- the same reasoning `transport` in
+    `run_agent()` already follows for the Anthropic call.
     """
 
-    def __init__(self, root: Path, phase: str, role: str) -> None:
+    def __init__(
+        self,
+        root: Path,
+        phase: str,
+        role: str,
+        github_request: RequestJson | None = None,
+        github_repository: str | None = None,
+    ) -> None:
         self.root = root
         self.phase = phase
         self.role = role
         self.files_written: list[str] = []
         self.finish_payload: dict[str, Any] | None = None
         self.finished = False
+        self.github_request = github_request
+        self.github_repository = github_repository
+        self._issue_summaries: dict[int, dict[str, Any]] | None = None
+        self.labels_applied: list[tuple[int, str]] = []
 
     def read_file(self, path: str) -> str:
         target = normalize_relative_path(self.root, path)
@@ -262,6 +328,174 @@ class RepoTools:
             raise AllowlistViolation(f"no such directory: {path!r}")
         entries = sorted(p.name + ("/" if p.is_dir() else "") for p in target.iterdir())
         return "\n".join(entries) if entries else "(empty)"
+
+    def _require_github(self) -> tuple[RequestJson, str]:
+        if self.phase not in PHASES_WITH_GITHUB_ISSUES:
+            raise AllowlistViolation(f"GitHub Issues tools are not available for phase {self.phase!r}")
+        if self.github_request is None or not self.github_repository:
+            raise AllowlistViolation(
+                "GitHub Issues tools are enabled for this phase but no github_request/"
+                "github_repository was configured -- this is a harness wiring bug, not a "
+                "model error"
+            )
+        return self.github_request, self.github_repository
+
+    def list_intake_issues(self) -> str:
+        """List open, non-PR issues carrying the discovery label, instance repo only.
+
+        Fetches summaries only (number, title, labels, author, created_at) --
+        never the body -- to keep this read cheap. `read_github_issue` fetches
+        one full issue when the model actually needs its rendered body.
+        Results are cached on this instance so `resolve_intake_candidates` can
+        reuse them without a second API round trip in the same run.
+        """
+        request_json, repository = self._require_github()
+        raw = request_json(
+            "GET",
+            f"/repos/{repository}/issues?labels={DISCOVERY_LABEL}&state=all&per_page=100",
+            None,
+        )
+        summaries: dict[int, dict[str, Any]] = {}
+        for item in raw or []:
+            summaries[item["number"]] = {
+                "number": item["number"],
+                "title": item.get("title", ""),
+                "labels": [label.get("name", "") for label in item.get("labels", [])],
+                "author_login": (item.get("user") or {}).get("login"),
+                "is_pull_request": "pull_request" in item,
+                "created_at": item.get("created_at"),
+            }
+        self._issue_summaries = summaries
+        return json.dumps(list(summaries.values()), indent=2)
+
+    def read_github_issue(self, number: int) -> str:
+        """Fetch one issue's full rendered body plus its identity fields."""
+        request_json, repository = self._require_github()
+        item = request_json("GET", f"/repos/{repository}/issues/{number}", None)
+        return json.dumps(
+            {
+                "number": item["number"],
+                "title": item.get("title", ""),
+                "body": item.get("body") or "",
+                "labels": [label.get("name", "") for label in item.get("labels", [])],
+                "author_login": (item.get("user") or {}).get("login"),
+                "is_pull_request": "pull_request" in item,
+                "created_at": item.get("created_at"),
+            },
+            indent=2,
+        )
+
+    def resolve_intake_candidates(
+        self,
+        expected_headings: list[str],
+        required_response_headings: list[str],
+        consent_heading: str,
+    ) -> str:
+        """Run the real scripts/intake_resolution.py classification, not a model guess.
+
+        instructions/10-intake.md requires applying this exact algorithm and
+        forbids replacing it with similarity or newest-issue heuristics; doing
+        the classification here in Python, from data the model cannot edit,
+        makes that requirement structural instead of advisory. The model
+        still supplies expected_headings/required_response_headings/
+        consent_heading because those come from reading the checked-in form
+        contract (.github/ISSUE_TEMPLATE/create-study-path.yml via read_file),
+        which is exactly the "current repository form contract, not a hidden
+        comment" the instruction requires -- the harness does not duplicate
+        that YAML parsing.
+
+        allowed_authors and imported_references are resolved by the harness
+        itself: allowed_authors from the known instance owner in
+        .open-study-path/instance.yml when present, imported_references from
+        state/intake-summary.json.source_reference when present. The model
+        never supplies either -- both are used to reject candidates, and a
+        model-supplied allowlist could be used to admit one instead.
+        """
+        request_json, repository = self._require_github()
+        if self._issue_summaries is None:
+            self.list_intake_issues()
+        assert self._issue_summaries is not None
+
+        allowed_authors = self._known_instance_owner()
+        imported_references = self._known_imported_references()
+
+        candidates: list[IntakeIssue] = []
+        for summary in self._issue_summaries.values():
+            if summary["is_pull_request"] or IMPORTED_LABEL in summary["labels"]:
+                # No need to fetch the body for something already excluded by
+                # a cheap identity check -- saves an API call per stale issue.
+                candidates.append(
+                    IntakeIssue(
+                        number=summary["number"],
+                        title=summary["title"],
+                        body="",
+                        labels=frozenset(summary["labels"]),
+                        is_pull_request=summary["is_pull_request"],
+                        source_reference=f"github_issue:{repository}#{summary['number']}",
+                        author_login=summary["author_login"],
+                    )
+                )
+                continue
+            full = json.loads(self.read_github_issue(summary["number"]))
+            candidates.append(
+                IntakeIssue(
+                    number=full["number"],
+                    title=full["title"],
+                    body=full["body"],
+                    labels=frozenset(full["labels"]),
+                    is_pull_request=full["is_pull_request"],
+                    source_reference=f"github_issue:{repository}#{full['number']}",
+                    author_login=full["author_login"],
+                )
+            )
+
+        resolution = resolve_candidates(
+            candidates,
+            expected_headings,
+            imported_references,
+            required_response_headings=required_response_headings,
+            consent_heading=consent_heading or None,
+            allowed_authors=allowed_authors,
+        )
+        return json.dumps(
+            {
+                "state": resolution.state,
+                "accepted": [decision.__dict__ for decision in resolution.accepted],
+                "rejected": [decision.__dict__ for decision in resolution.rejected],
+            },
+            indent=2,
+        )
+
+    def _known_instance_owner(self) -> list[str]:
+        marker = normalize_relative_path(self.root, ".open-study-path/instance.yml")
+        if not marker.is_file():
+            return []
+        import yaml  # local import: keep base module dependency-free for offline tests
+
+        data = yaml.safe_load(marker.read_text(encoding="utf-8")) or {}
+        owner = (data.get("owner") or {}).get("github_login") if isinstance(data.get("owner"), dict) else None
+        return [owner] if owner else []
+
+    def _known_imported_references(self) -> list[str]:
+        summary_path = normalize_relative_path(self.root, "state/intake-summary.json")
+        if not summary_path.is_file():
+            return []
+        data = json.loads(summary_path.read_text(encoding="utf-8"))
+        reference = data.get("source_reference")
+        return [reference] if reference else []
+
+    def label_github_issue(self, number: int, label: str) -> str:
+        if self.role != "author":
+            raise AllowlistViolation("label_github_issue is not available to this role")
+        if label != INTAKE_AUTHOR_ALLOWED_LABEL:
+            raise AllowlistViolation(
+                f"refusing to apply label {label!r}: the intake author may only apply "
+                f"{INTAKE_AUTHOR_ALLOWED_LABEL!r}"
+            )
+        request_json, repository = self._require_github()
+        request_json("POST", f"/repos/{repository}/issues/{number}/labels", {"labels": [label]})
+        self.labels_applied.append((number, label))
+        return f"applied label {label!r} to issue #{number}"
 
     def write_file(self, path: str, content: str) -> str:
         if self.role != "author":
@@ -316,11 +550,47 @@ class RepoTools:
                 tool_input["status"],
                 tool_input.get("blocking_findings", []),
             )
+        if name == "list_intake_issues":
+            return self.list_intake_issues()
+        if name == "read_github_issue":
+            return self.read_github_issue(tool_input["number"])
+        if name == "resolve_intake_candidates":
+            return self.resolve_intake_candidates(
+                tool_input["expected_headings"],
+                tool_input.get("required_response_headings", []),
+                tool_input.get("consent_heading", ""),
+            )
+        if name == "label_github_issue":
+            return self.label_github_issue(tool_input["number"], tool_input["label"])
         raise AllowlistViolation(f"unknown tool: {name}")
 
 
-def author_tools() -> list[dict[str, Any]]:
+def _github_issue_read_tools() -> list[dict[str, Any]]:
+    """Read-only GitHub Issues tools, shared by both author_tools() and reviewer_tools()."""
     return [
+        {
+            "name": "list_intake_issues",
+            "description": (
+                "List open, non-PR issues carrying the intake discovery label in the instance "
+                "repository (resolved from GITHUB_REPOSITORY, never user input). Returns "
+                "summaries only (no body) -- use read_github_issue for one issue's full body."
+            ),
+            "input_schema": {"type": "object", "properties": {}, "required": []},
+        },
+        {
+            "name": "read_github_issue",
+            "description": "Fetch one GitHub issue's full rendered body, title, labels and author, by number.",
+            "input_schema": {
+                "type": "object",
+                "properties": {"number": {"type": "integer"}},
+                "required": ["number"],
+            },
+        },
+    ]
+
+
+def author_tools(phase: str | None = None) -> list[dict[str, Any]]:
+    tools = [
         {
             "name": "read_file",
             "description": "Read a UTF-8 text file from the repository, path relative to repo root.",
@@ -343,7 +613,7 @@ def author_tools() -> list[dict[str, Any]]:
             "name": "write_file",
             "description": (
                 "Write a UTF-8 text file, path relative to repo root. Only paths in the "
-                "phase's allowed setup diff are accepted; anything else is rejected."
+                "phase's allowed domain-output list are accepted; anything else is rejected."
             ),
             "input_schema": {
                 "type": "object",
@@ -367,10 +637,54 @@ def author_tools() -> list[dict[str, Any]]:
             },
         },
     ]
+    if phase in PHASES_WITH_GITHUB_ISSUES:
+        tools.extend(_github_issue_read_tools())
+        tools.append(
+            {
+                "name": "resolve_intake_candidates",
+                "description": (
+                    "Deterministically classify every open candidate issue using the real "
+                    "scripts/intake_resolution.py algorithm -- never classify candidates "
+                    "yourself. Pass expected_headings, required_response_headings and "
+                    "consent_heading exactly as read from "
+                    ".github/ISSUE_TEMPLATE/create-study-path.yml via read_file. "
+                    "allowed_authors and already-imported references are resolved by the "
+                    "harness itself from repository state, not supplied by you."
+                ),
+                "input_schema": {
+                    "type": "object",
+                    "properties": {
+                        "expected_headings": {"type": "array", "items": {"type": "string"}},
+                        "required_response_headings": {"type": "array", "items": {"type": "string"}},
+                        "consent_heading": {"type": "string"},
+                    },
+                    "required": ["expected_headings"],
+                },
+            }
+        )
+        tools.append(
+            {
+                "name": "label_github_issue",
+                "description": (
+                    f"Apply a label to a GitHub issue. Only {INTAKE_AUTHOR_ALLOWED_LABEL!r} is "
+                    "accepted -- call this only once, on the accepted candidate's issue number, "
+                    "after every domain-output file has been written."
+                ),
+                "input_schema": {
+                    "type": "object",
+                    "properties": {
+                        "number": {"type": "integer"},
+                        "label": {"type": "string"},
+                    },
+                    "required": ["number", "label"],
+                },
+            }
+        )
+    return tools
 
 
-def reviewer_tools() -> list[dict[str, Any]]:
-    return [
+def reviewer_tools(phase: str | None = None) -> list[dict[str, Any]]:
+    tools = [
         {
             "name": "read_file",
             "description": "Read a UTF-8 text file from the repository, path relative to repo root.",
@@ -419,6 +733,14 @@ def reviewer_tools() -> list[dict[str, Any]]:
             },
         },
     ]
+    if phase in PHASES_WITH_GITHUB_ISSUES:
+        # Reviewer gets read-only issue access -- enough to independently
+        # re-fetch the source issue and compare its rendered fields against
+        # what the author normalized, but never label_github_issue: the
+        # reviewer must never be able to cause the external side effect it is
+        # supposed to be checking.
+        tools.extend(_github_issue_read_tools())
+    return tools
 
 
 def anthropic_transport(payload: Mapping[str, Any], api_key: str) -> dict[str, Any]:
@@ -483,18 +805,30 @@ def run_agent(
     api_key: str | None = None,
     transport: Callable[[Mapping[str, Any], str], dict[str, Any]] = anthropic_transport,
     max_tokens: int = DEFAULT_MAX_TOKENS,
+    github_request: RequestJson | None = None,
+    github_repository: str | None = None,
 ) -> AgentRun:
     """Run one author or reviewer agent call to completion (or until the budget runs out).
 
     Returns an AgentRun with the full transcript for logging/debugging plus the
     structured finish_payload the caller (author -> commit+PR, reviewer ->
     state/reviews/*.yml) needs to act on.
+
+    `github_request`/`github_repository` are only consulted when `phase` is in
+    PHASES_WITH_GITHUB_ISSUES; every other phase ignores them, same as `role`
+    ignoring `transport`'s implementation details.
     """
     if role not in ("author", "reviewer"):
         raise ValueError(f"unknown role: {role}")
 
-    tools = RepoTools(root=root, phase=phase, role=role)
-    tool_schemas = author_tools() if role == "author" else reviewer_tools()
+    tools = RepoTools(
+        root=root,
+        phase=phase,
+        role=role,
+        github_request=github_request,
+        github_repository=github_repository,
+    )
+    tool_schemas = author_tools(phase) if role == "author" else reviewer_tools(phase)
 
     messages: list[dict[str, Any]] = [{"role": "user", "content": user_prompt}]
     run = AgentRun(phase=phase, role=role, model=model)
@@ -598,6 +932,22 @@ def main(argv: Sequence[str] | None = None) -> None:
     if not api_key:
         raise SystemExit("ANTHROPIC_API_KEY is not set")
 
+    github_request: RequestJson | None = None
+    github_repository: str | None = None
+    if args.phase in PHASES_WITH_GITHUB_ISSUES:
+        github_token = os.environ.get("GITHUB_TOKEN")
+        if not github_token:
+            raise SystemExit(f"GITHUB_TOKEN is not set (required for phase {args.phase!r})")
+        # Deliberately GITHUB_REPOSITORY, the Actions-provided identity of the
+        # repository this workflow run belongs to -- never a CLI flag or
+        # workflow_dispatch input. See the module docstring and
+        # RepoTools._require_github for why that boundary matters.
+        github_repository = os.environ.get("GITHUB_REPOSITORY")
+        if not github_repository:
+            raise SystemExit(f"GITHUB_REPOSITORY is not set (required for phase {args.phase!r})")
+        github_api_url = os.environ.get("GITHUB_API_URL", GITHUB_API_URL_DEFAULT)
+        github_request = github_request_factory(github_token, github_api_url)
+
     run = run_agent(
         root=Path(args.repo_root),
         phase=args.phase,
@@ -606,6 +956,8 @@ def main(argv: Sequence[str] | None = None) -> None:
         system_prompt=_read_text(args.system_prompt_file),
         user_prompt=_read_text(args.user_prompt_file),
         api_key=api_key,
+        github_request=github_request,
+        github_repository=github_repository,
     )
 
     if not run.finished:

@@ -1,20 +1,28 @@
-name: Agent pilot - setup phase
+name: Agent pilot
 
 # Stage 2 of the multi-agent work proposal (see docs/claude-agent-pilot.md):
-# the first workflow that calls the real Anthropic API. Scoped deliberately
-# to the two lowest-risk phases of instructions/manifest.yml (bootstrap_instance
-# and configure_intake with the github_issue provider), with author and
-# reviewer as two separate API calls that never share context.
+# the first workflow that calls the real Anthropic API. Etapa 3 (proposal,
+# section 7, step 3) validated bootstrap_instance and configure_intake with
+# real dispatches; Etapa 4 (step 4) adds `intake`, still author + reviewer as
+# two separate API calls that never share context.
 #
 # Manual trigger only for the pilot. It does not merge: it opens a pull
 # request and posts the independent review as a comment, so a human makes
-# the final call while the pilot is being evaluated (proposal, section 7,
-# step 3: "medir o piloto ... antes de estender").
+# the final call while the pilot is being evaluated. For `intake`, the author
+# also applies the `intake:imported` label directly to the source GitHub
+# issue as a real, immediate write -- independent of whether the pull request
+# itself is later merged (see docs/claude-agent-pilot.md, "Known limitation:
+# label write is not covered by PR merge").
 #
 # Untrusted workflow_dispatch inputs (target_repo, extra_context) are only
 # ever passed through step `env:` and read back as shell variables, never
 # interpolated directly into a `run:` script body -- that's what keeps a
-# crafted input from being executed as shell/python instead of treated as data.
+# crafted input from being executed as shell/python instead of treated as
+# data. The repository the `intake` phase's GitHub Issues tools operate
+# against is never taken from target_repo or any other input -- it is always
+# GITHUB_REPOSITORY, which Actions sets to this workflow's own repository.
+# See scripts/agent_runtime.py's module docstring for why that boundary
+# matters.
 
 on:
   workflow_dispatch:
@@ -26,6 +34,7 @@ on:
         options:
           - bootstrap_instance
           - configure_intake
+          - intake
       target_repo:
         description: Target instance repository, as OWNER/REPOSITORY
         required: true
@@ -39,6 +48,12 @@ on:
 permissions:
   contents: write
   pull-requests: write
+  # Needed only by the `intake` phase's label_github_issue tool (applies
+  # `intake:imported` to the source issue). Harmless no-op permission for
+  # bootstrap_instance/configure_intake, which never call that tool --
+  # RepoTools._require_github rejects it outside PHASES_WITH_GITHUB_ISSUES
+  # regardless of what this token can technically do.
+  issues: write
 
 concurrency:
   group: agent-pilot-setup-${{ inputs.target_repo }}-${{ inputs.phase }}
@@ -94,6 +109,11 @@ jobs:
       - name: Run author agent
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          # Only consulted by agent_runtime.py when PHASE is in
+          # PHASES_WITH_GITHUB_ISSUES (currently just intake). GITHUB_TOKEN
+          # here is the workflow's own default token, scoped by the
+          # `permissions:` block above -- never a separate provider secret.
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           python scripts/agent_runtime.py author \
             --phase "$PHASE" \
@@ -172,6 +192,7 @@ jobs:
       - name: Run reviewer agent
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           python scripts/agent_runtime.py reviewer \
             --phase "$PHASE" \
