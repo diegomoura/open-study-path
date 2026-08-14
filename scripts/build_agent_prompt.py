@@ -74,6 +74,11 @@ Tools:
 
 - read_file(path): read one text file, path relative to repo root.
 - list_dir(path): list one directory, path relative to repo root.
+- compute_sha256(path): compute the real sha256 of a file's exact current
+  bytes. Always call this for every `artifacts[].sha256` value you put in the
+  review document -- never write a hex string from memory or estimation. A
+  fingerprint that isn't the real hash defeats the entire point of binding
+  approval to exact bytes.
 - submit_review(review_yaml, status, blocking_findings): call this exactly
   once. `review_yaml` must be a complete document matching the shape of
   templates/review.yml (contract_version, operation_id, phase, reviewer_role,

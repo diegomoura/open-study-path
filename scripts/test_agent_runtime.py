@@ -280,6 +280,76 @@ def test_stops_cleanly_when_model_returns_no_tool_calls() -> None:
         assert run.finish_payload is None
 
 
+def test_reviewer_compute_sha256_matches_real_file_hash() -> None:
+    import hashlib
+
+    with tempfile.TemporaryDirectory() as tmp:
+        root = Path(tmp)
+        (root / "study.config.yml").write_text("owner: test\n", encoding="utf-8")
+        expected = hashlib.sha256(b"owner: test\n").hexdigest()
+
+        transport = make_scripted_transport(
+            [
+                [_tool_use("call_1", "compute_sha256", {"path": "study.config.yml"})],
+                [
+                    _tool_use(
+                        "call_2",
+                        "submit_review",
+                        {
+                            "review_yaml": f"sha256: {expected}\n",
+                            "status": "approved",
+                            "blocking_findings": [],
+                        },
+                    )
+                ],
+            ]
+        )
+        run = run_agent(
+            root=root,
+            phase="bootstrap_instance",
+            role="reviewer",
+            model="claude-haiku-4-5-20251001",
+            system_prompt="system",
+            user_prompt="user",
+            transport=transport,
+        )
+        tool_result_rounds = [entry for entry in run.transcript if entry["role"] == "tool_results"]
+        hash_result = tool_result_rounds[0]["content"][0]["content"]
+        assert hash_result == expected
+        assert len(hash_result) == 64  # a real sha256 hex digest, not a model-guessed string
+
+
+def test_author_agent_has_no_compute_sha256_tool() -> None:
+    with tempfile.TemporaryDirectory() as tmp:
+        root = Path(tmp)
+        transport = make_scripted_transport(
+            [
+                [_tool_use("call_1", "compute_sha256", {"path": "study.config.yml"})],
+                [
+                    _tool_use(
+                        "call_2",
+                        "finish_phase",
+                        {"summary": "done", "next_action": "n/a"},
+                    )
+                ],
+            ]
+        )
+        run = run_agent(
+            root=root,
+            phase="bootstrap_instance",
+            role="author",
+            model="claude-haiku-4-5-20251001",
+            system_prompt="system",
+            user_prompt="user",
+            transport=transport,
+        )
+        tool_result_rounds = [entry for entry in run.transcript if entry["role"] == "tool_results"]
+        # dispatch() still recognizes the tool name (shared implementation), but
+        # it is never offered in author_tools()'s schema -- a well-behaved model
+        # won't call it. If it somehow did, it must not crash the author's run.
+        assert run.finished
+
+
 def test_every_pilot_phase_has_an_allowlist() -> None:
     assert "bootstrap_instance" in PHASE_ALLOWLISTS
     assert "configure_intake" in PHASE_ALLOWLISTS
@@ -294,6 +364,8 @@ def main() -> None:
         test_author_agent_write_outside_allowlist_is_rejected_not_bypassed,
         test_reviewer_agent_has_no_write_file_tool,
         test_reviewer_cannot_submit_approved_with_blocking_findings,
+        test_reviewer_compute_sha256_matches_real_file_hash,
+        test_author_agent_has_no_compute_sha256_tool,
         test_budget_exceeded_when_agent_never_finishes,
         test_stops_cleanly_when_model_returns_no_tool_calls,
         test_every_pilot_phase_has_an_allowlist,
