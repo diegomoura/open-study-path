@@ -442,6 +442,36 @@ def anthropic_transport(payload: Mapping[str, Any], api_key: str) -> dict[str, A
         raise RuntimeError(f"Anthropic API error {error.code}: {detail}") from error
 
 
+def _with_trailing_cache_breakpoint(messages: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Return a copy of `messages` with a cache_control breakpoint on the last content block.
+
+    Anthropic's prompt caching reuses everything up to (and including) a
+    cache_control breakpoint on a subsequent call, provided the prefix is
+    byte-identical. In a tool-use loop the message list only ever grows by
+    appending, so marking the *last* block on every outgoing request means
+    each round's newly-added content becomes the next round's cached prefix
+    -- the growing history is paid for once, not resent at full price on
+    every one of MAX_TOOL_ITERATIONS round trips. Without this, a run's
+    total input tokens scale roughly with the square of its round-trip
+    count; with it, they scale roughly linearly.
+
+    Only the outgoing copy is touched; the caller's own `messages` list,
+    which the loop keeps appending to, is left without cache_control keys.
+    """
+    if not messages:
+        return messages
+    copied = [dict(message) for message in messages]
+    last = copied[-1]
+    content = last["content"]
+    if isinstance(content, str):
+        last["content"] = [{"type": "text", "text": content, "cache_control": {"type": "ephemeral"}}]
+    elif isinstance(content, list) and content:
+        content = [dict(block) for block in content]
+        content[-1] = {**content[-1], "cache_control": {"type": "ephemeral"}}
+        last["content"] = content
+    return copied
+
+
 def run_agent(
     *,
     root: Path,
@@ -469,12 +499,17 @@ def run_agent(
     messages: list[dict[str, Any]] = [{"role": "user", "content": user_prompt}]
     run = AgentRun(phase=phase, role=role, model=model)
 
+    # The system prompt is identical on every round trip of this loop, so it
+    # gets its own permanent cache breakpoint -- separate from the messages
+    # breakpoint above, which moves forward each round as the conversation grows.
+    system_blocks = [{"type": "text", "text": system_prompt, "cache_control": {"type": "ephemeral"}}]
+
     for _ in range(MAX_TOOL_ITERATIONS):
         payload = {
             "model": model,
             "max_tokens": max_tokens,
-            "system": system_prompt,
-            "messages": messages,
+            "system": system_blocks,
+            "messages": _with_trailing_cache_breakpoint(messages),
             "tools": tool_schemas,
         }
         response = transport(payload, api_key or "")

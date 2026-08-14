@@ -103,11 +103,43 @@ Sample record shape:
 {"phase": "bootstrap_instance", "target_repo": "owner/course", "author": {"model": "claude-haiku-4-5-20251001", "input_tokens": 5312, "output_tokens": 812, "cache_creation_input_tokens": 0, "cache_read_input_tokens": 0, "total_tokens": 6124, "estimated_cost_usd": 0.009372}, "reviewer": {"model": "claude-haiku-4-5-20251001", "input_tokens": 6890, "output_tokens": 1024, "cache_creation_input_tokens": 0, "cache_read_input_tokens": 0, "total_tokens": 7914, "estimated_cost_usd": 0.012010}, "combined_tokens": 14038, "combined_estimated_cost_usd": 0.021382, "recorded_at": "2026-08-14T18:00:00+00:00"}
 ```
 
-Both pilot phases run on Haiku 4.5 (the cheapest tier), so real per-run cost
-for `bootstrap_instance` and `configure_intake` should be well under a cent
-each -- see `state/agent-pilot-usage.jsonl` on a repository that has actually
-run the pilot for real recorded numbers rather than an estimate of an
-estimate.
+Both pilot phases run on Haiku 4.5 (the cheapest tier). A real
+`bootstrap_instance` run before prompt caching was enabled cost **$0.24** for
+215,290 combined tokens (author + reviewer) -- higher than a rough guess
+would suggest, because every round trip of the tool-use loop was resending
+the full system prompt and growing conversation history from scratch, with
+zero cache reuse (`cache_creation_input_tokens` and `cache_read_input_tokens`
+were both 0 in that run's `state/agent-pilot-usage.jsonl` record).
+
+Prompt caching is now enabled (see below), which should cut most of that
+`$0.24` since the bulk of it was repeated, cacheable input. Until a fresh
+timed run confirms the post-caching number, treat the pre-caching figure as
+the pessimistic upper bound for `bootstrap_instance`/`configure_intake` on
+Haiku 4.5, not the expected steady-state cost.
+
+### Prompt caching
+
+`run_agent()` marks two `cache_control` breakpoints on every request:
+
+- one on the system prompt, which is byte-identical across every round trip
+  of a single author or reviewer call;
+- one on the last content block of the growing `messages` list, which moves
+  forward each round as new tool results are appended.
+
+Concretely: round 1 pays full price and writes a cache entry for the system
+prompt plus the initial user message. Round 2 reads both from cache (10% of
+input price) and only pays full price for what round 1 added. This makes
+total input cost scale roughly linearly with the number of round trips
+instead of roughly quadratically. See `_with_trailing_cache_breakpoint` in
+`scripts/agent_runtime.py`; `scripts/test_agent_runtime.py` has a test that
+asserts the breakpoint moves forward each call without mutating the stored
+message history.
+
+Cache writes cost 1.25x base input price and are only worth it if something
+downstream actually reads the cache; a call that finishes in one round trip
+(no tool use at all) pays the write premium for nothing. In practice every
+real pilot run so far has taken multiple rounds (reading several instruction
+files before writing anything), so this has consistently paid off.
 
 ## Author self-review is no longer part of the pilot path
 
