@@ -301,6 +301,7 @@ class RepoTools:
         self.github_repository = github_repository
         self._issue_summaries: dict[int, dict[str, Any]] | None = None
         self.labels_applied: list[tuple[int, str]] = []
+        self._last_candidate_resolution_state: str | None = None
 
     def read_file(self, path: str) -> str:
         target = normalize_relative_path(self.root, path)
@@ -457,6 +458,7 @@ class RepoTools:
             consent_heading=consent_heading or None,
             allowed_authors=allowed_authors,
         )
+        self._last_candidate_resolution_state = resolution.state
         return json.dumps(
             {
                 "state": resolution.state,
@@ -504,6 +506,25 @@ class RepoTools:
             raise AllowlistViolation(
                 f"{path!r} is outside the allowed setup diff for phase {self.phase!r} "
                 "(instructions/02-setup-execution.md); refusing to write it"
+            )
+        if (
+            self.phase == "intake"
+            and path.replace(os.sep, "/") == "state/intake-summary.json"
+            and self._last_candidate_resolution_state != "unique"
+        ):
+            # instructions/10-intake.md never authorizes an intake write
+            # without exactly one accepted candidate. A prompt note is not
+            # enough on its own -- an earlier real dispatch (Etapa 4,
+            # docs/claude-agent-pilot-etapa4.md section 5.2) showed the model
+            # using this path as an ad hoc status scratchpad in the
+            # `ambiguous` state instead of leaving it untouched. Enforcing it
+            # here means that failure mode can no longer happen silently,
+            # regardless of what the prompt says.
+            raise AllowlistViolation(
+                "refusing to write state/intake-summary.json: resolve_intake_candidates "
+                f"must return state='unique' first (last observed state: "
+                f"{self._last_candidate_resolution_state!r}). For 'none' or 'ambiguous', "
+                "report the outcome through finish_phase instead of writing this file."
             )
         target = normalize_relative_path(self.root, path)
         target.parent.mkdir(parents=True, exist_ok=True)

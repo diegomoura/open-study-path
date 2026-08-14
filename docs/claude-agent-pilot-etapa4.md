@@ -191,11 +191,17 @@ de qualquer forma, mas isso confirma que o reviewer bloquearia mesmo se
 houvesse merge automático configurado.
 
 Nenhum efeito colateral externo aconteceu, mas o prompt de `intake` (Etapa 4)
-tem um ponto a apertar: a instrução não deixa claro onde/como reportar um
-estado `ambiguous` sem escrever num caminho de schema fixo. Correção sugerida
-para uma iteração futura: adicionar ao `AUTHOR_INTAKE_TOOL_NOTE` uma
-instrução explícita — em `state: ambiguous` ou `state: none`, não escrever
-nenhum arquivo de domínio; comunicar o resultado só via `finish_phase`.
+tinha um ponto a apertar: a instrução não deixava claro onde/como reportar um
+estado `ambiguous` sem escrever num caminho de schema fixo. **Corrigido**:
+`AUTHOR_INTAKE_TOOL_NOTE` agora instrui explicitamente a não escrever nenhum
+arquivo de domínio em `none`/`ambiguous`, e — mais importante — `write_file`
+em `agent_runtime.py` agora **recusa estruturalmente** escrever
+`state/intake-summary.json` na fase `intake` a menos que
+`resolve_intake_candidates` tenha retornado `state="unique"` na mesma
+execução. Isso segue o mesmo princípio que já valia para o allowlist de
+caminho: falhar numa fronteira de código, não só confiar na instrução do
+prompt. Teste de regressão:
+`test_intake_summary_write_blocked_without_a_unique_resolution`.
 
 Custo real: 188.740 tokens combinados, **$0.0765**.
 
@@ -212,6 +218,7 @@ Os 4 passos listados originalmente nesta seção foram cumpridos:
    repo de teste — $0.0765–$0.1225 por execução em Haiku 4.5, faixa
    compatível com `bootstrap_instance`/`configure_intake` da Etapa 3.
 
-Pendência aberta (não bloqueante, mas registrada): apertar o prompt do
-author para não escrever `state/intake-summary.json` em estado
-`ambiguous`/`none`.
+Pendência resolvida nesta mesma etapa: apertado o prompt e, mais
+estruturalmente, adicionado um guard de código em `write_file` que recusa
+`state/intake-summary.json` fora do estado `unique` -- não depende só do
+prompt se comportar bem.
