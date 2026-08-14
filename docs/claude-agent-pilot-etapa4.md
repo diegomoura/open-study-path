@@ -1,10 +1,12 @@
 # Agent pilot: Etapa 4 — extensão para `intake`
 
-Status: **design implementado, aguardando validação real.** Nenhum
-`workflow_dispatch` foi disparado ainda para este código — o critério da
-Etapa 3 (`docs/claude-agent-pilot-etapa3.md`, "rodar de verdade + conferir
-hash na mão") ainda não foi aplicado a `intake`. Este documento registra o
-desenho e o que falta para fechar a validação, não um resultado medido.
+Status: **fechada para o caso `github_issue`.** Dois dispatches reais contra
+o repositório de teste descartável
+(`diegomoura/open-study-path-agent-test-20260814152628`) validaram o caso
+`unique` (hashes conferidos na mão, batem) e o caso `ambiguous` (sem write de
+domínio, sem label aplicada, reviewer isolado bloqueia por conta própria um
+resultado imperfeito). Ver seção 5 para os números reais e uma pendência não
+bloqueante encontrada no caminho `ambiguous`.
 
 ## 1. Escopo desta etapa
 
@@ -141,20 +143,75 @@ passando sem rede/token):
 Como antes, não há teste end-to-end automatizado contra a API real — custaria
 tokens em todo run de CI.
 
-## 5. O que falta para "validado" (critério da Etapa 3)
+## 5. Validação real (Etapa 4 fechada para o caso `github_issue`)
 
-1. Rodar `workflow_dispatch` de verdade, fase `intake`, contra o repositório
-   de teste descartável, com pelo menos uma issue real de exemplo já criada
-   com a label `study-request` e o formulário atual.
-2. Conferir manualmente: os 3 hashes dos arquivos de saída batem com os
-   bytes reais; a label `intake:imported` foi aplicada só na issue correta;
-   o reviewer isolado recomputou o hash (não copiou do author, replicando o
-   achado da Etapa 3 sobre `configure_intake` pré-`#76`).
-3. Rodar pelo menos um caso de `state: ambiguous` (duas issues válidas) e
-   confirmar que o author não escreve nada e não aplica a label — só
-   `finish_phase` com um resumo pedindo decisão humana.
-4. Registrar custo real em `state/agent-pilot-usage.jsonl`, mesmo padrão da
-   Etapa 3.
+Status: **fechada**, dois dispatches reais contra o repositório de teste
+descartável (`diegomoura/open-study-path-agent-test-20260814152628`).
 
-Nenhum desses 4 passos foi executado ainda. Não disparar o workflow sem
-confirmação explícita, já que tem custo de API real.
+### 5.1 Caso `unique` — issue #7 ("Aprender Go do zero")
+
+PR de teste #8 (`agent-pilot/intake-20260814210341`). Os 3 hashes conferidos
+na mão contra os bytes reais baixados via API bateram exatamente:
+
+| Arquivo | sha256 real | sha256 no review | Bate? |
+|---|---|---|---|
+| `.open-study-path/instance.yml` | `39c68737...0c40d756` | idêntico | sim |
+| `study.config.yml` | `e004a2af...59fe395c4` | idêntico | sim |
+| `state/intake-summary.json` | `f9bdea2b...0bce570b8` | idêntico | sim |
+
+Os 5 checks do profile `intake` (`request_fidelity`, `preference_preservation`,
+`ambiguity_resolution`, `data_minimization`, `next_phase_consistency`) todos
+`passed`, `status: approved`. `path.learning_request` preservado verbatim,
+`path.subject` é um rótulo derivado sem substituir a resposta original,
+`path.name` igual ao título da issue sem reescrita. A label
+`intake:imported` foi aplicada só na issue #7 — confirmado consultando
+`GET /repos/.../issues?labels=intake:imported` depois do run: nenhuma outra
+issue foi tocada. Custo real: 350.991 tokens combinados, **$0.1225**.
+
+### 5.2 Caso `ambiguous` — issues #9 e #10 (duas candidatas válidas)
+
+PR de teste #11 (`agent-pilot/intake-20260814210946`). Resultado central:
+**nenhum arquivo de domínio foi escrito** (`study.config.yml` e
+`.open-study-path/instance.yml` ficaram intocados) e **nenhuma label foi
+aplicada** a #9 ou #10 — só #7 (da rodada anterior) continua marcada. O
+author nunca decidiu sozinho qual candidata importar.
+
+Achado real (não hipotético) que vale registrar: o author escreveu em
+`state/intake-summary.json` um objeto de status ad hoc
+(`classification_state`, `ambiguous_candidates`, `action_required`) fora do
+schema real desse arquivo, em vez de não escrever nada e só usar
+`finish_phase` para reportar a ambiguidade. **O reviewer isolado pegou isso
+sozinho**: `status: action_required`, com blocking finding explícito
+("operation changed state/intake-summary.json but did not create an
+approved review artifact with all required checks... passed"). Três dos
+cinco checks (`request_fidelity`, `preference_preservation`,
+`next_phase_consistency`) ficaram `pending`, só `ambiguity_resolution` e
+`data_minimization` foram marcados `passed`. O workflow não faz auto-merge
+de qualquer forma, mas isso confirma que o reviewer bloquearia mesmo se
+houvesse merge automático configurado.
+
+Nenhum efeito colateral externo aconteceu, mas o prompt de `intake` (Etapa 4)
+tem um ponto a apertar: a instrução não deixa claro onde/como reportar um
+estado `ambiguous` sem escrever num caminho de schema fixo. Correção sugerida
+para uma iteração futura: adicionar ao `AUTHOR_INTAKE_TOOL_NOTE` uma
+instrução explícita — em `state: ambiguous` ou `state: none`, não escrever
+nenhum arquivo de domínio; comunicar o resultado só via `finish_phase`.
+
+Custo real: 188.740 tokens combinados, **$0.0765**.
+
+### 5.3 Critério de validação — fechado
+
+Os 4 passos listados originalmente nesta seção foram cumpridos:
+
+1. Dispatch real contra o repo de teste — feito, 2 execuções.
+2. Hashes conferidos na mão — batem exatamente (caso `unique`).
+3. Caso `ambiguous` testado — author não escreve domínio nem aplica label;
+   reviewer bloqueia por conta própria o resultado imperfeito que o author
+   produziu.
+4. Custo registrado em `state/agent-pilot-usage.jsonl` de ambos os runs no
+   repo de teste — $0.0765–$0.1225 por execução em Haiku 4.5, faixa
+   compatível com `bootstrap_instance`/`configure_intake` da Etapa 3.
+
+Pendência aberta (não bloqueante, mas registrada): apertar o prompt do
+author para não escrever `state/intake-summary.json` em estado
+`ambiguous`/`none`.
