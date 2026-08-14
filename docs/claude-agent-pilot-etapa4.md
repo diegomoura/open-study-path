@@ -222,3 +222,27 @@ Pendência resolvida nesta mesma etapa: apertado o prompt e, mais
 estruturalmente, adicionado um guard de código em `write_file` que recusa
 `state/intake-summary.json` fora do estado `unique` -- não depende só do
 prompt se comportar bem.
+
+### 5.4 Confirmação fim-a-fim do fix (PR #83)
+
+Terceiro dispatch, mesmas issues #9/#10 (ainda livres, sem `intake:imported`
+na época do teste). Resultado: `git status --porcelain` vazio -- o author
+não escreveu **nada**, nem `state/intake-summary.json`. O step `Fail if the
+author produced no diff` disparou de propósito, o mesmo comportamento que já
+existia para qualquer fase antes de `intake` existir. Custo real:
+**$0.0293** (bem mais barato que o run anterior de `ambiguous`, $0.0765 --
+o modelo não tentou mais escrever e recuar). Confirma o fix fim-a-fim, não
+só a lógica testada offline.
+
+Achado secundário, não corrigido ainda: o resumo do author (`finish_phase`'s
+`summary`/`next_action`, que explicaria qual é a ambiguidade e pediria a
+decisão do dono) é extraído para `/tmp/author-summary.txt` no step "Extract
+author summary for the reviewer" -- **antes** do step "Fail if the author
+produced no diff". Mas "Upload author artifacts" (que tornaria esse resumo
+visível) vem depois do step que falha, então é pulado. Um dono da instância
+vendo esse run só enxerga "author agent finished without writing any allowed
+file" no log bruto do Actions, sem a explicação de qual issue escolher.
+Correção sugerida para uma iteração futura: mover (ou duplicar) o upload do
+resumo do author para antes do check de diff vazio, ou imprimir
+`next_action` diretamente no job summary (`$GITHUB_STEP_SUMMARY`)
+independente do resultado do diff.
