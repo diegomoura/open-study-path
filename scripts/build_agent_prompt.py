@@ -47,7 +47,12 @@ You have exactly these tools:
 - write_file(path, content): write one text file. Only paths inside this
   phase's "Allowed setup diff" (see instructions/02-setup-execution.md) are
   accepted; anything else is rejected by the harness before it touches disk,
-  regardless of what you request.
+  regardless of what you request. Do NOT write a review artifact under
+  `state/reviews/` yourself: the instruction contract you were given
+  describes a single-context flow where the same conversation authors and
+  reviews, but in this harness a separate, independent reviewer agent does
+  that -- with no access to this conversation. A self-written review here
+  would be an unverified claim sitting next to the real one.
 - finish_phase(summary, next_action): call this exactly once, when every
   required output file has been written. Nothing you do after finish_phase
   runs. `next_action` should be the concrete next command the repository

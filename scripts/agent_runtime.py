@@ -45,6 +45,24 @@ API_URL = "https://api.anthropic.com/v1/messages"
 API_VERSION = "2023-06-01"
 DEFAULT_MAX_TOKENS = 4096
 
+# USD per million tokens, verified against platform.claude.com/docs/en/about-claude/pricing
+# (checked 2026-08-14). Update this table if Anthropic changes rates -- it is
+# only used to produce an estimate for the pilot's cost reporting, never sent
+# to the API or used for anything billing-authoritative.
+#
+# cache_write_5m / cache_read multipliers are relative to base input price
+# (1.25x and 0.1x respectively, per the pricing page); stored here as
+# absolute per-MTok USD for direct lookup instead of as a multiplier, since
+# the actual multiplier the API applied per-call isn't reported back to us --
+# only raw cache_creation_input_tokens / cache_read_input_tokens counts are.
+# 5-minute cache writes are assumed since neither prompt in this harness sets
+# a longer TTL.
+MODEL_PRICING_USD_PER_MTOK: dict[str, dict[str, float]] = {
+    "claude-haiku-4-5-20251001": {"input": 1.0, "output": 5.0, "cache_write_5m": 1.25, "cache_read": 0.10},
+    "claude-sonnet-5": {"input": 2.0, "output": 10.0, "cache_write_5m": 2.50, "cache_read": 0.20},
+    "claude-opus-5": {"input": 5.0, "output": 25.0, "cache_write_5m": 6.25, "cache_read": 0.50},
+}
+
 # Hard cap on tool-use round trips per agent call. This is a runtime safety
 # rail independent of any billing cap configured in the Anthropic Console
 # (work proposal, section 6): a bug that makes the model loop on tool calls
@@ -64,7 +82,16 @@ SETUP_ALLOWED_EXACT_PATHS: tuple[str, ...] = (
     "study/roadmap.md",
     "README.md",
 )
-SETUP_ALLOWED_PREFIXES: tuple[str, ...] = ("state/reviews/",)
+SETUP_ALLOWED_PREFIXES: tuple[str, ...] = ()
+# NOTE: instructions/02-setup-execution.md's "Allowed setup diff" also lists
+# `state/reviews/<setup-operation>.yml` -- but that's written by whichever
+# context runs the review. In the isolated harness that's always the
+# reviewer agent, which never gets write_file (it writes its verdict through
+# submit_review, recorded by the workflow step, not by touching disk itself).
+# The author is deliberately given no prefix-based write access here: letting
+# it write anywhere under state/reviews/ would let it author its own
+# "independent" review, which is exactly the failure mode this whole
+# author/reviewer split exists to prevent. See docs/claude-agent-pilot.md.
 
 # Which allowlist applies to which manifest phase. Only the two pilot phases
 # are wired up in stage 2; extending PHASE_ALLOWLISTS is exactly the work of
@@ -133,6 +160,54 @@ class ToolCallResult:
 
 
 @dataclass
+class UsageTotals:
+    """Accumulated token usage across every API round trip in one run_agent() call."""
+
+    input_tokens: int = 0
+    output_tokens: int = 0
+    cache_creation_input_tokens: int = 0
+    cache_read_input_tokens: int = 0
+
+    def add(self, usage: Mapping[str, Any]) -> None:
+        self.input_tokens += int(usage.get("input_tokens", 0) or 0)
+        self.output_tokens += int(usage.get("output_tokens", 0) or 0)
+        self.cache_creation_input_tokens += int(usage.get("cache_creation_input_tokens", 0) or 0)
+        self.cache_read_input_tokens += int(usage.get("cache_read_input_tokens", 0) or 0)
+
+    def total_tokens(self) -> int:
+        return self.input_tokens + self.output_tokens + self.cache_creation_input_tokens + self.cache_read_input_tokens
+
+    def estimated_cost_usd(self, model: str) -> float | None:
+        """Return an estimated USD cost, or None if `model` isn't in the pricing table.
+
+        This is an estimate for reporting only (see MODEL_PRICING_USD_PER_MTOK) --
+        it is never authoritative. Check the Anthropic Console for real billed
+        usage; this exists so a course creator deciding whether to run the
+        pilot has a number to look at before they do, not so anyone can skip
+        checking their actual invoice.
+        """
+        rates = MODEL_PRICING_USD_PER_MTOK.get(model)
+        if rates is None:
+            return None
+        return (
+            self.input_tokens * rates["input"]
+            + self.output_tokens * rates["output"]
+            + self.cache_creation_input_tokens * rates["cache_write_5m"]
+            + self.cache_read_input_tokens * rates["cache_read"]
+        ) / 1_000_000
+
+    def as_dict(self, model: str) -> dict[str, Any]:
+        return {
+            "input_tokens": self.input_tokens,
+            "output_tokens": self.output_tokens,
+            "cache_creation_input_tokens": self.cache_creation_input_tokens,
+            "cache_read_input_tokens": self.cache_read_input_tokens,
+            "total_tokens": self.total_tokens(),
+            "estimated_cost_usd": self.estimated_cost_usd(model),
+        }
+
+
+@dataclass
 class AgentRun:
     """Outcome of one run_agent() call -- author or reviewer."""
 
@@ -143,6 +218,7 @@ class AgentRun:
     finished: bool = False
     finish_payload: dict[str, Any] | None = None
     files_written: list[str] = field(default_factory=list)
+    usage: UsageTotals = field(default_factory=UsageTotals)
 
 
 class RepoTools:
@@ -403,6 +479,8 @@ def run_agent(
         }
         response = transport(payload, api_key or "")
         run.transcript.append({"role": "assistant_response", "content": response.get("content", [])})
+        if "usage" in response:
+            run.usage.add(response["usage"])
         content = response.get("content", [])
         messages.append({"role": "assistant", "content": content})
 
@@ -498,9 +576,22 @@ def main(argv: Sequence[str] | None = None) -> None:
     if not run.finished:
         raise SystemExit(f"{args.role} agent did not call its finish tool")
 
-    print(json.dumps(run.finish_payload, indent=2))
+    output = dict(run.finish_payload or {})
+    output["model"] = model
+    output["usage"] = run.usage.as_dict(model)
+    print(json.dumps(output, indent=2))
+
     if run.files_written:
         print("files written:", ", ".join(run.files_written), file=sys.stderr)
+
+    cost = run.usage.estimated_cost_usd(model)
+    cost_str = f"${cost:.4f}" if cost is not None else "unknown (model not in local pricing table)"
+    print(
+        f"usage: {run.usage.input_tokens} input + {run.usage.output_tokens} output "
+        f"+ {run.usage.cache_creation_input_tokens} cache-write + {run.usage.cache_read_input_tokens} cache-read "
+        f"tokens -- estimated cost {cost_str} (model={model})",
+        file=sys.stderr,
+    )
 
 
 if __name__ == "__main__":

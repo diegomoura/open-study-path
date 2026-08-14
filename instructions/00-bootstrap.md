@@ -18,7 +18,7 @@ Read and apply `instructions/02-setup-execution.md` before inspecting or changin
 12. Leave all learner fields and provider selections unconfigured or `auto`. Do not import a submission, recommend providers or create external resources during bootstrap.
 13. Continue to `instructions/05-configure-intake.md` unless the owner explicitly asks to postpone intake configuration.
 14. Stop when the selected intake method is ready. Do not import answers, generate a curriculum, publish tasks or create study integrations during setup.
-15. Assemble all outputs and the approved setup review on the same feature branch. Open exactly one pull request only after the complete setup head exists; intermediate commits must never be treated as a completed setup.
+15. Assemble all outputs and the approved setup review on the same feature branch. Open exactly one pull request only after the complete setup head exists; intermediate commits must never be treated as a completed setup. **Exception:** when running under the isolated multi-agent harness (`docs/claude-agent-pilot.md`), the author does not assemble or self-approve a review artifact — a separate, independent reviewer call produces the one review that satisfies this step and the merge gate in `instructions/02-setup-execution.md`. A self-authored review in that mode would just be an unverified claim sitting next to the real one, which is worse than not having it.
 16. Validate the complete setup diff and satisfy the merge gate in `instructions/02-setup-execution.md` before merging or reporting success.
 17. Complete the phase using `instructions/phase-completion.md`, including the exact next action for the selected intake provider.
 

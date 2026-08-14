@@ -46,6 +46,14 @@ selection.
   `docs/review-framework.md` for the reviewer). It reads these files at
   workflow run time rather than duplicating their text, so the automated path
   can't silently drift from the manual (ChatGPT Project) path.
+- `scripts/summarize_agent_pilot_usage.py` -- combines the author's and
+  reviewer's token usage/cost into one record, appended to
+  `state/agent-pilot-usage.jsonl` in the target repository.
+- `scripts/format_pr_body.py` -- renders the pull request body (status +
+  usage estimate) as a small standalone script, specifically so the workflow
+  YAML never embeds a multi-line Python string inside a `run:` block --
+  that pattern is what caused two of the YAML bugs during this pilot's first
+  real dispatches.
 - `.github/workflows/agent-pilot-setup.yml` -- `workflow_dispatch` only. Two
   sequential jobs, `author` then `reviewer`, each its own `run_agent()` call
   with its own fresh message history. The reviewer job never receives the
@@ -66,9 +74,58 @@ selection.
   to invoke, which is the cheapest way to keep `ANTHROPIC_API_KEY` away from
   untrusted input for this first pilot. Issue- or label-triggered runs are
   future work once the manual pilot is validated.
-- **No cost/usage capture yet.** `agent_runtime.py` does not currently log
-  the `usage` field from the API response. Add that before step 3 of the
-  proposal ("medir o piloto") needs real numbers.
+
+## Token usage and cost estimates
+
+Every `agent_runtime.py` call accumulates the `usage` field the Anthropic API
+returns on each round trip (input, output, cache-write, cache-read tokens)
+and estimates a USD cost against a hard-coded pricing table
+(`MODEL_PRICING_USD_PER_MTOK`, verified against
+`platform.claude.com/docs/en/about-claude/pricing` on 2026-08-14). This is a
+planning estimate only -- it is never authoritative and the pricing table can
+drift if Anthropic changes rates; check the Anthropic Console for real billed
+usage.
+
+`scripts/summarize_agent_pilot_usage.py` combines the author's and reviewer's
+usage into one number per run and:
+
+- puts it in the pull request body (via `scripts/format_pr_body.py`), so
+  whoever reviews the PR sees the estimated cost of the run that produced it;
+- appends one JSON line to `state/agent-pilot-usage.jsonl` in the target
+  repository, so cost is visible across every phase run over the life of a
+  course, not just the latest one.
+
+This is what a course creator publishing an instance can point learners (or
+their own budget planning) to for a real estimate, rather than a guess.
+Sample record shape:
+
+```json
+{"phase": "bootstrap_instance", "target_repo": "owner/course", "author": {"model": "claude-haiku-4-5-20251001", "input_tokens": 5312, "output_tokens": 812, "cache_creation_input_tokens": 0, "cache_read_input_tokens": 0, "total_tokens": 6124, "estimated_cost_usd": 0.009372}, "reviewer": {"model": "claude-haiku-4-5-20251001", "input_tokens": 6890, "output_tokens": 1024, "cache_creation_input_tokens": 0, "cache_read_input_tokens": 0, "total_tokens": 7914, "estimated_cost_usd": 0.012010}, "combined_tokens": 14038, "combined_estimated_cost_usd": 0.021382, "recorded_at": "2026-08-14T18:00:00+00:00"}
+```
+
+Both pilot phases run on Haiku 4.5 (the cheapest tier), so real per-run cost
+for `bootstrap_instance` and `configure_intake` should be well under a cent
+each -- see `state/agent-pilot-usage.jsonl` on a repository that has actually
+run the pilot for real recorded numbers rather than an estimate of an
+estimate.
+
+## Author self-review is no longer part of the pilot path
+
+`instructions/00-bootstrap.md` and `instructions/02-setup-execution.md` were
+written for the single-context manual flow (one ChatGPT/Claude conversation
+authors the setup *and* reviews its own diff before opening the PR). The
+first real pilot run exposed the consequence of handing that same contract to
+a split author/reviewer harness verbatim: the author dutifully wrote its own
+`state/reviews/setup-v1.yml` with fabricated content, which just sat there as
+noise next to the actual independent review.
+
+Both instruction files now carry an explicit exception for the isolated
+harness, and `scripts/agent_runtime.py`'s write allowlist enforces it
+structurally: `state/reviews/` is no longer a path the author's `write_file`
+tool can write to at all (only the reviewer's `submit_review` result,
+recorded by the workflow itself, ever lands there in this pilot). The manual,
+single-context flow is unaffected -- the exception only applies when
+`docs/claude-agent-pilot.md` (this file) is the flow in use.
 
 ## Required repository secret
 

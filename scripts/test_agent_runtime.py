@@ -53,10 +53,19 @@ def make_scripted_transport(responses: list[list[dict]]):
 def test_write_allowlist_matches_setup_execution_contract() -> None:
     assert is_write_allowed("bootstrap_instance", ".open-study-path/instance.yml")
     assert is_write_allowed("bootstrap_instance", "study.config.yml")
-    assert is_write_allowed("bootstrap_instance", "state/reviews/bootstrap-2026-08-14.yml")
     assert not is_write_allowed("bootstrap_instance", "instructions/manifest.yml")
     assert not is_write_allowed("bootstrap_instance", "scripts/agent_runtime.py")
     assert not is_write_allowed("unknown_phase", "study.config.yml")
+
+
+def test_author_cannot_write_its_own_review_artifact() -> None:
+    # instructions/02-setup-execution.md's "Allowed setup diff" lists
+    # state/reviews/<setup-operation>.yml, but that path is deliberately
+    # excluded from the author's write allowlist in this harness: only the
+    # independent reviewer agent (via submit_review, not write_file) may
+    # produce a review. See docs/claude-agent-pilot.md.
+    assert not is_write_allowed("bootstrap_instance", "state/reviews/setup-v1.yml")
+    assert not is_write_allowed("configure_intake", "state/reviews/anything.yml")
 
 
 def test_normalize_relative_path_rejects_escapes() -> None:
@@ -350,6 +359,42 @@ def test_author_agent_has_no_compute_sha256_tool() -> None:
         assert run.finished
 
 
+def test_usage_accumulates_across_tool_round_trips_and_estimates_cost() -> None:
+    with tempfile.TemporaryDirectory() as tmp:
+        root = Path(tmp)
+        calls = []
+
+        def transport(payload, api_key):
+            calls.append(payload)
+            if len(calls) == 1:
+                return {
+                    "content": [_tool_use("call_1", "list_dir", {"path": "."})],
+                    "usage": {"input_tokens": 1000, "output_tokens": 50, "cache_creation_input_tokens": 200, "cache_read_input_tokens": 0},
+                }
+            return {
+                "content": [_tool_use("call_2", "finish_phase", {"summary": "done", "next_action": "n/a"})],
+                "usage": {"input_tokens": 1300, "output_tokens": 40, "cache_creation_input_tokens": 0, "cache_read_input_tokens": 200},
+            }
+
+        run = run_agent(
+            root=root,
+            phase="bootstrap_instance",
+            role="author",
+            model="claude-haiku-4-5-20251001",
+            system_prompt="system",
+            user_prompt="user",
+            transport=transport,
+        )
+        assert run.usage.input_tokens == 2300
+        assert run.usage.output_tokens == 90
+        assert run.usage.cache_creation_input_tokens == 200
+        assert run.usage.cache_read_input_tokens == 200
+        # (2300*1.0 + 90*5.0 + 200*1.25 + 200*0.10) / 1_000_000
+        expected_cost = (2300 * 1.0 + 90 * 5.0 + 200 * 1.25 + 200 * 0.10) / 1_000_000
+        assert abs(run.usage.estimated_cost_usd("claude-haiku-4-5-20251001") - expected_cost) < 1e-12
+        assert run.usage.estimated_cost_usd("some-unknown-model") is None
+
+
 def test_every_pilot_phase_has_an_allowlist() -> None:
     assert "bootstrap_instance" in PHASE_ALLOWLISTS
     assert "configure_intake" in PHASE_ALLOWLISTS
@@ -358,6 +403,7 @@ def test_every_pilot_phase_has_an_allowlist() -> None:
 def main() -> None:
     tests = [
         test_write_allowlist_matches_setup_execution_contract,
+        test_author_cannot_write_its_own_review_artifact,
         test_normalize_relative_path_rejects_escapes,
         test_resolve_phase_reviewer_model_inherits_author_tier,
         test_author_agent_write_then_finish_happy_path,
@@ -366,6 +412,7 @@ def main() -> None:
         test_reviewer_cannot_submit_approved_with_blocking_findings,
         test_reviewer_compute_sha256_matches_real_file_hash,
         test_author_agent_has_no_compute_sha256_tool,
+        test_usage_accumulates_across_tool_round_trips_and_estimates_cost,
         test_budget_exceeded_when_agent_never_finishes,
         test_stops_cleanly_when_model_returns_no_tool_calls,
         test_every_pilot_phase_has_an_allowlist,
