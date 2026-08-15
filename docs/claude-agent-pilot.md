@@ -8,7 +8,8 @@ Anthropic API and acts on what comes back.
 
 ## Scope
 
-Four manifest phases wired to a real agent call so far:
+Five manifest phases (four full phases plus one suboperation of `generate`)
+wired to a real agent call so far:
 
 - `bootstrap_instance`, `configure_intake` -- stage 2/Etapa 3, allowed diff
   small and mechanical (`instructions/02-setup-execution.md`, "Allowed setup
@@ -27,6 +28,15 @@ Four manifest phases wired to a real agent call so far:
   decides to pick integrations back up; each needs its own Secret and its
   own adapter, and the work proposal's section 6 (key security) only ever
   addressed `ANTHROPIC_API_KEY`, not third-party provider Secrets.
+- `generate_proposal` -- the `proposal` suboperation of manifest.yml's
+  `generate` phase only (`instructions/28-propose-path.md`, roadmap
+  architecture -- no materialized content). Etapa 5's first slice
+  (proposal, section 7, step 5). Design complete and tested offline,
+  **not yet validated with a real dispatch** -- see
+  `docs/claude-agent-pilot-etapa5.md`. `detailed_generation`
+  (`instructions/30-generate-path.md` -- lessons, slides, PDF rendering)
+  remains unimplemented; it needs Node.js/npm in the runner for slide
+  rendering, an infrastructure dependency none of the phases above needed.
 
 `diagnostic` is not implemented, but its design decision is closed: it needs
 a genuinely different trigger model (`issue_comment` per learner answer,

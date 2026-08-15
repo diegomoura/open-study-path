@@ -702,6 +702,30 @@ def test_run_publish_projection_reports_invalid_topic_input_without_crashing() -
         assert tools._last_publish_status != "success"
 
 
+def test_generate_proposal_allowlist_matches_proposal_outputs() -> None:
+    # instructions/28-propose-path.md "Outputs": only the roadmap and the
+    # instance marker -- everything instructions/30-generate-path.md later
+    # materializes (topics, modules, slides, assessments) must stay outside
+    # this suboperation's allowlist.
+    assert is_write_allowed("generate_proposal", "study/roadmap.md")
+    assert is_write_allowed("generate_proposal", ".open-study-path/instance.yml")
+    assert not is_write_allowed("generate_proposal", "study/topics/TOPIC-001.md")
+    assert not is_write_allowed("generate_proposal", "study/modules/TOPIC-001.md")
+    assert not is_write_allowed("generate_proposal", "study/slides/TOPIC-001/slides.pdf")
+    assert not is_write_allowed("generate_proposal", "study/assessments/TOPIC-001.md")
+    assert not is_write_allowed("generate_proposal", "state/reviews/agent-pilot-generate-proposal.yml")
+
+
+def test_generate_proposal_has_no_github_issues_tools() -> None:
+    # This suboperation never touches GitHub Issues -- unlike intake/publish,
+    # it has no entry in PHASES_WITH_GITHUB_ISSUES and gets only the plain
+    # file-writing tool set, same shape as bootstrap_instance/configure_intake.
+    author_names = {t["name"] for t in author_tools("generate_proposal")}
+    assert author_names == {"read_file", "list_dir", "write_file", "finish_phase"}
+    reviewer_names = {t["name"] for t in reviewer_tools("generate_proposal")}
+    assert reviewer_names == {"read_file", "list_dir", "compute_sha256", "submit_review"}
+
+
 def main() -> None:
     tests = [
         test_write_allowlist_matches_setup_execution_contract,
@@ -729,6 +753,8 @@ def main() -> None:
         test_publish_tools_are_distinct_from_intake_tools,
         test_run_publish_projection_routes_through_dispatch_and_reports_success,
         test_run_publish_projection_reports_invalid_topic_input_without_crashing,
+        test_generate_proposal_allowlist_matches_proposal_outputs,
+        test_generate_proposal_has_no_github_issues_tools,
     ]
     for test in tests:
         test()
