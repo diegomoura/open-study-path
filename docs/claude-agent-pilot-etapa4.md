@@ -1,12 +1,13 @@
-# Agent pilot: Etapa 4 — extensão para `intake`
+# Agent pilot: Etapa 4 — extensão para `intake` e `publish`
 
-Status: **fechada para o caso `github_issue`.** Dois dispatches reais contra
-o repositório de teste descartável
-(`diegomoura/open-study-path-agent-test-20260814152628`) validaram o caso
-`unique` (hashes conferidos na mão, batem) e o caso `ambiguous` (sem write de
-domínio, sem label aplicada, reviewer isolado bloqueia por conta própria um
-resultado imperfeito). Ver seção 5 para os números reais e uma pendência não
-bloqueante encontrada no caminho `ambiguous`.
+Status: **fechada.** `intake` validado com 3 dispatches reais (unique,
+ambiguous pré-fix, ambiguous pós-fix). `publish` validado com 2 dispatches
+reais (github_issues only) -- confirma criação real de issues, idempotência
+sem duplicar e bloqueio correto de conteúdo inválido, mas **sem** um caso
+de sucesso limpo (o dispatch de validação bateu num artefato de nome do
+repositório de teste que colide com o validador de conteúdo visível; ver
+seção 6.5). `diagnostic` continua fora de escopo, pendente de decisão de
+formato (multi-turn).
 
 ## 1. Escopo desta etapa
 
@@ -257,3 +258,166 @@ falha de propósito por diff vazio. Seguindo a mesma convenção de
 `scripts/format_pr_body.py`, a lógica ficou num script Python próprio, não
 inline no YAML. Teste offline novo:
 `scripts/test_publish_author_summary.py` (2 casos).
+
+## 6. Extensão para `publish` (github_issues only)
+
+Status: **design implementado, testado offline, aguardando validação
+real.** Escopo confirmado com você: só o backend `github_issues`; Trello/
+Todoist/Notion ficam para quando você decidir mexer com integrações.
+
+### 6.1 Por que reaproveitar `scripts/task_projection_engine.py`
+
+`instructions/40-publish-tasks.md`/`41-task-backend-projection.md`/
+`42-integration-preflight.md` descrevem um contrato muito mais rico que
+`intake` -- projeção de tarefas, idempotência, fingerprint de roadmap,
+validação de read-back, boundary de conteúdo visível. Só que quase todo esse
+contrato **já existe implementado e testado** em
+`scripts/task_projection_engine.py` (1297 linhas, com `Backend` como
+`Protocol` e um `FakeBackend` usado pelos próprios testes do motor). Isso já
+inclui suporte nativo a `github_issues` como provider (`GITHUB_STATE_LABELS`,
+exclusão de `github_issues` de `ORDERED_PROVIDERS`).
+
+Isso significa que a extensão do harness não precisou reimplementar nada do
+algoritmo -- só precisou de um adaptador real (`Backend`) contra a API do
+GitHub, exatamente o mesmo padrão de `resolve_intake_candidates`: a lógica
+determinística já existe em Python puro, o harness só conecta um backend de
+verdade e deixa o modelo fornecer os dados de entrada (`topics`, lidos do
+roadmap aprovado).
+
+### 6.2 `scripts/github_issues_backend.py`
+
+Implementa o `Backend` protocol com chamadas REST reais. Decisões de design
+que valem registrar:
+
+- **Metadata interna nunca fica no título/corpo da issue.** A instrução
+  proíbe expor `topic_id`, fingerprint, IDs de pré-requisito etc. em campos
+  visíveis. Mas o motor já entrega esse metadata como parâmetro em todo
+  `upsert_managed_resource()` -- o adapter só precisa guardá-lo em memória
+  durante a vida do backend e devolvê-lo no `read_normalized_snapshot()`.
+  Nenhuma persistência extra no GitHub é necessária; entre execuções
+  separadas, `state/integrations.json` é a fonte durável (o modelo lê o
+  `external_id` de lá e devolve pro tool na próxima chamada).
+- **Sem "container" real.** GitHub Issues não tem quadro/projeto -- o
+  `ensure_container` devolve o próprio repositório, sem nenhum write.
+- **Sem seções gerenciadas.** `ORDERED_PROVIDERS` no motor já exclui
+  `github_issues` (só Trello/Todoist têm listas/colunas) -- `ensure_managed_
+  sections` é no-op.
+- **Matching**: só os tiers 1 (`external_id` durável) e 3 (match único de
+  título) da ordem de `instructions/41` são implementados. O tier 2 (chave
+  privada) exigiria um marcador oculto na issue, que a instrução proíbe
+  explicitamente. Isso não quebra idempotência entre execuções porque o
+  tier 1 já resolve isso via `state/integrations.json`.
+- **Achado de compatibilidade, não corrigido aqui**: o exemplo de URL de
+  slides em `instructions/40-publish-tasks.md`
+  (`.../study/slides/TOPIC-000/slides.pdf`) embutiria o `topic_id` no campo
+  visível `slides_url`, o que o validador de conteúdo visível do próprio
+  motor rejeita (`validate_visible_fields`, padrão "internal topic id"). Os
+  testes do próprio `task_projection_engine.py` já usam URLs baseadas no
+  número da aula, não no `topic_id`, confirmando que essa é a convenção
+  real esperada. Registrado aqui para quem construir `generate`/Etapa 5:
+  as URLs de recurso publicadas não devem embutir `TOPIC-NNN` cru.
+
+### 6.3 Harness (`agent_runtime.py`)
+
+- Allowlist: `state/integrations.json`, `study/integrations.md` (exatos),
+  `state/operations/` (prefixo) -- direto de `instructions/41`'s "Durable
+  operation contract".
+- Tool único `run_publish_projection(topics, operation_id, course_name)`:
+  monta `TopicProjection` a partir do que o modelo fornece, lê
+  `state/integrations.json`/`state/operations/<id>.json` locais se
+  existirem, chama `publish_projection()` de verdade contra
+  `GitHubIssuesBackend`, devolve o resultado como JSON. Erros conhecidos do
+  motor (`AmbiguousMatchError`, `PartialWriteError`,
+  `ReadbackValidationError`) são capturados e devolvidos como
+  `{"status": "error", ...}` em vez de estourar a execução -- são
+  resultados válidos e esperados pela própria instrução ("When required
+  publication is blocked, failed, partial or still in progress..."), não
+  mau uso da tool.
+- **Guard estrutural aplicado desde o início desta vez**, sem esperar um
+  dispatch real revelar o problema (como aconteceu com `intake`):
+  `write_file` recusa `state/integrations.json`/`study/integrations.md`
+  fora de `run_publish_projection` ter retornado `status="success"` na
+  mesma execução. `state/operations/<id>.json` fica de fora desse guard
+  porque precisa ser persistido mesmo em `blocked`/`partial`.
+
+### 6.4 Testes offline
+
+`scripts/test_github_issues_backend.py` (4 casos) -- o mais importante é
+`test_publish_projection_round_trip_passes_readback`: roda o
+`publish_projection()` real contra um transporte HTTP falso e confirma que
+`validate_readback` não encontra nenhum erro. Também cobre: segunda execução
+com os mesmos tópicos não gera nenhuma chamada de escrita (idempotência real,
+não só testada em memória pelo motor), match ambíguo bloqueia antes de
+qualquer escrita, labels não-`study:*` são preservadas em update.
+
+`scripts/test_agent_runtime.py` ganhou 4 casos novos (25 no total): guard
+estrutural de sucesso, tools de `publish` distintas das de `intake`, `run_
+publish_projection` roteado corretamente via `dispatch()`, entrada inválida
+de tópico não derruba a execução.
+
+### 6.5 Validação real (2 dispatches; encerrada como "blocked, não success")
+
+Status: **fechada com um resultado parcial, não com um caso de sucesso
+limpo.** Dois dispatches reais contra o repositório de teste descartável.
+
+**Dispatch 1** (issues #12/#13 criadas de verdade -- orientação + "Aula 01 ·
+Introducao a Go", `study:ready`, TOPIC-002 não materializada corretamente
+não virou issue): falhou por um bug meu, não do harness de `publish` --
+esqueci de sincronizar `scripts/publish_author_summary.py` (do PR #83) pro
+repositório de teste. O job falhou no step novo "Publish author result to
+the job summary" *depois* do author já ter feito os writes reais no GitHub
+(step anterior, "Run author agent", tinha terminado com sucesso). Corrigido
+e sincronizado; nenhuma issue duplicada ficou órfã porque o dispatch 2
+reconheceu #12/#13 por título.
+
+**Dispatch 2** (redisparo, `state/agent-pilot-usage.jsonl` mostra
+`external_write_count: 0`): confirma idempotência real -- nenhuma escrita
+nova, `preflight_match` reconheceu as issues existentes por título e não
+duplicou nada. Mas a publicação terminou `status: partial`, não `success`:
+
+- **Achado 1 -- artefato do nome do repositório de teste, não bug do
+  código.** A URL de recurso (`https://github.com/.../open-study-path-
+  agent-test-20260814152628/raw/HEAD/study/slides/aula-01/slides.pdf`)
+  contém literalmente a substring `open-study-path`, que é exatamente o
+  padrão que `VISIBLE_METADATA_PATTERNS` existe para detectar (marcador
+  interno vazando em campo visível). O motor bloqueou corretamente
+  (`ReadbackValidationError`, journal `status: partial`), e o guard
+  estrutural funcionou: nenhum `state/integrations.json`/`study/
+  integrations.md` foi escrito. Confirmei na mão, direto na API, que a
+  substring está mesmo presente no corpo real da issue #13 -- não é falso
+  positivo do validador. É consequência de eu ter nomeado o repositório de
+  teste `open-study-path-agent-test-...` lá na Etapa 2, o que colide com o
+  próprio marcador que o motor proíbe. **Risco real além do fixture**: uma
+  instância de produção que mantenha o nome padrão de fork do template
+  (`open-study-path`) sem renomear teria exatamente essa mesma colisão em
+  toda publicação futura -- vale como item de atenção para quem for operar
+  uma instância real, não corrigido aqui (mexer no regex compartilhado de
+  `task_projection_engine.py` é escopo maior, usado por outras fases que
+  ainda não existem).
+- **Achado 2 -- o reviewer isolado errou o fato, mas acertou a decisão.**
+  O `blocking_finding` principal do reviewer afirma: *"external read-back
+  of issue #13 shows no such marker... The actual visible fields are
+  clean."* Isso é factualmente incorreto -- conferi direto na API que a
+  substring `open-study-path` está mesmo no corpo da issue #13. O reviewer
+  teve acesso de leitura real à issue (via `read_github_issue`) e mesmo
+  assim concluiu o oposto do que os bytes reais mostram. A decisão final
+  (`status: action_required`, recusar aprovar) foi o resultado seguro --
+  mas chegou lá por um raciocínio errado, não pelo motivo certo. Vale
+  registrar como o mesmo tipo de achado da Etapa 3 (reviewer que hash
+  fabricado vs. recomputado), só que desta vez na direção oposta: o
+  reviewer chegou à conclusão correta apesar de, não por causa de, sua
+  verificação factual.
+
+Decisão registrada com você: não gastar mais um dispatch para forçar um
+caso `success` limpo agora. O que já foi confirmado -- criação real de
+issues, título/label/checklist corretos, idempotência sem duplicar,
+bloqueio correto de conteúdo inválido, guard estrutural funcionando -- é
+considerado evidência suficiente para fechar esta etapa. Um caso de sucesso
+limpo (URLs de fixture que não colidam com o nome do repositório) fica como
+follow-up de baixo custo para quando for conveniente.
+
+Custo real: dispatch 2 (author + reviewer completos, o único que rodou até
+o fim), **$0.1242** (303.998 tokens combinados). Dispatch 1 falhou antes do
+reviewer rodar -- só o custo do author, não registrado em
+`state/agent-pilot-usage.jsonl` porque o job nunca chegou ao step que
+grava esse arquivo.

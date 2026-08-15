@@ -8,16 +8,25 @@ Anthropic API and acts on what comes back.
 
 ## Scope
 
-Three manifest phases wired to a real agent call so far:
+Four manifest phases wired to a real agent call so far:
 
 - `bootstrap_instance`, `configure_intake` -- stage 2/Etapa 3, allowed diff
   small and mechanical (`instructions/02-setup-execution.md`, "Allowed setup
   diff"). Validated with real dispatches; see
   `docs/claude-agent-pilot-etapa3.md`.
-- `intake` -- Etapa 4 (proposal, section 7, step 4). Design complete (see
-  `docs/claude-agent-pilot-etapa4.md`), **not yet validated with a real
-  dispatch** -- follow the same "run for real + check the hash/read-back by
-  hand" criterion Etapa 3 used before treating it as trustworthy.
+- `intake` -- Etapa 4 (proposal, section 7, step 4). Validated with 3 real
+  dispatches (unique and ambiguous cases); see
+  `docs/claude-agent-pilot-etapa4.md`, sections 1-5.
+- `publish`, restricted to the `task manager: GitHub Issues` backend only.
+  Validated with 2 real dispatches -- real issue creation, idempotent
+  reuse, and correct blocking on invalid visible content all confirmed;
+  no clean `success` case yet (the validation dispatch hit a naming
+  collision between the disposable test repository's own name and the
+  visible-content validator -- see `docs/claude-agent-pilot-etapa4.md`,
+  section 6.5). Trello/Todoist/Notion remain deferred until the owner
+  decides to pick integrations back up; each needs its own Secret and its
+  own adapter, and the work proposal's section 6 (key security) only ever
+  addressed `ANTHROPIC_API_KEY`, not third-party provider Secrets.
 
 `diagnostic` is deliberately not wired yet: `instructions/20-diagnostic.md`
 requires a real, multi-turn interactive placement session with the learner
@@ -26,16 +35,11 @@ harness's one-shot `run_agent()` -> `finish_phase()` shape. Extending to it
 needs a separate design decision (turn-based harness vs. staying manual),
 not just a new allowlist entry.
 
-`publish` is also not wired yet. `instructions/40-publish-tasks.md` covers
-Trello, Todoist, Google/Outlook Calendar and Gmail, all of which need their
-own Secret and their own tool set beyond this harness's current GitHub-only
-scope, and the work proposal's section 6 (key security) only ever addressed
-`ANTHROPIC_API_KEY` -- it does not yet say anything about third-party
-provider Secrets. When `publish` is picked up, the plan is to start scoped to
-`task manager: GitHub Issues` only (reuses the same `GITHUB_TOKEN` this
-Etapa 4 GitHub Issues tooling already established, no new Secret), and add
-Trello/Todoist/Notion as later, explicit, incremental steps -- each with its
-own Secret and its own review of section 6.
+`generate` (curriculum/content/slides) has not been picked up either --
+proposal section 7, step 5. `publish`'s real-dispatch validation is
+constrained by this: there is no real approved roadmap in the disposable
+test repository yet, so its validation dispatch uses a small fixture topic
+list passed through `extra_context` rather than a real curriculum.
 
 `configure_intake` in this pilot always resolves as if the owner already
 selected the `github_issue` provider. The instruction file

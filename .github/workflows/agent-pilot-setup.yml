@@ -3,8 +3,9 @@ name: Agent pilot
 # Stage 2 of the multi-agent work proposal (see docs/claude-agent-pilot.md):
 # the first workflow that calls the real Anthropic API. Etapa 3 (proposal,
 # section 7, step 3) validated bootstrap_instance and configure_intake with
-# real dispatches; Etapa 4 (step 4) adds `intake`, still author + reviewer as
-# two separate API calls that never share context.
+# real dispatches; Etapa 4 (step 4) adds `intake` and, restricted to the
+# github_issues task-manager backend only, `publish` -- still author +
+# reviewer as two separate API calls that never share context.
 #
 # Manual trigger only for the pilot. It does not merge: it opens a pull
 # request and posts the independent review as a comment, so a human makes
@@ -12,17 +13,19 @@ name: Agent pilot
 # also applies the `intake:imported` label directly to the source GitHub
 # issue as a real, immediate write -- independent of whether the pull request
 # itself is later merged (see docs/claude-agent-pilot.md, "Known limitation:
-# label write is not covered by PR merge").
+# label write is not covered by PR merge"). `publish` similarly creates or
+# updates GitHub Issues as real, immediate writes during the author step,
+# independent of the pull request that records state/integrations.json.
 #
 # Untrusted workflow_dispatch inputs (target_repo, extra_context) are only
 # ever passed through step `env:` and read back as shell variables, never
 # interpolated directly into a `run:` script body -- that's what keeps a
 # crafted input from being executed as shell/python instead of treated as
-# data. The repository the `intake` phase's GitHub Issues tools operate
-# against is never taken from target_repo or any other input -- it is always
-# GITHUB_REPOSITORY, which Actions sets to this workflow's own repository.
-# See scripts/agent_runtime.py's module docstring for why that boundary
-# matters.
+# data. The repository the `intake`/`publish` phases' GitHub Issues tools
+# operate against is never taken from target_repo or any other input -- it
+# is always GITHUB_REPOSITORY, which Actions sets to this workflow's own
+# repository. See scripts/agent_runtime.py's module docstring for why that
+# boundary matters.
 
 on:
   workflow_dispatch:
@@ -35,6 +38,7 @@ on:
           - bootstrap_instance
           - configure_intake
           - intake
+          - publish
       target_repo:
         description: Target instance repository, as OWNER/REPOSITORY
         required: true
@@ -48,11 +52,14 @@ on:
 permissions:
   contents: write
   pull-requests: write
-  # Needed only by the `intake` phase's label_github_issue tool (applies
-  # `intake:imported` to the source issue). Harmless no-op permission for
-  # bootstrap_instance/configure_intake, which never call that tool --
-  # RepoTools._require_github rejects it outside PHASES_WITH_GITHUB_ISSUES
-  # regardless of what this token can technically do.
+  # Needed by the `intake` phase's label_github_issue tool (applies
+  # `intake:imported` to the source issue) and by `publish`'s
+  # run_publish_projection tool (creates/updates GitHub Issues via
+  # GitHubIssuesBackend). Harmless no-op permission for
+  # bootstrap_instance/configure_intake, which never call either tool --
+  # RepoTools._require_github rejects GitHub Issues access outside
+  # PHASES_WITH_GITHUB_ISSUES regardless of what this token can technically
+  # do.
   issues: write
 
 concurrency:
