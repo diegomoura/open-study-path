@@ -18,6 +18,7 @@ from agent_runtime import (
     AgentBudgetExceeded,
     AllowlistViolation,
     INTAKE_AUTHOR_ALLOWED_LABEL,
+    MODEL_PRICING_USD_PER_MTOK,
     PHASE_ALLOWLISTS,
     RepoTools,
     author_tools,
@@ -27,6 +28,7 @@ from agent_runtime import (
     reviewer_tools,
     run_agent,
 )
+from agent_model_resolution import MODEL_CATALOG
 
 
 def _default_config(**overrides) -> dict:
@@ -726,6 +728,22 @@ def test_generate_proposal_has_no_github_issues_tools() -> None:
     assert reviewer_names == {"read_file", "list_dir", "compute_sha256", "submit_review"}
 
 
+def test_pricing_table_covers_every_resolvable_model() -> None:
+    # Regression for a real bug found during Etapa 5's first real dispatch
+    # (docs/claude-agent-pilot-etapa5.md): MODEL_PRICING_USD_PER_MTOK had
+    # "claude-opus-5" as a key while agent_model_resolution.MODEL_CATALOG
+    # resolves the "opus" tier to "claude-opus-4-8" -- a silent key mismatch
+    # that made every Opus-tier run's estimated_cost_usd come back None
+    # instead of erroring loudly. This test would have caught it before any
+    # real dispatch spent money blind to its own cost.
+    for tier, model in MODEL_CATALOG.items():
+        assert model in MODEL_PRICING_USD_PER_MTOK, (
+            f"MODEL_PRICING_USD_PER_MTOK is missing an entry for {model!r} "
+            f"(tier {tier!r}) -- estimated_cost_usd will silently come back "
+            "None for every run using this model"
+        )
+
+
 def main() -> None:
     tests = [
         test_write_allowlist_matches_setup_execution_contract,
@@ -755,6 +773,7 @@ def main() -> None:
         test_run_publish_projection_reports_invalid_topic_input_without_crashing,
         test_generate_proposal_allowlist_matches_proposal_outputs,
         test_generate_proposal_has_no_github_issues_tools,
+        test_pricing_table_covers_every_resolvable_model,
     ]
     for test in tests:
         test()

@@ -86,7 +86,7 @@ DEFAULT_MAX_TOKENS = 4096
 MODEL_PRICING_USD_PER_MTOK: dict[str, dict[str, float]] = {
     "claude-haiku-4-5-20251001": {"input": 1.0, "output": 5.0, "cache_write_5m": 1.25, "cache_read": 0.10},
     "claude-sonnet-5": {"input": 2.0, "output": 10.0, "cache_write_5m": 2.50, "cache_read": 0.20},
-    "claude-opus-5": {"input": 5.0, "output": 25.0, "cache_write_5m": 6.25, "cache_read": 0.50},
+    "claude-opus-4-8": {"input": 5.0, "output": 25.0, "cache_write_5m": 6.25, "cache_read": 0.50},
 }
 
 # Hard cap on tool-use round trips per agent call. This is a runtime safety
