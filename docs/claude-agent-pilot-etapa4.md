@@ -1,12 +1,13 @@
-# Agent pilot: Etapa 4 — extensão para `intake`
+# Agent pilot: Etapa 4 — extensão para `intake` e `publish`
 
-Status: **fechada para o caso `github_issue`.** Dois dispatches reais contra
-o repositório de teste descartável
-(`diegomoura/open-study-path-agent-test-20260814152628`) validaram o caso
-`unique` (hashes conferidos na mão, batem) e o caso `ambiguous` (sem write de
-domínio, sem label aplicada, reviewer isolado bloqueia por conta própria um
-resultado imperfeito). Ver seção 5 para os números reais e uma pendência não
-bloqueante encontrada no caminho `ambiguous`.
+Status: **fechada.** `intake` validado com 3 dispatches reais (unique,
+ambiguous pré-fix, ambiguous pós-fix). `publish` validado com 2 dispatches
+reais (github_issues only) -- confirma criação real de issues, idempotência
+sem duplicar e bloqueio correto de conteúdo inválido, mas **sem** um caso
+de sucesso limpo (o dispatch de validação bateu num artefato de nome do
+repositório de teste que colide com o validador de conteúdo visível; ver
+seção 6.5). `diagnostic` continua fora de escopo, pendente de decisão de
+formato (multi-turn).
 
 ## 1. Escopo desta etapa
 
@@ -354,16 +355,69 @@ estrutural de sucesso, tools de `publish` distintas das de `intake`, `run_
 publish_projection` roteado corretamente via `dispatch()`, entrada inválida
 de tópico não derruba a execução.
 
-### 6.5 O que falta para "validado"
+### 6.5 Validação real (2 dispatches; encerrada como "blocked, não success")
 
-Como não existe fase `generate` ainda (Etapa 5), não há `study/roadmap.md`
-real no repositório de teste. Para a validação real, o `extra_context` do
-`workflow_dispatch` vai fornecer uma lista pequena de tópicos-fixture
-diretamente (2-3 tópicos sintéticos), instruindo o author a usá-los em vez
-de tentar ler um roadmap que não existe -- isso valida o mecanismo de
-publicação em si, não o pipeline de currículo completo (fora de escopo até
-Etapa 5).
+Status: **fechada com um resultado parcial, não com um caso de sucesso
+limpo.** Dois dispatches reais contra o repositório de teste descartável.
 
-Pendente: dispatch real, conferência manual dos issues criados/atualizados
-no repositório de teste, confirmação de que o reviewer isolado consegue
-validar de forma independente.
+**Dispatch 1** (issues #12/#13 criadas de verdade -- orientação + "Aula 01 ·
+Introducao a Go", `study:ready`, TOPIC-002 não materializada corretamente
+não virou issue): falhou por um bug meu, não do harness de `publish` --
+esqueci de sincronizar `scripts/publish_author_summary.py` (do PR #83) pro
+repositório de teste. O job falhou no step novo "Publish author result to
+the job summary" *depois* do author já ter feito os writes reais no GitHub
+(step anterior, "Run author agent", tinha terminado com sucesso). Corrigido
+e sincronizado; nenhuma issue duplicada ficou órfã porque o dispatch 2
+reconheceu #12/#13 por título.
+
+**Dispatch 2** (redisparo, `state/agent-pilot-usage.jsonl` mostra
+`external_write_count: 0`): confirma idempotência real -- nenhuma escrita
+nova, `preflight_match` reconheceu as issues existentes por título e não
+duplicou nada. Mas a publicação terminou `status: partial`, não `success`:
+
+- **Achado 1 -- artefato do nome do repositório de teste, não bug do
+  código.** A URL de recurso (`https://github.com/.../open-study-path-
+  agent-test-20260814152628/raw/HEAD/study/slides/aula-01/slides.pdf`)
+  contém literalmente a substring `open-study-path`, que é exatamente o
+  padrão que `VISIBLE_METADATA_PATTERNS` existe para detectar (marcador
+  interno vazando em campo visível). O motor bloqueou corretamente
+  (`ReadbackValidationError`, journal `status: partial`), e o guard
+  estrutural funcionou: nenhum `state/integrations.json`/`study/
+  integrations.md` foi escrito. Confirmei na mão, direto na API, que a
+  substring está mesmo presente no corpo real da issue #13 -- não é falso
+  positivo do validador. É consequência de eu ter nomeado o repositório de
+  teste `open-study-path-agent-test-...` lá na Etapa 2, o que colide com o
+  próprio marcador que o motor proíbe. **Risco real além do fixture**: uma
+  instância de produção que mantenha o nome padrão de fork do template
+  (`open-study-path`) sem renomear teria exatamente essa mesma colisão em
+  toda publicação futura -- vale como item de atenção para quem for operar
+  uma instância real, não corrigido aqui (mexer no regex compartilhado de
+  `task_projection_engine.py` é escopo maior, usado por outras fases que
+  ainda não existem).
+- **Achado 2 -- o reviewer isolado errou o fato, mas acertou a decisão.**
+  O `blocking_finding` principal do reviewer afirma: *"external read-back
+  of issue #13 shows no such marker... The actual visible fields are
+  clean."* Isso é factualmente incorreto -- conferi direto na API que a
+  substring `open-study-path` está mesmo no corpo da issue #13. O reviewer
+  teve acesso de leitura real à issue (via `read_github_issue`) e mesmo
+  assim concluiu o oposto do que os bytes reais mostram. A decisão final
+  (`status: action_required`, recusar aprovar) foi o resultado seguro --
+  mas chegou lá por um raciocínio errado, não pelo motivo certo. Vale
+  registrar como o mesmo tipo de achado da Etapa 3 (reviewer que hash
+  fabricado vs. recomputado), só que desta vez na direção oposta: o
+  reviewer chegou à conclusão correta apesar de, não por causa de, sua
+  verificação factual.
+
+Decisão registrada com você: não gastar mais um dispatch para forçar um
+caso `success` limpo agora. O que já foi confirmado -- criação real de
+issues, título/label/checklist corretos, idempotência sem duplicar,
+bloqueio correto de conteúdo inválido, guard estrutural funcionando -- é
+considerado evidência suficiente para fechar esta etapa. Um caso de sucesso
+limpo (URLs de fixture que não colidam com o nome do repositório) fica como
+follow-up de baixo custo para quando for conveniente.
+
+Custo real: dispatch 2 (author + reviewer completos, o único que rodou até
+o fim), **$0.1242** (303.998 tokens combinados). Dispatch 1 falhou antes do
+reviewer rodar -- só o custo do author, não registrado em
+`state/agent-pilot-usage.jsonl` porque o job nunca chegou ao step que
+grava esse arquivo.

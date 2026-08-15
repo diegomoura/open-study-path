@@ -18,14 +18,15 @@ Four manifest phases wired to a real agent call so far:
   dispatches (unique and ambiguous cases); see
   `docs/claude-agent-pilot-etapa4.md`, sections 1-5.
 - `publish`, restricted to the `task manager: GitHub Issues` backend only.
-  Design complete and tested offline, reusing the existing
-  `scripts/task_projection_engine.py` engine with a new real
-  `scripts/github_issues_backend.py` adapter, **not yet validated with a
-  real dispatch** -- see `docs/claude-agent-pilot-etapa4.md`, section 6.
-  Trello/Todoist/Notion remain deferred until the owner decides to pick
-  integrations back up; each needs its own Secret and its own adapter, and
-  the work proposal's section 6 (key security) only ever addressed
-  `ANTHROPIC_API_KEY`, not third-party provider Secrets.
+  Validated with 2 real dispatches -- real issue creation, idempotent
+  reuse, and correct blocking on invalid visible content all confirmed;
+  no clean `success` case yet (the validation dispatch hit a naming
+  collision between the disposable test repository's own name and the
+  visible-content validator -- see `docs/claude-agent-pilot-etapa4.md`,
+  section 6.5). Trello/Todoist/Notion remain deferred until the owner
+  decides to pick integrations back up; each needs its own Secret and its
+  own adapter, and the work proposal's section 6 (key security) only ever
+  addressed `ANTHROPIC_API_KEY`, not third-party provider Secrets.
 
 `diagnostic` is deliberately not wired yet: `instructions/20-diagnostic.md`
 requires a real, multi-turn interactive placement session with the learner
