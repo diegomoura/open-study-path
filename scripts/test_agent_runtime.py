@@ -615,6 +615,93 @@ def test_intake_summary_write_blocked_without_a_unique_resolution() -> None:
         assert tools.write_file("study.config.yml", "version: 2") == "wrote 10 bytes to study.config.yml"
 
 
+def test_publish_summary_write_blocked_without_success() -> None:
+    with tempfile.TemporaryDirectory() as tmp:
+        root = Path(tmp)
+        tools = RepoTools(root=root, phase="publish", role="author")
+        for path in ("state/integrations.json", "study/integrations.md"):
+            try:
+                tools.write_file(path, "{}")
+                assert False, f"expected AllowlistViolation for {path}"
+            except AllowlistViolation:
+                pass
+
+        # The operation journal is never gated by publish success -- it must
+        # be writable even on a blocked/partial outcome.
+        result = tools.write_file("state/operations/op-1.json", "{}")
+        assert "wrote" in result
+
+        tools._last_publish_status = "success"
+        assert "wrote" in tools.write_file("state/integrations.json", "{}")
+        assert "wrote" in tools.write_file("study/integrations.md", "# ok")
+
+
+def test_publish_tools_are_distinct_from_intake_tools() -> None:
+    publish_author_names = {t["name"] for t in author_tools("publish")}
+    intake_author_names = {t["name"] for t in author_tools("intake")}
+    assert "run_publish_projection" in publish_author_names
+    assert "run_publish_projection" not in intake_author_names
+    assert "resolve_intake_candidates" not in publish_author_names
+    assert "label_github_issue" not in publish_author_names
+    # Reviewer for publish gets the same generic read-only issue tools as intake.
+    assert "list_intake_issues" in {t["name"] for t in reviewer_tools("publish")}
+    assert "run_publish_projection" not in {t["name"] for t in reviewer_tools("publish")}
+
+
+def test_run_publish_projection_routes_through_dispatch_and_reports_success() -> None:
+    from test_github_issues_backend import FakeGitHubTransport
+
+    transport = FakeGitHubTransport()
+
+    with tempfile.TemporaryDirectory() as tmp:
+        root = Path(tmp)
+        tools = RepoTools(root=root, phase="publish", role="author", github_request=transport, github_repository="o/r")
+        result_text = tools.dispatch(
+            "run_publish_projection",
+            {
+                "topics": [
+                    {
+                        "topic_id": "TOPIC-001",
+                        "lesson_number": 1,
+                        "title": "Introdução",
+                        "materialized": True,
+                        "slides_url": "https://github.com/o/r/raw/HEAD/study/slides/aula-01/slides.pdf",
+                        "lesson_url": "https://github.com/o/r/blob/HEAD/study/lessons/aula-01.md",
+                        "assessment_url": "https://github.com/o/r/blob/HEAD/study/assessments/aula-01.md",
+                    }
+                ],
+                "operation_id": "op-1",
+                "course_name": "Go do zero",
+            },
+        )
+        result = json.loads(result_text)
+        assert result["status"] == "success", result
+        assert tools._last_publish_status == "success"
+        assert "integration_state" in result and "learner_summary" in result
+
+
+def test_run_publish_projection_reports_invalid_topic_input_without_crashing() -> None:
+    with tempfile.TemporaryDirectory() as tmp:
+        root = Path(tmp)
+        tools = RepoTools(
+            root=root,
+            phase="publish",
+            role="author",
+            github_request=lambda *a, **k: [],
+            github_repository="o/r",
+        )
+        result = json.loads(
+            tools.run_publish_projection(
+                topics=[{"topic_id": "not-a-valid-id", "lesson_number": 1, "title": "x"}],
+                operation_id="op-1",
+                course_name="Go do zero",
+            )
+        )
+        assert result["status"] == "error"
+        assert result["error_type"] == "InvalidTopicInput"
+        assert tools._last_publish_status != "success"
+
+
 def main() -> None:
     tests = [
         test_write_allowlist_matches_setup_execution_contract,
@@ -638,6 +725,10 @@ def main() -> None:
         test_label_github_issue_refuses_any_label_other_than_imported,
         test_reviewer_cannot_label_github_issues,
         test_intake_summary_write_blocked_without_a_unique_resolution,
+        test_publish_summary_write_blocked_without_success,
+        test_publish_tools_are_distinct_from_intake_tools,
+        test_run_publish_projection_routes_through_dispatch_and_reports_success,
+        test_run_publish_projection_reports_invalid_topic_input_without_crashing,
     ]
     for test in tests:
         test()

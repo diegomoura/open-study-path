@@ -21,6 +21,7 @@ PHASE_INSTRUCTION_FILES = {
     "bootstrap_instance": ["instructions/00-bootstrap.md"],
     "configure_intake": ["instructions/05-configure-intake.md"],
     "intake": ["instructions/10-intake.md"],
+    "publish": ["instructions/40-publish-tasks.md"],
 }
 
 # Files every author/reviewer prompt gets regardless of phase.
@@ -46,10 +47,20 @@ PHASE_EXTRA_AUTHOR_FILES: dict[str, list[str]] = {
     "bootstrap_instance": ["instructions/02-setup-execution.md"],
     "configure_intake": ["instructions/02-setup-execution.md"],
     "intake": ["instructions/11-intake-completion-recovery.md", "intake/field-mapping.yml"],
+    "publish": [
+        "instructions/41-task-backend-projection.md",
+        "instructions/42-integration-preflight.md",
+        "docs/learner-facing-language.md",
+        "docs/study-slides.md",
+    ],
 }
 
 PHASE_EXTRA_REVIEWER_FILES: dict[str, list[str]] = {
     "intake": ["instructions/11-intake-completion-recovery.md", "intake/field-mapping.yml"],
+    "publish": [
+        "instructions/41-task-backend-projection.md",
+        "instructions/42-integration-preflight.md",
+    ],
 }
 
 # `review_profile` selects which required-check set instructions/
@@ -58,10 +69,14 @@ PHASE_EXTRA_REVIEWER_FILES: dict[str, list[str]] = {
 # uses its own profile with different required checks (request_fidelity,
 # preference_preservation, ambiguity_resolution, data_minimization,
 # next_phase_consistency -- instructions/11-intake-completion-recovery.md).
+# `publish` uses the framework's `publication` profile name (not `publish` --
+# docs/review-framework.md's table already used that name before this
+# pilot existed).
 PHASE_REVIEW_PROFILE: dict[str, str] = {
     "bootstrap_instance": "setup",
     "configure_intake": "setup",
     "intake": "intake",
+    "publish": "publication",
 }
 
 AUTHOR_HARNESS_NOTE = """\
@@ -187,6 +202,63 @@ label_github_issue: you are checking whether the label was applied correctly,
 not applying it yourself.
 """
 
+AUTHOR_PUBLISH_TOOL_NOTE = """\
+## Publish tool addendum (Etapa 4)
+
+Restricted to the `github_issues` task-manager backend only in this pilot --
+Trello, Todoist and any other provider are out of scope here (see
+docs/claude-agent-pilot.md's Scope section). Do not attempt to resolve,
+probe or write to any other task-manager provider, and do not activate
+reminders, calendars or email -- this pilot only covers the required
+task-manager capability.
+
+You have exactly one tool for the actual publication:
+
+- run_publish_projection(topics, operation_id, course_name): runs the real
+  scripts/task_projection_engine.py projection, matching, external writes
+  and read-back validation against GitHub Issues -- never build or validate
+  the projection yourself. Read the approved roadmap and topic contracts via
+  read_file first, then construct `topics` as a list of objects matching
+  TopicProjection's fields (topic_id, lesson_number, title,
+  direct_prerequisite_ids, content_version, canonical_state, materialized,
+  slides_url, lesson_url, practice_url, assessment_url). For every topic
+  already published in an earlier run, read its known `external_id` from
+  `state/integrations.json` first and pass it back in -- this is what lets
+  the engine update the same issue instead of creating a duplicate.
+
+The tool's response has a `status` field:
+
+- `status: "success"`: write `state/integrations.json` (the returned
+  `integration_state`, as JSON), `study/integrations.md` (the returned
+  `learner_summary`, verbatim -- it is already validated, human-readable
+  Markdown, do not rewrite it), and `state/operations/<operation_id>.json`
+  (the returned `journal`, as JSON). Then call finish_phase with the
+  completion response instructions/40-publish-tasks.md describes.
+- `status: "error"`: do **not** write `state/integrations.json` or
+  `study/integrations.md` -- the harness refuses those writes at the code
+  level in this state regardless of what you attempt. If the response
+  includes a `journal`, write only that to
+  `state/operations/<operation_id>.json` (this is the resumable technical
+  journal instructions/41-task-backend-projection.md requires even on a
+  blocked or partial outcome). Report the blocked/partial/failed outcome
+  through finish_phase using instructions/40-publish-tasks.md's guidance for
+  that case -- do not claim success.
+"""
+
+REVIEWER_PUBLISH_TOOL_NOTE = """\
+## Publish tool addendum (Etapa 4)
+
+You have the same read-only GitHub Issues access as the intake reviewer
+(list_intake_issues, read_github_issue) -- use it to independently re-fetch
+the issues the author's `state/integrations.json` claims to have created or
+updated, and compare title, labels and rendered description against what
+instructions/40-publish-tasks.md and instructions/41-task-backend-
+projection.md require (numbered title format, exactly one `Próxima aula`,
+correct `study:*` label, no internal metadata leaked into visible fields).
+You do not have run_publish_projection: you are checking the result, not
+reproducing or re-running the publication.
+"""
+
 
 def _read(relative_path: str) -> str:
     return (ROOT / relative_path).read_text(encoding="utf-8")
@@ -210,6 +282,8 @@ def build_author_prompts(phase: str, target_repo: str, extra_context: str) -> tu
     sections.append(AUTHOR_HARNESS_NOTE)
     if phase == "intake":
         sections.append(AUTHOR_INTAKE_TOOL_NOTE)
+    elif phase == "publish":
+        sections.append(AUTHOR_PUBLISH_TOOL_NOTE)
     system_prompt = "\n\n---\n\n".join(sections)
 
     user_prompt = (
@@ -228,6 +302,8 @@ def build_reviewer_prompts(phase: str, target_repo: str, base_sha: str, author_s
     sections.append(REVIEWER_HARNESS_NOTE)
     if phase == "intake":
         sections.append(REVIEWER_INTAKE_TOOL_NOTE)
+    elif phase == "publish":
+        sections.append(REVIEWER_PUBLISH_TOOL_NOTE)
     system_prompt = "\n\n---\n\n".join(sections)
 
     review_profile = PHASE_REVIEW_PROFILE.get(phase, "setup")

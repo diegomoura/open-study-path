@@ -56,7 +56,13 @@ from typing import Any, Callable, Mapping, Sequence
 
 from agent_model_resolution import AGENT_CATALOG, resolve_effective_models
 from ensure_repository_labels import github_request_factory
+from github_issues_backend import GitHubIssuesBackend
 from intake_resolution import DISCOVERY_LABEL, IMPORTED_LABEL, IntakeIssue, resolve_candidates
+from task_projection_engine import (
+    ProjectionError,
+    TopicProjection,
+    publish_projection,
+)
 
 GITHUB_API_URL_DEFAULT = "https://api.github.com"
 RequestJson = Callable[[str, str, dict[str, Any] | None], Any]
@@ -126,12 +132,27 @@ INTAKE_ALLOWED_EXACT_PATHS: tuple[str, ...] = (
 )
 INTAKE_ALLOWED_PREFIXES: tuple[str, ...] = ()
 
+# The exact publish domain-output list from instructions/41-task-backend-
+# projection.md's "Durable operation contract": state/integrations.json is
+# the complete authoritative integration state; state/operations/<id>.json
+# is the resumable technical journal; study/integrations.md is the rendered
+# learner-facing summary ("render study/integrations.md from authoritative
+# state" -- read-back step 11). All three are domain output for this phase,
+# unlike the review artifact under state/reviews/.
+PUBLISH_ALLOWED_EXACT_PATHS: tuple[str, ...] = (
+    "state/integrations.json",
+    "study/integrations.md",
+)
+PUBLISH_ALLOWED_PREFIXES: tuple[str, ...] = ("state/operations/",)
+
 # Which allowlist applies to which manifest phase. Etapa 4 (proposal, section
-# 7, step 4) adds `intake` to the two pilot phases wired up in stage 2.
+# 7, step 4) adds `intake` and, restricted to the github_issues backend only
+# (see docs/claude-agent-pilot-etapa4.md), `publish`.
 PHASE_ALLOWLISTS: dict[str, tuple[tuple[str, ...], tuple[str, ...]]] = {
     "bootstrap_instance": (SETUP_ALLOWED_EXACT_PATHS, SETUP_ALLOWED_PREFIXES),
     "configure_intake": (SETUP_ALLOWED_EXACT_PATHS, SETUP_ALLOWED_PREFIXES),
     "intake": (INTAKE_ALLOWED_EXACT_PATHS, INTAKE_ALLOWED_PREFIXES),
+    "publish": (PUBLISH_ALLOWED_EXACT_PATHS, PUBLISH_ALLOWED_PREFIXES),
 }
 
 # Agent ids that exist as real rows in AGENT_CATALOG for the pilot phases.
@@ -139,15 +160,15 @@ PHASE_AUTHOR_AGENT: dict[str, str] = {
     "bootstrap_instance": "bootstrap",
     "configure_intake": "configure_intake",
     "intake": "intake_resolution",
+    "publish": "publish",
 }
 
 # Phases where the RepoTools instance also gets a small, separate GitHub
-# Issues tool group (list/read/resolve/label), in addition to the repo-file
-# tools every phase gets. Kept as its own set -- rather than folding into
-# PHASE_ALLOWLISTS -- because it gates a different resource (the GitHub API,
-# not the local checkout) with its own authorization model (GITHUB_TOKEN,
-# not filesystem paths).
-PHASES_WITH_GITHUB_ISSUES: frozenset[str] = frozenset({"intake"})
+# Issues tool group, in addition to the repo-file tools every phase gets.
+# `publish` is restricted to the github_issues task-manager backend only --
+# Trello/Todoist need their own Secret and their own adapter, deferred (see
+# docs/claude-agent-pilot.md's Scope section).
+PHASES_WITH_GITHUB_ISSUES: frozenset[str] = frozenset({"intake", "publish"})
 
 # The only label the intake author is ever allowed to apply. Restricting this
 # at the tool layer (not just in the prompt) means a model that misreads its
@@ -302,6 +323,7 @@ class RepoTools:
         self._issue_summaries: dict[int, dict[str, Any]] | None = None
         self.labels_applied: list[tuple[int, str]] = []
         self._last_candidate_resolution_state: str | None = None
+        self._last_publish_status: str | None = None
 
     def read_file(self, path: str) -> str:
         target = normalize_relative_path(self.root, path)
@@ -499,6 +521,84 @@ class RepoTools:
         self.labels_applied.append((number, label))
         return f"applied label {label!r} to issue #{number}"
 
+    def run_publish_projection(
+        self,
+        topics: list[dict[str, Any]],
+        operation_id: str,
+        course_name: str,
+    ) -> str:
+        """Run the real task_projection_engine.publish_projection() against GitHub Issues.
+
+        This is the single orchestrated tool for the `publish` phase, the
+        same pattern `resolve_intake_candidates` already established: the
+        deterministic engine in scripts/task_projection_engine.py does all
+        matching, idempotency and read-back validation; this method only
+        supplies a real backend and translates its result into the JSON the
+        model reads back. The model supplies `topics` from the approved
+        roadmap (read via read_file) -- it never invents or classifies
+        projection state itself.
+
+        On success, returns integration_state/journal/learner_summary for
+        the model to persist via write_file. On a known projection failure
+        (ambiguous match, partial write, failed read-back validation), returns
+        a structured error instead of raising -- these are expected, valid
+        outcomes instructions/40-publish-tasks.md explicitly describes
+        ("When required publication is blocked, failed, partial or still in
+        progress..."), not tool misuse, so they must not crash the run the
+        way an AllowlistViolation would.
+        """
+        if self.role != "author":
+            raise AllowlistViolation("run_publish_projection is not available to this role")
+        request_json, repository = self._require_github()
+
+        try:
+            topic_projections = [TopicProjection(**topic) for topic in topics]
+        except (TypeError, ValueError) as exc:
+            return json.dumps({"status": "error", "error_type": "InvalidTopicInput", "message": str(exc)})
+
+        previous_integration_state = None
+        integrations_path = normalize_relative_path(self.root, "state/integrations.json")
+        if integrations_path.is_file():
+            previous_integration_state = json.loads(integrations_path.read_text(encoding="utf-8"))
+
+        journal_state = None
+        operation_path = normalize_relative_path(self.root, f"state/operations/{operation_id}.json")
+        if operation_path.is_file():
+            journal_state = json.loads(operation_path.read_text(encoding="utf-8"))
+
+        backend = GitHubIssuesBackend(request_json=request_json, repository=repository)
+        try:
+            result = publish_projection(
+                topics=topic_projections,
+                backend=backend,
+                operation_id=operation_id,
+                journal_state=journal_state,
+                previous_integration_state=previous_integration_state,
+                course_name=course_name,
+            )
+        except ProjectionError as exc:
+            self._last_publish_status = "error"
+            journal = getattr(exc, "journal", None)
+            return json.dumps(
+                {
+                    "status": "error",
+                    "error_type": type(exc).__name__,
+                    "message": str(exc),
+                    "journal": journal,
+                }
+            )
+
+        self._last_publish_status = "success"
+        return json.dumps(
+            {
+                "status": "success",
+                "integration_state": result.integration_state,
+                "journal": result.journal,
+                "learner_summary": result.learner_summary,
+            },
+            indent=2,
+        )
+
     def write_file(self, path: str, content: str) -> str:
         if self.role != "author":
             raise AllowlistViolation("write_file is not available to this role")
@@ -525,6 +625,28 @@ class RepoTools:
                 f"must return state='unique' first (last observed state: "
                 f"{self._last_candidate_resolution_state!r}). For 'none' or 'ambiguous', "
                 "report the outcome through finish_phase instead of writing this file."
+            )
+        if (
+            self.phase == "publish"
+            and path.replace(os.sep, "/") in {"state/integrations.json", "study/integrations.md"}
+            and self._last_publish_status != "success"
+        ):
+            # Same principle as the intake guard just above, applied before
+            # a real dispatch ever surfaces it: instructions/40-publish-
+            # tasks.md is explicit that a blocked/failed/partial publication
+            # must not be reported as success ("do not set success or
+            # sync.last_success_at"). state/integrations.json and study/
+            # integrations.md are exactly the authoritative-success and
+            # learner-facing-success artifacts -- state/operations/<id>.json
+            # is deliberately NOT covered by this guard, since the resumable
+            # operation journal must be persisted on every outcome, including
+            # a blocked or partial one.
+            raise AllowlistViolation(
+                f"refusing to write {path!r}: run_publish_projection must return "
+                f"status='success' first (last observed status: {self._last_publish_status!r}). "
+                "For a blocked/partial/failed publication, persist only "
+                "state/operations/<operation-id>.json and report the outcome through "
+                "finish_phase."
             )
         target = normalize_relative_path(self.root, path)
         target.parent.mkdir(parents=True, exist_ok=True)
@@ -583,6 +705,12 @@ class RepoTools:
             )
         if name == "label_github_issue":
             return self.label_github_issue(tool_input["number"], tool_input["label"])
+        if name == "run_publish_projection":
+            return self.run_publish_projection(
+                tool_input["topics"],
+                tool_input["operation_id"],
+                tool_input["course_name"],
+            )
         raise AllowlistViolation(f"unknown tool: {name}")
 
 
@@ -658,7 +786,7 @@ def author_tools(phase: str | None = None) -> list[dict[str, Any]]:
             },
         },
     ]
-    if phase in PHASES_WITH_GITHUB_ISSUES:
+    if phase == "intake":
         tools.extend(_github_issue_read_tools())
         tools.append(
             {
@@ -698,6 +826,39 @@ def author_tools(phase: str | None = None) -> list[dict[str, Any]]:
                         "label": {"type": "string"},
                     },
                     "required": ["number", "label"],
+                },
+            }
+        )
+    elif phase == "publish":
+        tools.append(
+            {
+                "name": "run_publish_projection",
+                "description": (
+                    "Run the real scripts/task_projection_engine.py projection and read-back "
+                    "validation against GitHub Issues -- never construct or validate the "
+                    "projection yourself. `topics` is a list of objects matching "
+                    "TopicProjection's fields (topic_id, lesson_number, title, "
+                    "direct_prerequisite_ids, content_version, canonical_state, materialized, "
+                    "external_id, slides_url, lesson_url, practice_url, assessment_url), read "
+                    "from the approved roadmap and topic contracts via read_file. For every "
+                    "topic already published before, pass its known external_id from "
+                    "state/integrations.json so the engine updates the same issue instead of "
+                    "creating a duplicate. On status='success', write "
+                    "state/integrations.json, study/integrations.md and "
+                    "state/operations/<operation_id>.json from the returned payload. On "
+                    "status='error', do not write state/integrations.json or "
+                    "study/integrations.md -- persist only the operation journal (if present "
+                    "in the response) and report the blocked/partial outcome through "
+                    "finish_phase, per instructions/40-publish-tasks.md."
+                ),
+                "input_schema": {
+                    "type": "object",
+                    "properties": {
+                        "topics": {"type": "array", "items": {"type": "object"}},
+                        "operation_id": {"type": "string"},
+                        "course_name": {"type": "string"},
+                    },
+                    "required": ["topics", "operation_id", "course_name"],
                 },
             }
         )
