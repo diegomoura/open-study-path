@@ -28,12 +28,17 @@ Four manifest phases wired to a real agent call so far:
   own adapter, and the work proposal's section 6 (key security) only ever
   addressed `ANTHROPIC_API_KEY`, not third-party provider Secrets.
 
-`diagnostic` is deliberately not wired yet: `instructions/20-diagnostic.md`
+`diagnostic` is not implemented, but its design decision is closed: it needs
+a genuinely different trigger model (`issue_comment` per learner answer,
+not `workflow_dispatch` one-shot), since `instructions/20-diagnostic.md`
 requires a real, multi-turn interactive placement session with the learner
 ("ask exactly one short question at a time"), which does not fit this
-harness's one-shot `run_agent()` -> `finish_phase()` shape. Extending to it
-needs a separate design decision (turn-based harness vs. staying manual),
-not just a new allowlist entry.
+harness's one-shot `run_agent()` -> `finish_phase()` shape. See
+`docs/claude-agent-pilot-etapa4b-diagnostic-design.md` for the full design.
+Building it is comparable in size to `intake`+`publish` combined (new
+workflow trigger, comment-posting tools, a question-budget that persists
+implicitly across turns) -- tracked as its own future step, not a blocker
+for `generate` (Etapa 5).
 
 `generate` (curriculum/content/slides) has not been picked up either --
 proposal section 7, step 5. `publish`'s real-dispatch validation is
