@@ -22,6 +22,7 @@ PHASE_INSTRUCTION_FILES = {
     "configure_intake": ["instructions/05-configure-intake.md"],
     "intake": ["instructions/10-intake.md"],
     "publish": ["instructions/40-publish-tasks.md"],
+    "generate_proposal": ["instructions/28-propose-path.md"],
 }
 
 # Files every author/reviewer prompt gets regardless of phase.
@@ -53,6 +54,11 @@ PHASE_EXTRA_AUTHOR_FILES: dict[str, list[str]] = {
         "docs/learner-facing-language.md",
         "docs/study-slides.md",
     ],
+    "generate_proposal": [
+        "instructions/35-review-curriculum.md",
+        "docs/learner-facing-language.md",
+        "docs/beginner-first-pedagogy.md",
+    ],
 }
 
 PHASE_EXTRA_REVIEWER_FILES: dict[str, list[str]] = {
@@ -60,6 +66,10 @@ PHASE_EXTRA_REVIEWER_FILES: dict[str, list[str]] = {
     "publish": [
         "instructions/41-task-backend-projection.md",
         "instructions/42-integration-preflight.md",
+    ],
+    "generate_proposal": [
+        "instructions/35-review-curriculum.md",
+        "docs/beginner-first-pedagogy.md",
     ],
 }
 
@@ -71,12 +81,18 @@ PHASE_EXTRA_REVIEWER_FILES: dict[str, list[str]] = {
 # next_phase_consistency -- instructions/11-intake-completion-recovery.md).
 # `publish` uses the framework's `publication` profile name (not `publish` --
 # docs/review-framework.md's table already used that name before this
-# pilot existed).
+# pilot existed). `generate_proposal` uses `curriculum` -- the same profile
+# manifest.yml assigns to the whole `generate` phase; two of its seven
+# checks (content_review_complete, assessment_alignment) are about
+# materialized content this suboperation never creates, so they resolve
+# trivially (nothing to check) rather than being skipped -- the reviewer
+# prompt notes this explicitly (REVIEWER_PROPOSAL_TOOL_NOTE below).
 PHASE_REVIEW_PROFILE: dict[str, str] = {
     "bootstrap_instance": "setup",
     "configure_intake": "setup",
     "intake": "intake",
     "publish": "publication",
+    "generate_proposal": "curriculum",
 }
 
 AUTHOR_HARNESS_NOTE = """\
@@ -259,6 +275,41 @@ You do not have run_publish_projection: you are checking the result, not
 reproducing or re-running the publication.
 """
 
+AUTHOR_PROPOSAL_NOTE = """\
+## Proposal scope addendum (Etapa 5)
+
+This run covers only the `proposal` suboperation of the `generate` phase
+(instructions/28-propose-path.md) -- the roadmap architecture, nothing
+materialized yet. instructions/28-propose-path.md already says this
+explicitly, but it bears repeating given how much of the parent
+instructions/30-generate-path.md's surrounding content (materialized
+modules, slides, assessments, rubrics) is reachable from the same
+instructions/ directory: do not create `study/topics/`, `study/modules/`,
+`study/slides/`, `study/assessments/`, `.github/ISSUE_TEMPLATE/assessment-
+topic-*.yml`, or any other materialization artifact in this run. The only
+files you may write are `study/roadmap.md` and `.open-study-path/
+instance.yml` -- write_file rejects anything else regardless of what you
+attempt, matching the same allowed-domain-output enforcement every other
+phase in this harness already has.
+
+Detailed content materialization (instructions/30-generate-path.md) is a
+separate, not-yet-built harness phase -- do not attempt it here even if the
+roadmap makes it tempting to keep going.
+"""
+
+REVIEWER_PROPOSAL_NOTE = """\
+## Proposal scope addendum (Etapa 5)
+
+You are reviewing only the `proposal` suboperation -- a roadmap architecture,
+no materialized content. Two of the seven required `curriculum` profile
+checks (`content_review_complete`, `assessment_alignment`) are about
+materialized lessons and assessments that do not exist yet at this stage.
+Record them as `passed` with a short note that there is no materialized
+content in scope for this operation to fail those checks against -- do not
+leave them `pending` (an incomplete review) and do not invent materialized-
+content findings that don't apply.
+"""
+
 
 def _read(relative_path: str) -> str:
     return (ROOT / relative_path).read_text(encoding="utf-8")
@@ -284,6 +335,8 @@ def build_author_prompts(phase: str, target_repo: str, extra_context: str) -> tu
         sections.append(AUTHOR_INTAKE_TOOL_NOTE)
     elif phase == "publish":
         sections.append(AUTHOR_PUBLISH_TOOL_NOTE)
+    elif phase == "generate_proposal":
+        sections.append(AUTHOR_PROPOSAL_NOTE)
     system_prompt = "\n\n---\n\n".join(sections)
 
     user_prompt = (
@@ -304,6 +357,8 @@ def build_reviewer_prompts(phase: str, target_repo: str, base_sha: str, author_s
         sections.append(REVIEWER_INTAKE_TOOL_NOTE)
     elif phase == "publish":
         sections.append(REVIEWER_PUBLISH_TOOL_NOTE)
+    elif phase == "generate_proposal":
+        sections.append(REVIEWER_PROPOSAL_NOTE)
     system_prompt = "\n\n---\n\n".join(sections)
 
     review_profile = PHASE_REVIEW_PROFILE.get(phase, "setup")

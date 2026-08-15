@@ -39,6 +39,7 @@ on:
           - configure_intake
           - intake
           - publish
+          - generate_proposal
       target_repo:
         description: Target instance repository, as OWNER/REPOSITORY
         required: true

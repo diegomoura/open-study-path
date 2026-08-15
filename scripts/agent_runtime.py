@@ -86,7 +86,7 @@ DEFAULT_MAX_TOKENS = 4096
 MODEL_PRICING_USD_PER_MTOK: dict[str, dict[str, float]] = {
     "claude-haiku-4-5-20251001": {"input": 1.0, "output": 5.0, "cache_write_5m": 1.25, "cache_read": 0.10},
     "claude-sonnet-5": {"input": 2.0, "output": 10.0, "cache_write_5m": 2.50, "cache_read": 0.20},
-    "claude-opus-5": {"input": 5.0, "output": 25.0, "cache_write_5m": 6.25, "cache_read": 0.50},
+    "claude-opus-4-8": {"input": 5.0, "output": 25.0, "cache_write_5m": 6.25, "cache_read": 0.50},
 }
 
 # Hard cap on tool-use round trips per agent call. This is a runtime safety
@@ -145,22 +145,49 @@ PUBLISH_ALLOWED_EXACT_PATHS: tuple[str, ...] = (
 )
 PUBLISH_ALLOWED_PREFIXES: tuple[str, ...] = ("state/operations/",)
 
-# Which allowlist applies to which manifest phase. Etapa 4 (proposal, section
-# 7, step 4) adds `intake` and, restricted to the github_issues backend only
-# (see docs/claude-agent-pilot-etapa4.md), `publish`.
+# The exact proposal domain-output list from instructions/28-propose-path.md's
+# "Outputs" section: only the roadmap and the instance marker's proposal
+# state. Everything else generate touches later (study/topics/, study/
+# modules/, study/slides/, ...) belongs to the detailed_generation
+# suboperation, not this one -- instructions/28-propose-path.md is explicit:
+# "Do not create study/topics/, modules, slide sources, PDFs, rubrics,
+# assessment forms, flashcards or integration projections during this
+# suboperation."
+PROPOSAL_ALLOWED_EXACT_PATHS: tuple[str, ...] = (
+    "study/roadmap.md",
+    ".open-study-path/instance.yml",
+)
+PROPOSAL_ALLOWED_PREFIXES: tuple[str, ...] = ()
+
+# Which allowlist applies to which manifest phase. `generate_proposal` is a
+# harness-level key for the `proposal` suboperation of manifest.yml's
+# `generate` phase (instructions/28-propose-path.md) -- Etapa 5's first
+# slice (proposal, section 7, step 5). It is deliberately its own harness
+# phase, distinct from a future `generate_detailed` for
+# instructions/30-generate-path.md's materialization suboperation, since the
+# two have completely different allowed outputs, agents and (for detailed
+# generation) infrastructure needs (Node.js slide rendering).
 PHASE_ALLOWLISTS: dict[str, tuple[tuple[str, ...], tuple[str, ...]]] = {
     "bootstrap_instance": (SETUP_ALLOWED_EXACT_PATHS, SETUP_ALLOWED_PREFIXES),
     "configure_intake": (SETUP_ALLOWED_EXACT_PATHS, SETUP_ALLOWED_PREFIXES),
     "intake": (INTAKE_ALLOWED_EXACT_PATHS, INTAKE_ALLOWED_PREFIXES),
     "publish": (PUBLISH_ALLOWED_EXACT_PATHS, PUBLISH_ALLOWED_PREFIXES),
+    "generate_proposal": (PROPOSAL_ALLOWED_EXACT_PATHS, PROPOSAL_ALLOWED_PREFIXES),
 }
 
 # Agent ids that exist as real rows in AGENT_CATALOG for the pilot phases.
+# AGENT_CATALOG's own `phase` field for curriculum_architect/curriculum_
+# reviewer is the manifest id "generate" (matching manifest.yml, which
+# doesn't split proposal vs detailed_generation into separate ids) -- that
+# field is descriptive only. resolve_effective_models() looks agents up by
+# id, never by this harness's phase key, so introducing a harness-only
+# `generate_proposal` key here causes no lookup mismatch.
 PHASE_AUTHOR_AGENT: dict[str, str] = {
     "bootstrap_instance": "bootstrap",
     "configure_intake": "configure_intake",
     "intake": "intake_resolution",
     "publish": "publish",
+    "generate_proposal": "curriculum_architect",
 }
 
 # Phases where the RepoTools instance also gets a small, separate GitHub
