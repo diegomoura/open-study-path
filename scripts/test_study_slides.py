@@ -19,7 +19,9 @@ from study_slides import (  # noqa: E402
     aggregate_source_sha256,
     expected_pdf_url,
     file_sha256,
+    slides_deliberately_disabled,
     validate_materialized_topic,
+    validate_repository,
 )
 
 
@@ -170,8 +172,55 @@ def test_thin_deck_is_rejected() -> None:
         assert any("too thin" in error for error in errors)
 
 
+def test_slides_deliberately_disabled_requires_explicit_false() -> None:
+    assert slides_deliberately_disabled({"study_slides": {"enabled": False}})
+    # Absent config is a misconfiguration to catch, not an opt-out --
+    # otherwise every repository that simply never configured study_slides
+    # would silently skip validation instead of erroring.
+    assert not slides_deliberately_disabled({})
+    assert not slides_deliberately_disabled({"study_slides": {}})
+    assert not slides_deliberately_disabled({"study_slides": {"enabled": None}})
+
+
+def test_validate_repository_passes_when_deliberately_disabled_even_with_materialized_topics() -> None:
+    with TemporaryDirectory() as directory:
+        root = Path(directory)
+        write(
+            root / ".open-study-path/instance.yml",
+            yaml.safe_dump({"repository": "example/private-study", "study_slides": {"enabled": False}}),
+        )
+        # A materialized topic with zero slide artifacts anywhere -- this is
+        # exactly the state the Etapa 5b agent-pilot toggle (docs/claude-
+        # agent-pilot-etapa5.md) produces when slides are off.
+        write(
+            root / "study/topics/TOPIC-001.md",
+            "---\nid: TOPIC-001\ncontent_status: materialized\ncontent_version: 1\n---\n\nConteudo.\n",
+        )
+        result = validate_repository(root)
+        assert result.ok, result.errors
+
+
+def test_validate_repository_still_errors_when_slides_config_is_missing_not_disabled() -> None:
+    with TemporaryDirectory() as directory:
+        root = Path(directory)
+        write(root / ".open-study-path/instance.yml", yaml.safe_dump({"repository": "example/private-study"}))
+        result = validate_repository(root)
+        assert not result.ok
+        assert any("contract_version 3" in error for error in result.errors)
+
+
+
 def main() -> None:
-    tests = [test_valid_topic, test_generic_placeholder_is_rejected, test_missing_svg_is_rejected, test_zip_instruction_is_rejected, test_thin_deck_is_rejected]
+    tests = [
+        test_valid_topic,
+        test_generic_placeholder_is_rejected,
+        test_missing_svg_is_rejected,
+        test_zip_instruction_is_rejected,
+        test_thin_deck_is_rejected,
+        test_slides_deliberately_disabled_requires_explicit_false,
+        test_validate_repository_passes_when_deliberately_disabled_even_with_materialized_topics,
+        test_validate_repository_still_errors_when_slides_config_is_missing_not_disabled,
+    ]
     for test in tests:
         test()
     print(f"Static SVG/PDF study-slide regression tests passed ({len(tests)} cases).")

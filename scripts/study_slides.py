@@ -143,6 +143,21 @@ def slides_enabled(instance: Mapping[str, Any]) -> bool:
     )
 
 
+def slides_deliberately_disabled(instance: Mapping[str, Any]) -> bool:
+    """True only when the instance explicitly turned study_slides off.
+
+    `enabled: False` is the one field an instance sets to make a considered,
+    all-or-nothing decision not to produce slides at all (see the Etapa 5b
+    agent-pilot toggle, docs/claude-agent-pilot-etapa5.md) -- distinct from
+    every other way `slides_enabled()` can return False, which is a
+    misconfiguration (wrong contract_version, a required field left unset or
+    wrong) that must still fail loudly. Any other field is irrelevant once
+    `enabled` is explicitly False: there is nothing left to validate.
+    """
+    contract = _mapping(instance.get("study_slides"))
+    return contract.get("enabled") is False
+
+
 VOID_TAGS = {"area", "base", "br", "col", "embed", "hr", "img", "input", "link", "meta", "param", "source", "track", "wbr"}
 
 
@@ -565,6 +580,12 @@ def validate_repository(root: Path) -> ValidationResult:
     if not instance_path.is_file():
         instance_path = root / "templates/instance.yml"
     instance = _mapping(load_yaml(instance_path)) if instance_path.is_file() else {}
+    if slides_deliberately_disabled(instance):
+        # A genuine, explicit opt-out (study_slides.enabled: false) is not a
+        # misconfiguration -- nothing to check, pass silently. Materialized
+        # topics are allowed to exist without slides in this mode; the
+        # per-topic loop below is simply never reached.
+        return ValidationResult(())
     contract = slides_contract(instance)
     if contract == 2:
         from study_slides_legacy import validate_repository as validate_legacy
