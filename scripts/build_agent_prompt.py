@@ -23,6 +23,7 @@ PHASE_INSTRUCTION_FILES = {
     "intake": ["instructions/10-intake.md"],
     "publish": ["instructions/40-publish-tasks.md"],
     "generate_proposal": ["instructions/28-propose-path.md"],
+    "generate_detailed": ["instructions/30-generate-path.md"],
 }
 
 # Files every author/reviewer prompt gets regardless of phase.
@@ -59,6 +60,14 @@ PHASE_EXTRA_AUTHOR_FILES: dict[str, list[str]] = {
         "docs/learner-facing-language.md",
         "docs/beginner-first-pedagogy.md",
     ],
+    "generate_detailed": [
+        "instructions/36-review-course-content.md",
+        "docs/learner-facing-language.md",
+        "docs/beginner-first-pedagogy.md",
+        "docs/content-quality-and-sources.md",
+        "docs/mermaid-visual-learning.md",
+        "docs/integration-capabilities.md",
+    ],
 }
 
 PHASE_EXTRA_REVIEWER_FILES: dict[str, list[str]] = {
@@ -71,6 +80,12 @@ PHASE_EXTRA_REVIEWER_FILES: dict[str, list[str]] = {
         "instructions/35-review-curriculum.md",
         "docs/beginner-first-pedagogy.md",
     ],
+    "generate_detailed": [
+        "instructions/35-review-curriculum.md",
+        "instructions/36-review-course-content.md",
+        "docs/beginner-first-pedagogy.md",
+        "docs/content-quality-and-sources.md",
+    ],
 }
 
 # `review_profile` selects which required-check set instructions/
@@ -81,18 +96,19 @@ PHASE_EXTRA_REVIEWER_FILES: dict[str, list[str]] = {
 # next_phase_consistency -- instructions/11-intake-completion-recovery.md).
 # `publish` uses the framework's `publication` profile name (not `publish` --
 # docs/review-framework.md's table already used that name before this
-# pilot existed). `generate_proposal` uses `curriculum` -- the same profile
-# manifest.yml assigns to the whole `generate` phase; two of its seven
-# checks (content_review_complete, assessment_alignment) are about
-# materialized content this suboperation never creates, so they resolve
-# trivially (nothing to check) rather than being skipped -- the reviewer
-# prompt notes this explicitly (REVIEWER_PROPOSAL_TOOL_NOTE below).
+# pilot existed). `generate_proposal` and `generate_detailed` both use
+# `curriculum` -- the same profile manifest.yml assigns to the whole
+# `generate` phase; two of its seven checks (content_review_complete,
+# assessment_alignment) are about materialized content, which only exists
+# once `generate_detailed` runs -- trivially satisfied ("nothing in scope")
+# for `generate_proposal`, genuinely evaluated for `generate_detailed`.
 PHASE_REVIEW_PROFILE: dict[str, str] = {
     "bootstrap_instance": "setup",
     "configure_intake": "setup",
     "intake": "intake",
     "publish": "publication",
     "generate_proposal": "curriculum",
+    "generate_detailed": "curriculum",
 }
 
 AUTHOR_HARNESS_NOTE = """\
@@ -310,6 +326,57 @@ leave them `pending` (an incomplete review) and do not invent materialized-
 content findings that don't apply.
 """
 
+AUTHOR_DETAILED_NOTE = """\
+## Detailed-generation scope addendum (Etapa 5b)
+
+Slides are off for this pilot -- do not create `study/slides/`,
+`state/slide-reviews/`, or run instructions/37-review-study-slides.md; do
+not read docs/study-slides.md. write_file rejects any path under
+`study/slides/` or `state/slide-reviews/` regardless of what you attempt, so
+treat every instruction in instructions/30-generate-path.md that refers to
+slides as not applicable to this run:
+
+- Topic contracts (`study/topics/`) do not record `slides` or
+  `slides_review` fields. `slides_pdf` also does not apply -- omit it too.
+- The module's "Complete-content contract" (18 required elements) drops
+  element 18 ("one direct Slides da aula PDF link") for this run -- there is
+  no PDF. 17 elements apply.
+- Outcome traceability step 7 ("represent every outcome in slides through
+  honest data-outcome-ids") and step 8 (slide review before PDF rendering)
+  do not apply.
+- The learner-facing completion response and any task/assessment copy must
+  never promise, reference or link a slide deck or PDF that does not exist.
+
+Everything else in instructions/30-generate-path.md applies in full:
+dependency-aware topic contracts, beginner-first concept progression,
+outcome traceability via hidden markers, the source and provenance
+contract, the 100-point rubric, the GitHub Issue Form per materialized
+topic, and running instructions/36-review-course-content.md as the
+independent content-review pass. Only materialize the deterministic
+lookahead window from `.open-study-path/instance.yml`'s
+`content_generation` config (or all topics, if the roadmap is within both
+`full_upfront_max_topics` and `full_upfront_max_hours`) -- do not
+materialize every future topic regardless of that budget.
+"""
+
+REVIEWER_DETAILED_NOTE = """\
+## Detailed-generation scope addendum (Etapa 5b)
+
+Slides are off for this pilot run -- do not check for `study/slides/`,
+`state/slide-reviews/`, or a "Slides da aula" PDF link in the module (the
+18th element of the complete-content contract does not apply here; verify
+the other 17). A topic contract without `slides`/`slides_pdf`/
+`slides_review` fields is correct for this run, not a finding. If the
+module, rubric or Issue Form references or promises a slide deck anywhere,
+that IS a real finding -- nothing may promise an artifact that does not
+exist in this run.
+
+Otherwise, apply instructions/36-review-course-content.md in full to every
+materialized topic: outcome traceability, source and provenance checks,
+beginner-first progression where the learner's level warrants it, and
+whether the lookahead-window scope (not the whole roadmap) was respected.
+"""
+
 
 def _read(relative_path: str) -> str:
     return (ROOT / relative_path).read_text(encoding="utf-8")
@@ -337,6 +404,8 @@ def build_author_prompts(phase: str, target_repo: str, extra_context: str) -> tu
         sections.append(AUTHOR_PUBLISH_TOOL_NOTE)
     elif phase == "generate_proposal":
         sections.append(AUTHOR_PROPOSAL_NOTE)
+    elif phase == "generate_detailed":
+        sections.append(AUTHOR_DETAILED_NOTE)
     system_prompt = "\n\n---\n\n".join(sections)
 
     user_prompt = (
@@ -359,6 +428,8 @@ def build_reviewer_prompts(phase: str, target_repo: str, base_sha: str, author_s
         sections.append(REVIEWER_PUBLISH_TOOL_NOTE)
     elif phase == "generate_proposal":
         sections.append(REVIEWER_PROPOSAL_NOTE)
+    elif phase == "generate_detailed":
+        sections.append(REVIEWER_DETAILED_NOTE)
     system_prompt = "\n\n---\n\n".join(sections)
 
     review_profile = PHASE_REVIEW_PROFILE.get(phase, "setup")

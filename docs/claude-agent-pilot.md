@@ -8,7 +8,7 @@ Anthropic API and acts on what comes back.
 
 ## Scope
 
-Five manifest phases (four full phases plus one suboperation of `generate`)
+Six manifest phases (four full phases plus two suboperations of `generate`)
 wired to a real agent call so far:
 
 - `bootstrap_instance`, `configure_intake` -- stage 2/Etapa 3, allowed diff
@@ -31,12 +31,18 @@ wired to a real agent call so far:
 - `generate_proposal` -- the `proposal` suboperation of manifest.yml's
   `generate` phase only (`instructions/28-propose-path.md`, roadmap
   architecture -- no materialized content). Etapa 5's first slice
-  (proposal, section 7, step 5). Design complete and tested offline,
-  **not yet validated with a real dispatch** -- see
-  `docs/claude-agent-pilot-etapa5.md`. `detailed_generation`
-  (`instructions/30-generate-path.md` -- lessons, slides, PDF rendering)
-  remains unimplemented; it needs Node.js/npm in the runner for slide
-  rendering, an infrastructure dependency none of the phases above needed.
+  (proposal, section 7, step 5). Validated with 1 real dispatch (Opus) --
+  see `docs/claude-agent-pilot-etapa5.md`, section 6.
+- `generate_detailed` -- the `detailed_generation` suboperation
+  (`instructions/30-generate-path.md` -- topic contracts, lesson modules,
+  rubrics, GitHub Issue Forms), restricted to **no slide generation** by
+  default (`AGENT_PILOT_ENABLE_SLIDES`, unset/false). Etapa 5's second
+  slice (Etapa 5b). Design complete and tested offline, **not yet
+  validated with a real dispatch** -- see
+  `docs/claude-agent-pilot-etapa5.md`, section 7. Turning the env var on
+  is refused loudly before any API call; slide rendering
+  (`scripts/render_study_slides.mjs`, Node.js/Puppeteer) is a separate,
+  not-yet-built slice of work.
 
 `diagnostic` is not implemented, but its design decision is closed: it needs
 a genuinely different trigger model (`issue_comment` per learner answer,

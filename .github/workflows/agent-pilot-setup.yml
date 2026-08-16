@@ -40,6 +40,7 @@ on:
           - intake
           - publish
           - generate_proposal
+          - generate_detailed
       target_repo:
         description: Target instance repository, as OWNER/REPOSITORY
         required: true

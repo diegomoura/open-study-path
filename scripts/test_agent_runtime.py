@@ -9,6 +9,7 @@ without spending a token.
 
 from __future__ import annotations
 
+import os
 import tempfile
 from pathlib import Path
 
@@ -744,6 +745,48 @@ def test_pricing_table_covers_every_resolvable_model() -> None:
         )
 
 
+def test_generate_detailed_allowlist_excludes_slides_by_default() -> None:
+    # Etapa 5b: slides are off by default in this pilot (docs/claude-agent-
+    # pilot-etapa5.md, section 7). study/slides/ and state/slide-reviews/
+    # must never be write-allowed, regardless of the env var -- the
+    # allowlist itself doesn't grow when the toggle flips; main() refuses to
+    # even start a generate_detailed run when it's on (see
+    # test_slides_toggle_enabled_reads_env_var below).
+    assert is_write_allowed("generate_detailed", "study/topics/TOPIC-001.md")
+    assert is_write_allowed("generate_detailed", "study/modules/TOPIC-001.md")
+    assert is_write_allowed("generate_detailed", "study/assessments/TOPIC-001.md")
+    assert is_write_allowed("generate_detailed", "state/content-reviews/TOPIC-001.yml")
+    assert is_write_allowed("generate_detailed", ".github/ISSUE_TEMPLATE/assessment-topic-001.yml")
+    assert is_write_allowed("generate_detailed", "study/roadmap.md")
+    assert is_write_allowed("generate_detailed", "study/integrations.md")
+    assert not is_write_allowed("generate_detailed", "study/slides/TOPIC-001/index.html")
+    assert not is_write_allowed("generate_detailed", "study/slides/TOPIC-001/slides.pdf")
+    assert not is_write_allowed("generate_detailed", "state/slide-reviews/TOPIC-001.yml")
+    # Prefix matching must not spill onto unrelated Issue Form files --
+    # confirms the intake form is never shadowed by this phase's allowlist.
+    assert not is_write_allowed("generate_detailed", ".github/ISSUE_TEMPLATE/create-study-path.yml")
+
+
+def test_slides_toggle_enabled_reads_env_var() -> None:
+    import agent_runtime as ar
+
+    original = os.environ.get(ar.SLIDES_ENV_VAR)
+    try:
+        os.environ.pop(ar.SLIDES_ENV_VAR, None)
+        assert ar.slides_toggle_enabled() is False
+        for value in ("true", "1", "yes", "on", "True", "ON"):
+            os.environ[ar.SLIDES_ENV_VAR] = value
+            assert ar.slides_toggle_enabled() is True, value
+        for value in ("false", "0", "no", "off", ""):
+            os.environ[ar.SLIDES_ENV_VAR] = value
+            assert ar.slides_toggle_enabled() is False, value
+    finally:
+        if original is None:
+            os.environ.pop(ar.SLIDES_ENV_VAR, None)
+        else:
+            os.environ[ar.SLIDES_ENV_VAR] = original
+
+
 def main() -> None:
     tests = [
         test_write_allowlist_matches_setup_execution_contract,
@@ -774,6 +817,8 @@ def main() -> None:
         test_generate_proposal_allowlist_matches_proposal_outputs,
         test_generate_proposal_has_no_github_issues_tools,
         test_pricing_table_covers_every_resolvable_model,
+        test_generate_detailed_allowlist_excludes_slides_by_default,
+        test_slides_toggle_enabled_reads_env_var,
     ]
     for test in tests:
         test()

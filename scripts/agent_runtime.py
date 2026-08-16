@@ -159,20 +159,40 @@ PROPOSAL_ALLOWED_EXACT_PATHS: tuple[str, ...] = (
 )
 PROPOSAL_ALLOWED_PREFIXES: tuple[str, ...] = ()
 
+# The exact detailed-generation domain-output list from instructions/30-
+# generate-path.md's "Content-generation strategy" and "Planning contract"
+# sections, restricted to the Etapa 5b pilot scope: slides are off by
+# default (AGENT_PILOT_ENABLE_SLIDES, see slides_toggle_enabled() below), so
+# study/slides/ and state/slide-reviews/ are deliberately NOT in this
+# allowlist -- the pilot only supports the slides-off path today; turning
+# the env var on is refused loudly in main() rather than silently allowing
+# writes the harness was never built to validate.
+GENERATE_DETAILED_ALLOWED_EXACT_PATHS: tuple[str, ...] = (
+    "study/roadmap.md",
+    ".open-study-path/instance.yml",
+    "study/integrations.md",
+)
+GENERATE_DETAILED_ALLOWED_PREFIXES: tuple[str, ...] = (
+    "study/topics/",
+    "study/modules/",
+    "study/assessments/",
+    "state/content-reviews/",
+    ".github/ISSUE_TEMPLATE/assessment-",
+)
+
 # Which allowlist applies to which manifest phase. `generate_proposal` is a
 # harness-level key for the `proposal` suboperation of manifest.yml's
 # `generate` phase (instructions/28-propose-path.md) -- Etapa 5's first
-# slice (proposal, section 7, step 5). It is deliberately its own harness
-# phase, distinct from a future `generate_detailed` for
-# instructions/30-generate-path.md's materialization suboperation, since the
-# two have completely different allowed outputs, agents and (for detailed
-# generation) infrastructure needs (Node.js slide rendering).
+# slice (proposal, section 7, step 5). `generate_detailed` is the second
+# slice, the `detailed_generation` suboperation
+# (instructions/30-generate-path.md), scoped to slides-off only (Etapa 5b).
 PHASE_ALLOWLISTS: dict[str, tuple[tuple[str, ...], tuple[str, ...]]] = {
     "bootstrap_instance": (SETUP_ALLOWED_EXACT_PATHS, SETUP_ALLOWED_PREFIXES),
     "configure_intake": (SETUP_ALLOWED_EXACT_PATHS, SETUP_ALLOWED_PREFIXES),
     "intake": (INTAKE_ALLOWED_EXACT_PATHS, INTAKE_ALLOWED_PREFIXES),
     "publish": (PUBLISH_ALLOWED_EXACT_PATHS, PUBLISH_ALLOWED_PREFIXES),
     "generate_proposal": (PROPOSAL_ALLOWED_EXACT_PATHS, PROPOSAL_ALLOWED_PREFIXES),
+    "generate_detailed": (GENERATE_DETAILED_ALLOWED_EXACT_PATHS, GENERATE_DETAILED_ALLOWED_PREFIXES),
 }
 
 # Agent ids that exist as real rows in AGENT_CATALOG for the pilot phases.
@@ -188,7 +208,23 @@ PHASE_AUTHOR_AGENT: dict[str, str] = {
     "intake": "intake_resolution",
     "publish": "publish",
     "generate_proposal": "curriculum_architect",
+    "generate_detailed": "content_author",
 }
+
+# Etapa 5b (docs/claude-agent-pilot-etapa5.md, section 7): slides are off by
+# default in this pilot. `render_study_slides.mjs` needs Node.js/Puppeteer/
+# Mermaid in the runner, which this harness has never set up, and the slide
+# authoring+review+PDF-rendering pipeline (instructions/30-generate-path.md
+# "Study-slide authoring and rendering", instructions/37-review-study-
+# slides.md) is a substantial separate slice of work. `study_slides.py` now
+# supports a genuine, validator-recognized "disabled" state
+# (slides_deliberately_disabled(), PR #87) precisely so this default is safe
+# rather than something that would fail the repository's own existing CI.
+SLIDES_ENV_VAR = "AGENT_PILOT_ENABLE_SLIDES"
+
+
+def slides_toggle_enabled() -> bool:
+    return os.environ.get(SLIDES_ENV_VAR, "false").strip().lower() in ("1", "true", "yes", "on")
 
 # Phases where the RepoTools instance also gets a small, separate GitHub
 # Issues tool group, in addition to the repo-file tools every phase gets.
@@ -1132,6 +1168,14 @@ def main(argv: Sequence[str] | None = None) -> None:
         model = resolve_effective_models(config)[agent_id].model
     else:
         model = resolve_phase_reviewer_model(args.phase, config)
+
+    if args.phase == "generate_detailed" and slides_toggle_enabled():
+        raise SystemExit(
+            f"{SLIDES_ENV_VAR}=true, but slide generation is not implemented in this harness "
+            "yet (docs/claude-agent-pilot-etapa5.md, section 7 -- Node.js/Puppeteer slide "
+            "rendering is a separate, not-yet-built slice of work). Leave it unset/false to "
+            "run generate_detailed without slides."
+        )
 
     if args.dry_run:
         print(f"role={args.role} phase={args.phase} model={model}")

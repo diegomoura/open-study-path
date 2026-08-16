@@ -174,3 +174,93 @@ Nenhum achado negativo desta vez -- diferente de `intake`/`publish`, este
 dispatch não revelou nenhum comportamento incorreto do harness, só o bug
 pré-existente da tabela de preços (não relacionado à lógica de
 `generate_proposal` em si).
+
+## 7. Extensão para `generate_detailed` (Etapa 5b, sem slides por padrão)
+
+Status: **design implementado, testado offline, aguardando validação
+real.** Segunda fatia da Etapa 5 -- a suboperação `detailed_generation`
+de `instructions/30-generate-path.md` (contratos de tópico, módulos de
+aula completos, rubricas, GitHub Issue Forms), restrita a **sem geração
+de slides** por decisão explícita do dono da instância.
+
+### 7.1 Por que slides ficaram de fora por padrão
+
+`scripts/render_study_slides.mjs` é Node.js, não Python -- renderiza
+Mermaid → SVG → HTML → PDF via Puppeteer. Nenhuma fase anterior deste
+harness precisou de infraestrutura fora de Python/pip no runner do
+Actions. Construir isso corretamente (deck de 12-24 slides, revisão
+independente via `instructions/37-review-study-slides.md`, renderização
+real de PDF, os 14 checks de `REQUIRED_REVIEW_CHECKS` em
+`scripts/study_slides.py`) é um pedaço de trabalho comparável em tamanho
+ao resto de `generate_detailed` -- por isso fica atrás de um toggle,
+não implementado nesta etapa.
+
+### 7.2 Achado de infraestrutura resolvido antes do harness: `study_slides.py` não suportava "desligado"
+
+Antes de sequer desenhar o toggle do harness, descobri que
+`scripts/validate_study_slides.py` roda **sem condição** em todo push
+(`.github/workflows/validate-template.yml`, step "Validate study-slide
+contract", sem `if:` -- diferente dos steps de renderização Node.js, que
+só rodam se `contract_version == 3`). E `slides_enabled()` tratava
+`study_slides.enabled: false` deliberado exatamente como qualquer outra
+misconfiguração -- sempre erro, sem um modo "desligado" real. Corrigido
+em PR #87 (mergeado, `22cf902`): nova função `slides_deliberately_disabled()`
+que só retorna `True` quando `enabled` é exatamente `False` (ausência de
+config continua sendo tratada como esquecimento, não opt-out), e
+`validate_repository()` passa sem erros nesse caso, mesmo com tópicos
+`content_status: materialized` presentes.
+
+### 7.3 O toggle (`AGENT_PILOT_ENABLE_SLIDES`)
+
+- Env var, default `false`/não setada -- nunca exposta como input de
+  `workflow_dispatch` (ficaria fácil demais de ligar sem querer); só
+  editável direto no YAML do workflow, fricção intencional ("trancada").
+- `slides_toggle_enabled()` em `agent_runtime.py` lê a env var.
+- Se alguém setar `true`, `main()` recusa **antes de qualquer chamada de
+  API**, com uma mensagem clara ("não implementado ainda, ver
+  docs/claude-agent-pilot-etapa5.md seção 7") -- confirmado na linha de
+  comando, `exit code 1`, sem custo.
+- O allowlist de `generate_detailed` nunca inclui `study/slides/` nem
+  `state/slide-reviews/`, independente do valor da env var -- a proteção
+  real está no `write_file`, não só na checagem de `main()`.
+
+### 7.4 O que muda no harness
+
+- **Allowlist**: `study/topics/`, `study/modules/`, `study/assessments/`,
+  `state/content-reviews/`, `.github/ISSUE_TEMPLATE/assessment-*` (prefixo
+  restrito o bastante pra não sombrear `create-study-path.yml`, o form de
+  intake), mais `study/roadmap.md`/`.open-study-path/instance.yml`/
+  `study/integrations.md` (podem ser atualizados de novo nesta fase).
+- **Agente**: `content_author`/`content_reviewer`, tier `sonnet`.
+- **Review profile**: `curriculum` (mesmo de `generate_proposal`) -- mas
+  desta vez `content_review_complete`/`assessment_alignment` se aplicam
+  de verdade, já que existe conteúdo materializado.
+- **Nota de escopo do author**: lista exatamente quais dos 18 elementos
+  do "Complete-content contract" se aplicam (17, sem o link de PDF),
+  quais passos de outcome traceability não se aplicam (7 e 8, sobre
+  slides), e reforça materializar só a janela de lookahead configurada
+  em `instance.yml`'s `content_generation`, não o roadmap inteiro.
+- **Nota de escopo do reviewer**: não cobrar `study/slides/`/`slides_review`
+  como achado -- mas cobrar se o módulo/rubrica/Issue Form **prometer**
+  um deck de slides que não existe nesta execução.
+
+### 7.5 Testes offline
+
+`scripts/test_agent_runtime.py` ganhou 2 casos novos (30 no total):
+allowlist exclui slides mesmo com prefixos testados exaustivamente
+(incluindo confirmar que `.github/ISSUE_TEMPLATE/assessment-*` não
+sombreia o form de intake), e `slides_toggle_enabled()` lê a env var
+corretamente em ambas as direções.
+
+### 7.6 O que falta para "validado"
+
+Nenhum dispatch real ainda. Diferente de `generate_proposal`, esta
+suboperação precisa de um `study/roadmap.md` real como input (já existe
+no repositório de teste, gerado no dispatch real da seção 6) -- não
+precisa de fixture adicional além do que já foi commitado. Pendente:
+rodar de verdade, conferir um tópico materializado contra os 17
+elementos aplicáveis do contrato de conteúdo completo, confirmar que o
+reviewer isolado aplica `instructions/36-review-course-content.md`
+corretamente, e confirmar que `scripts/validate_study_slides.py` (CI do
+próprio repositório) passa de verdade com `study_slides.enabled: false`
+e tópicos materializados sem slides.
