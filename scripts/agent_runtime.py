@@ -266,7 +266,18 @@ class AllowlistViolation(RuntimeError):
 
 
 class AgentBudgetExceeded(RuntimeError):
-    """Raised when MAX_TOOL_ITERATIONS is hit without the agent finishing."""
+    """Raised when MAX_TOOL_ITERATIONS is hit without the agent finishing.
+
+    Carries `tool_call_names`, the ordered sequence of every tool call made
+    before the budget ran out, so a caller can tell steady, varied progress
+    (raise the budget further) apart from a repeated/looping pattern (a real
+    behavioral bug, not a budget problem) -- without this, the only signal
+    was "did not call its finish tool", which looks identical either way.
+    """
+
+    def __init__(self, message: str, tool_call_names: list[str] | None = None) -> None:
+        super().__init__(message)
+        self.tool_call_names = tool_call_names or []
 
 
 def resolve_phase_reviewer_model(phase: str, config: Mapping[str, Any]) -> str:
@@ -1029,6 +1040,20 @@ def anthropic_transport(payload: Mapping[str, Any], api_key: str) -> dict[str, A
         raise RuntimeError(f"Anthropic API error {error.code}: {detail}") from error
 
 
+def _describe_tool_call(block: Mapping[str, Any]) -> str:
+    """One short diagnostic line for a tool_use block, for AgentBudgetExceeded's log.
+
+    Includes the path/number a call acted on when there is one, so the
+    resulting sequence shows real progress (different paths each time) or a
+    repeated/looping pattern (the same path or an error over and over) at a
+    glance, without needing the full transcript.
+    """
+    name = block.get("name", "<unknown>")
+    tool_input = block.get("input", {}) or {}
+    detail = tool_input.get("path") or tool_input.get("number") or tool_input.get("operation_id")
+    return f"{name}({detail})" if detail is not None else name
+
+
 def _with_trailing_cache_breakpoint(messages: list[dict[str, Any]]) -> list[dict[str, Any]]:
     """Return a copy of `messages` with a cache_control breakpoint on the last content block.
 
@@ -1098,6 +1123,7 @@ def run_agent(
 
     messages: list[dict[str, Any]] = [{"role": "user", "content": user_prompt}]
     run = AgentRun(phase=phase, role=role, model=model)
+    tool_call_log: list[str] = []
 
     # The system prompt is identical on every round trip of this loop, so it
     # gets its own permanent cache breakpoint -- separate from the messages
@@ -1125,6 +1151,7 @@ def run_agent(
 
         tool_results: list[dict[str, Any]] = []
         for block in tool_use_blocks:
+            tool_call_log.append(_describe_tool_call(block))
             try:
                 result_text = tools.dispatch(block["name"], block.get("input", {}))
                 tool_results.append(
@@ -1150,7 +1177,8 @@ def run_agent(
             break
     else:
         raise AgentBudgetExceeded(
-            f"{role} agent for phase {phase!r} did not finish within {max_iterations} tool round trips"
+            f"{role} agent for phase {phase!r} did not finish within {max_iterations} tool round trips",
+            tool_call_names=tool_call_log,
         )
 
     run.finished = tools.finished
@@ -1222,17 +1250,29 @@ def main(argv: Sequence[str] | None = None) -> None:
         github_api_url = os.environ.get("GITHUB_API_URL", GITHUB_API_URL_DEFAULT)
         github_request = github_request_factory(github_token, github_api_url)
 
-    run = run_agent(
-        root=Path(args.repo_root),
-        phase=args.phase,
-        role=args.role,
-        model=model,
-        system_prompt=_read_text(args.system_prompt_file),
-        user_prompt=_read_text(args.user_prompt_file),
-        api_key=api_key,
-        github_request=github_request,
-        github_repository=github_repository,
-    )
+    try:
+        run = run_agent(
+            root=Path(args.repo_root),
+            phase=args.phase,
+            role=args.role,
+            model=model,
+            system_prompt=_read_text(args.system_prompt_file),
+            user_prompt=_read_text(args.user_prompt_file),
+            api_key=api_key,
+            github_request=github_request,
+            github_repository=github_repository,
+        )
+    except AgentBudgetExceeded as exc:
+        # Without this, the only signal in the job log used to be "did not
+        # call its finish tool" -- indistinguishable whether the agent made
+        # real, varied progress that just needed more room, or was stuck
+        # repeating the same call. Printed to stderr (visible in the Actions
+        # log) before still failing the job the same way as before.
+        print(f"::error::{exc}", file=sys.stderr)
+        print("Tool calls made before the budget ran out:", file=sys.stderr)
+        for index, call in enumerate(exc.tool_call_names, start=1):
+            print(f"  {index:2d}. {call}", file=sys.stderr)
+        raise SystemExit(1) from exc
 
     if not run.finished:
         raise SystemExit(f"{args.role} agent did not call its finish tool")

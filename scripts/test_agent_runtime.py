@@ -803,6 +803,38 @@ def test_generate_detailed_gets_a_higher_tool_iteration_budget() -> None:
     assert max_tool_iterations_for("some_unknown_phase") == MAX_TOOL_ITERATIONS
 
 
+def test_agent_budget_exceeded_carries_tool_call_diagnostics() -> None:
+    # Regression for the same Etapa 5b dispatch finding as the budget test
+    # above: when the budget runs out, the exception must carry which tools
+    # were called (and on what path/number) so a human can tell real,
+    # varied progress apart from a repeated/looping pattern -- "did not call
+    # its finish tool" alone doesn't distinguish those.
+    def transport(payload, api_key):
+        return {
+            "content": [
+                {"type": "tool_use", "id": "1", "name": "write_file", "input": {"path": "study/topics/TOPIC-001.md", "content": "x"}}
+            ]
+        }
+
+    with tempfile.TemporaryDirectory() as tmp:
+        root = Path(tmp)
+        try:
+            run_agent(
+                root=root,
+                phase="intake",  # small budget (20) so this finishes quickly
+                role="author",
+                model="claude-haiku-4-5-20251001",
+                system_prompt="sp",
+                user_prompt="up",
+                api_key="key",
+                transport=transport,
+            )
+            assert False, "expected AgentBudgetExceeded"
+        except AgentBudgetExceeded as exc:
+            assert len(exc.tool_call_names) == MAX_TOOL_ITERATIONS
+            assert exc.tool_call_names[0] == "write_file(study/topics/TOPIC-001.md)"
+
+
 def main() -> None:
     tests = [
         test_write_allowlist_matches_setup_execution_contract,
@@ -836,6 +868,7 @@ def main() -> None:
         test_generate_detailed_allowlist_excludes_slides_by_default,
         test_slides_toggle_enabled_reads_env_var,
         test_generate_detailed_gets_a_higher_tool_iteration_budget,
+        test_agent_budget_exceeded_carries_tool_call_diagnostics,
     ]
     for test in tests:
         test()
