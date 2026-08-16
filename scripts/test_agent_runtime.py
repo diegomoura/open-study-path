@@ -835,6 +835,31 @@ def test_agent_budget_exceeded_carries_tool_call_diagnostics() -> None:
             assert exc.tool_call_names[0] == "write_file(study/topics/TOPIC-001.md)"
 
 
+def test_transcript_captures_stop_reason_for_unfinished_runs() -> None:
+    # Regression for the second real Etapa 5b dispatch finding: the model
+    # can stop producing tool_use blocks (loop breaks early, run.finished
+    # stays False) without ever hitting the iteration budget. stop_reason
+    # is what distinguishes "response got truncated" from "the model just
+    # stopped" -- it must survive into the transcript for main() to log it.
+    def transport(payload, api_key):
+        return {"content": [{"type": "text", "text": "I'm done here."}], "stop_reason": "end_turn"}
+
+    with tempfile.TemporaryDirectory() as tmp:
+        run = run_agent(
+            root=Path(tmp),
+            phase="intake",
+            role="author",
+            model="claude-haiku-4-5-20251001",
+            system_prompt="sp",
+            user_prompt="up",
+            api_key="key",
+            transport=transport,
+        )
+        assert run.finished is False
+        assert run.transcript[-1]["stop_reason"] == "end_turn"
+        assert run.transcript[-1]["content"][0]["text"] == "I'm done here."
+
+
 def main() -> None:
     tests = [
         test_write_allowlist_matches_setup_execution_contract,
@@ -869,6 +894,7 @@ def main() -> None:
         test_slides_toggle_enabled_reads_env_var,
         test_generate_detailed_gets_a_higher_tool_iteration_budget,
         test_agent_budget_exceeded_carries_tool_call_diagnostics,
+        test_transcript_captures_stop_reason_for_unfinished_runs,
     ]
     for test in tests:
         test()

@@ -1139,7 +1139,13 @@ def run_agent(
             "tools": tool_schemas,
         }
         response = transport(payload, api_key or "")
-        run.transcript.append({"role": "assistant_response", "content": response.get("content", [])})
+        run.transcript.append(
+            {
+                "role": "assistant_response",
+                "content": response.get("content", []),
+                "stop_reason": response.get("stop_reason"),
+            }
+        )
         if "usage" in response:
             run.usage.add(response["usage"])
         content = response.get("content", [])
@@ -1275,6 +1281,20 @@ def main(argv: Sequence[str] | None = None) -> None:
         raise SystemExit(1) from exc
 
     if not run.finished:
+        # Same reasoning as the AgentBudgetExceeded diagnostics above, for
+        # the other way a run can end without finishing: the model stops
+        # producing tool_use blocks (so the loop breaks early, without
+        # exhausting the iteration budget) without ever calling
+        # finish_phase. stop_reason and any final text explain why --
+        # e.g. "max_tokens" means the response was truncated mid-turn,
+        # a model just stopping mid-plan looks different and points at a
+        # prompt/behavior issue instead of a budget one.
+        last_response = run.transcript[-1] if run.transcript else {}
+        print(f"::error::{args.role} agent did not call its finish tool", file=sys.stderr)
+        print(f"stop_reason: {last_response.get('stop_reason')}", file=sys.stderr)
+        for block in last_response.get("content", []):
+            if block.get("type") == "text":
+                print(f"final text from the model:\n{block.get('text', '')}", file=sys.stderr)
         raise SystemExit(f"{args.role} agent did not call its finish tool")
 
     output = dict(run.finish_payload or {})
