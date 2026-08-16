@@ -19,11 +19,13 @@ from agent_runtime import (
     AgentBudgetExceeded,
     AllowlistViolation,
     INTAKE_AUTHOR_ALLOWED_LABEL,
+    MAX_TOOL_ITERATIONS,
     MODEL_PRICING_USD_PER_MTOK,
     PHASE_ALLOWLISTS,
     RepoTools,
     author_tools,
     is_write_allowed,
+    max_tool_iterations_for,
     normalize_relative_path,
     resolve_phase_reviewer_model,
     reviewer_tools,
@@ -787,6 +789,20 @@ def test_slides_toggle_enabled_reads_env_var() -> None:
             os.environ[ar.SLIDES_ENV_VAR] = original
 
 
+def test_generate_detailed_gets_a_higher_tool_iteration_budget() -> None:
+    # Regression for a real dispatch finding (docs/claude-agent-pilot-
+    # etapa5.md, section 7): the default 20-iteration budget, tuned for
+    # smaller phases, was too tight for generate_detailed's realistic
+    # workload (read ~4 input files, write ~5-6 outputs) and a real author
+    # run hit "did not call its finish tool" before completing. Other
+    # phases keep the original, tighter budget -- a runaway loop there
+    # should still be caught quickly.
+    assert max_tool_iterations_for("generate_detailed") > MAX_TOOL_ITERATIONS
+    assert max_tool_iterations_for("intake") == MAX_TOOL_ITERATIONS
+    assert max_tool_iterations_for("publish") == MAX_TOOL_ITERATIONS
+    assert max_tool_iterations_for("some_unknown_phase") == MAX_TOOL_ITERATIONS
+
+
 def main() -> None:
     tests = [
         test_write_allowlist_matches_setup_execution_contract,
@@ -819,6 +835,7 @@ def main() -> None:
         test_pricing_table_covers_every_resolvable_model,
         test_generate_detailed_allowlist_excludes_slides_by_default,
         test_slides_toggle_enabled_reads_env_var,
+        test_generate_detailed_gets_a_higher_tool_iteration_budget,
     ]
     for test in tests:
         test()

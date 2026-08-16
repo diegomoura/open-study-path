@@ -95,6 +95,26 @@ MODEL_PRICING_USD_PER_MTOK: dict[str, dict[str, float]] = {
 # stops here instead of draining the budget.
 MAX_TOOL_ITERATIONS = 20
 
+# Per-phase override for MAX_TOOL_ITERATIONS. Found necessary during Etapa 5b
+# validation: `generate_detailed` materializes a topic contract, lesson
+# module, rubric, GitHub Issue Form and a content review in one run
+# (instructions/30-generate-path.md) -- reading its ~4 input files
+# (roadmap, study.config.yml, intake/diagnostic summaries) plus writing
+# those ~5-6 outputs already approaches the default 20-iteration budget
+# before accounting for any self-correction, and a real dispatch hit exactly
+# this ("author agent did not call its finish tool" -- 20 was tuned for
+# simpler phases like intake/publish, not this one). Deliberately a
+# per-phase override, not a raised global default: a runaway loop in a
+# smaller phase should still be caught quickly, at the original budget.
+PHASE_MAX_TOOL_ITERATIONS: dict[str, int] = {
+    "generate_detailed": 40,
+}
+
+
+def max_tool_iterations_for(phase: str) -> int:
+    return PHASE_MAX_TOOL_ITERATIONS.get(phase, MAX_TOOL_ITERATIONS)
+
+
 # The exact "Allowed setup diff" list from instructions/02-setup-execution.md,
 # duplicated here deliberately rather than parsed out of the markdown: this
 # list is a safety boundary and must fail closed (require a code change and
@@ -1074,6 +1094,7 @@ def run_agent(
         github_repository=github_repository,
     )
     tool_schemas = author_tools(phase) if role == "author" else reviewer_tools(phase)
+    max_iterations = max_tool_iterations_for(phase)
 
     messages: list[dict[str, Any]] = [{"role": "user", "content": user_prompt}]
     run = AgentRun(phase=phase, role=role, model=model)
@@ -1083,7 +1104,7 @@ def run_agent(
     # breakpoint above, which moves forward each round as the conversation grows.
     system_blocks = [{"type": "text", "text": system_prompt, "cache_control": {"type": "ephemeral"}}]
 
-    for _ in range(MAX_TOOL_ITERATIONS):
+    for _ in range(max_iterations):
         payload = {
             "model": model,
             "max_tokens": max_tokens,
@@ -1129,7 +1150,7 @@ def run_agent(
             break
     else:
         raise AgentBudgetExceeded(
-            f"{role} agent for phase {phase!r} did not finish within {MAX_TOOL_ITERATIONS} tool round trips"
+            f"{role} agent for phase {phase!r} did not finish within {max_iterations} tool round trips"
         )
 
     run.finished = tools.finished
