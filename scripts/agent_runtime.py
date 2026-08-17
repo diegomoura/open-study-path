@@ -78,13 +78,23 @@ DEFAULT_MAX_TOKENS = 4096
 # check, source verification, outcome traceability), hit stop_reason
 # "max_tokens" at the 4096 default -- the response was truncated mid-turn,
 # never producing a complete tool_use block, so the run ended without
-# finishing even though the model was doing real, correct work. A per-phase
-# override, not a raised global default, for the same reason as the tool-
-# iteration budget: simpler phases don't need more room, and a larger cap
-# everywhere would raise the ceiling on how much a runaway response could
-# cost before this safety rail catches it.
+# finishing even though the model was doing real, correct work. Raising this
+# to 8192 was not enough either -- a subsequent dispatch showed the AUTHOR
+# also hitting max_tokens at 8192, because a single write_file call
+# containing a full lesson module (or a review artifact) can by itself
+# consume most of one turn's budget. Verified before raising further:
+# Claude Sonnet 5 supports up to 128,000 output tokens on the standard
+# synchronous Messages API (no beta header required, unlike the old Sonnet
+# 3.5 8192-token beta), and max_tokens does not affect billing or rate
+# limits -- it is a cap on the response, not a reservation, so there is no
+# cost or rate downside to setting it generously above what any single turn
+# should realistically need. A per-phase override, not a raised global
+# default, for the same reason as the tool-iteration budget: simpler phases
+# don't need more room, and a larger cap everywhere would raise the ceiling
+# on how much a runaway response could cost before this safety rail catches
+# it.
 PHASE_MAX_TOKENS: dict[str, int] = {
-    "generate_detailed": 8192,
+    "generate_detailed": 16384,
 }
 
 
