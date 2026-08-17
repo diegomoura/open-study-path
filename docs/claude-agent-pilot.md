@@ -37,10 +37,13 @@ wired to a real agent call so far:
   (`instructions/30-generate-path.md` -- topic contracts, lesson modules,
   rubrics, GitHub Issue Forms), restricted to **no slide generation** by
   default (`AGENT_PILOT_ENABLE_SLIDES`, unset/false). Etapa 5's second
-  slice (Etapa 5b). Design complete and tested offline, **not yet
-  validated with a real dispatch** -- see
-  `docs/claude-agent-pilot-etapa5.md`, section 7. Turning the env var on
-  is refused loudly before any API call; slide rendering
+  slice (Etapa 5b). Validated with 7 real dispatches -- real pedagogical
+  content generation and correct reviewer blocking on a real gap both
+  confirmed, no clean `approved` run yet (the last attempt correctly
+  blocked on a missing required deliverable, `state/content-reviews/`,
+  now fixed in the prompt but not re-validated) -- see
+  `docs/claude-agent-pilot-etapa5.md`, section 8. Turning the slides env
+  var on is refused loudly before any API call; slide rendering
   (`scripts/render_study_slides.mjs`, Node.js/Puppeteer) is a separate,
   not-yet-built slice of work.
 

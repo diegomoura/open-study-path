@@ -1,9 +1,12 @@
-# Agent pilot: Etapa 5a — extensão para `generate_proposal`
+# Agent pilot: Etapa 5 — extensão para `generate` (`generate_proposal` + `generate_detailed`)
 
-Status: **design implementado, testado offline, aguardando validação
-real.** Primeira fatia da Etapa 5 (proposta, seção 7, passo 5: "estender
-para `generate` — currículo, conteúdo, slides — a parte mais cara e mais
-sensível a qualidade").
+Status: **`generate_proposal` fechada** (1 dispatch real, hashes conferidos,
+reviewer aprovou -- seção 6). **`generate_detailed` fechada como evidência
+suficiente**, sem `approved` limpo (7 dispatches reais; mecanismo de
+geração + bloqueio correto pelo reviewer isolado provados, mas a última
+tentativa terminou `action_required` por um gap real do author -- seção
+8). Ambas restritas ao escopo já decidido: `generate_detailed` sem slides
+por padrão (`AGENT_PILOT_ENABLE_SLIDES`, seção 7).
 
 ## 1. Por que fatiar `generate` em duas suboperações
 
@@ -264,3 +267,97 @@ reviewer isolado aplica `instructions/36-review-course-content.md`
 corretamente, e confirmar que `scripts/validate_study_slides.py` (CI do
 próprio repositório) passa de verdade com `study_slides.enabled: false`
 e tópicos materializados sem slides.
+
+## 8. Validação real (7 dispatches; mecanismo provado, sem `approved` limpo)
+
+Status: **fechada como evidência suficiente**, decisão explícita com você
+de não gastar mais um dispatch para forçar um `approved` limpo agora. O
+mecanismo central -- geração pedagógica real + bloqueio correto de um gap
+real pelo reviewer isolado -- está provado.
+
+### 8.1 Cronologia dos 7 dispatches
+
+`generate_detailed` foi, de longe, a fase mais difícil de fazer rodar até o
+fim neste piloto -- diferente de `intake`/`publish`/`generate_proposal`,
+que funcionaram no primeiro ou segundo dispatch real.
+
+1. **Tentativa 1**: `AgentBudgetExceeded` -- orçamento padrão de 20
+   iterações (dimensionado para fases menores) insuficiente para ler ~4
+   arquivos de input e escrever ~6-7 saídas. Corrigido: `PHASE_MAX_TOOL_
+   ITERATIONS`, override por fase (não elevação global), `generate_
+   detailed` ganha 40.
+2. **Tentativa 2**: estourou de novo, mesmo com 40. Sem visibilidade
+   nenhuma do que o modelo estava fazendo -- só "did not call its finish
+   tool". Corrigido: `AgentBudgetExceeded` ganha `tool_call_names`, log
+   completo impresso no stderr antes de falhar.
+3. **Tentativa 3** (diagnóstico): revelou um modo de falha *diferente* --
+   o modelo parou de produzir tool calls sem esgotar o orçamento
+   (`run.finished=False` sem exceção). Corrigido: transcript passa a
+   guardar `stop_reason` de cada resposta; `main()` imprime isso e o texto
+   final do modelo antes de falhar.
+4. **Tentativa 4**: o **author terminou com sucesso** -- materializou
+   TOPIC-001 completo (contrato, módulo, rubrica, Issue Form), contratos
+   corretos para todo o roadmap (`content_status: planned` nos demais),
+   `study/integrations.md` coerente (preview `status: proposed`, nem
+   previsto por mim ao montar a allowlist, mas correto). O **reviewer**
+   estourou `stop_reason: max_tokens` (4096, default) escrevendo o
+   artefato de revisão completo contra conteúdo real. Corrigido:
+   `PHASE_MAX_TOKENS`, override por fase, `generate_detailed` ganha 8192.
+5. **Tentativa 5**: desta vez foi o **author** que estourou `max_tokens`
+   a 8192 -- um único `write_file` com um módulo de aula completo pode
+   sozinho consumir a maior parte do orçamento de um turno. Antes de
+   subir mais às cegas, confirmei via busca real: Sonnet 5 aceita até
+   **128.000 tokens de saída** na API síncrona padrão, sem beta header, e
+   `max_tokens` **não afeta custo real nem rate limit** -- é só um teto de
+   resposta. Elevado para 16384.
+6. **Tentativa 6**: falhou **antes de qualquer chamada de API** --
+   `"Your credit balance is too low to access the Anthropic API"`. Não é
+   bug de código; é o limite de gasto real da conta batendo, depois de
+   todos os dispatches desta sessão (Etapas 3, 4, 5 completas). Resolvido
+   por você no Console da Anthropic.
+7. **Tentativa 7**: **sucesso completo**. Author e reviewer terminaram,
+   PR real aberto (#16 no repo de teste). Ver seção 8.2.
+
+### 8.2 Resultado da tentativa 7
+
+Author materializou TOPIC-001 (mesmo conteúdo de qualidade da tentativa
+4: outcomes bem mapeados, pedagogia beginner-first correta considerando o
+perfil real do aluno em `state/diagnostic-summary.json`, fontes
+plausíveis com locators precisos) mas **não criou
+`state/content-reviews/TOPIC-001.yml`** -- a revisão independente de
+conteúdo exigida por `instructions/32-generation-execution.md` como parte
+da mesma operação, não um passo posterior.
+
+O **reviewer isolado pegou isso corretamente**: `status: action_required`,
+citando a instrução exata (`instructions/32-generation-execution.md`,
+`instructions/36-review-course-content.md`, `instance.yml`'s
+`content_review.required_for_materialized_topics: true`), e notou que o
+próprio resumo do author reconhecia a omissão sem corrigi-la --
+"Acknowledging the omission... is not a substitute for doing it." Deu
+feedback positivo específico também (outcome markers bem posicionados,
+rubrica cobrindo todos os outcomes, pedagogia executada corretamente).
+
+3 hashes conferidos na mão (módulo, contrato de tópico, Issue Form) --
+todos batem. Custo real: **$1.5870** (author $0.9754 + reviewer $0.6116,
+Sonnet, 2.028.781 tokens combinados).
+
+### 8.3 Achado de prompt, corrigido nesta mesma etapa (sem revalidar)
+
+`AUTHOR_DETAILED_NOTE` mencionava rodar `instructions/36-review-course-
+content.md` como parte do trabalho, mas não deixava claro o suficiente que
+`state/content-reviews/<TOPIC-ID>.yml` é um **entregável obrigatório desta
+mesma operação**, não um passo posterior opcional. Corrigido: o prompt
+agora afirma isso explicitamente, citando o achado real da tentativa 7
+como o que não deve se repetir. **Não revalidado com um oitavo dispatch**
+-- decisão explícita de tratar a evidência já coletada (mecanismo provado,
+bloqueio correto do reviewer) como suficiente por ora.
+
+### 8.4 Custo total da validação de `generate_detailed`
+
+Só a tentativa 7 (a única que completou e registrou uso) tem custo exato
+registrado: $1.5870. As tentativas 1-5 consumiram API real sem registrar
+uso (o log de custo só é escrito ao final de uma execução bem-sucedida) --
+gap de visibilidade conhecido, não corrigido nesta etapa. A tentativa 6
+não custou nada (falhou antes de qualquer chamada). Custo total real da
+fase é maior que $1.59, mas não é possível recuperar o valor exato das
+tentativas que falharam.

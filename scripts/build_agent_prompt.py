@@ -357,6 +357,17 @@ lookahead window from `.open-study-path/instance.yml`'s
 `content_generation` config (or all topics, if the roadmap is within both
 `full_upfront_max_topics` and `full_upfront_max_hours`) -- do not
 materialize every future topic regardless of that budget.
+
+REQUIRED DELIVERABLE, not an optional later step: for every topic you
+materialize in this run, you must also produce and commit a passing
+`state/content-reviews/<TOPIC-ID>.yml` from running instructions/36-review-
+course-content.md yourself, in this same operation. A real dispatch (Etapa
+5b validation, docs/claude-agent-pilot-etapa5.md section 7) produced an
+otherwise-strong materialized topic but never created this file, and the
+isolated reviewer correctly blocked the whole operation for it
+(`action_required`) even though everything else passed -- do not repeat
+that gap. Acknowledging the omission in your summary is not a substitute
+for doing it.
 """
 
 REVIEWER_DETAILED_NOTE = """\
