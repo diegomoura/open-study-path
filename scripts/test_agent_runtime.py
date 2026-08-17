@@ -18,6 +18,7 @@ import json
 from agent_runtime import (
     AgentBudgetExceeded,
     AllowlistViolation,
+    DEFAULT_MAX_TOKENS,
     INTAKE_AUTHOR_ALLOWED_LABEL,
     MAX_TOOL_ITERATIONS,
     MODEL_PRICING_USD_PER_MTOK,
@@ -25,6 +26,7 @@ from agent_runtime import (
     RepoTools,
     author_tools,
     is_write_allowed,
+    max_tokens_for,
     max_tool_iterations_for,
     normalize_relative_path,
     resolve_phase_reviewer_model,
@@ -860,6 +862,18 @@ def test_transcript_captures_stop_reason_for_unfinished_runs() -> None:
         assert run.transcript[-1]["content"][0]["text"] == "I'm done here."
 
 
+def test_generate_detailed_gets_a_higher_max_tokens_budget() -> None:
+    # Regression for the real dispatch that revealed this: the reviewer,
+    # writing a full curriculum review artifact against a real materialized
+    # lesson, hit stop_reason "max_tokens" at the 4096 default -- truncated
+    # mid-turn before producing a complete tool_use block. Other phases keep
+    # the original, smaller cap.
+    assert max_tokens_for("generate_detailed") > DEFAULT_MAX_TOKENS
+    assert max_tokens_for("intake") == DEFAULT_MAX_TOKENS
+    assert max_tokens_for("publish") == DEFAULT_MAX_TOKENS
+    assert max_tokens_for("some_unknown_phase") == DEFAULT_MAX_TOKENS
+
+
 def main() -> None:
     tests = [
         test_write_allowlist_matches_setup_execution_contract,
@@ -895,6 +909,7 @@ def main() -> None:
         test_generate_detailed_gets_a_higher_tool_iteration_budget,
         test_agent_budget_exceeded_carries_tool_call_diagnostics,
         test_transcript_captures_stop_reason_for_unfinished_runs,
+        test_generate_detailed_gets_a_higher_max_tokens_budget,
     ]
     for test in tests:
         test()

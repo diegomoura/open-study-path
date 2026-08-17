@@ -71,6 +71,26 @@ API_URL = "https://api.anthropic.com/v1/messages"
 API_VERSION = "2023-06-01"
 DEFAULT_MAX_TOKENS = 4096
 
+# Per-phase override for max_tokens (the per-response output cap sent to the
+# API), same reasoning as PHASE_MAX_TOOL_ITERATIONS below. Found necessary
+# during the same Etapa 5b dispatch: the reviewer, writing a full curriculum
+# review artifact against a real materialized lesson (17-element content
+# check, source verification, outcome traceability), hit stop_reason
+# "max_tokens" at the 4096 default -- the response was truncated mid-turn,
+# never producing a complete tool_use block, so the run ended without
+# finishing even though the model was doing real, correct work. A per-phase
+# override, not a raised global default, for the same reason as the tool-
+# iteration budget: simpler phases don't need more room, and a larger cap
+# everywhere would raise the ceiling on how much a runaway response could
+# cost before this safety rail catches it.
+PHASE_MAX_TOKENS: dict[str, int] = {
+    "generate_detailed": 8192,
+}
+
+
+def max_tokens_for(phase: str) -> int:
+    return PHASE_MAX_TOKENS.get(phase, DEFAULT_MAX_TOKENS)
+
 # USD per million tokens, verified against platform.claude.com/docs/en/about-claude/pricing
 # (checked 2026-08-14). Update this table if Anthropic changes rates -- it is
 # only used to produce an estimate for the pilot's cost reporting, never sent
@@ -1267,6 +1287,7 @@ def main(argv: Sequence[str] | None = None) -> None:
             api_key=api_key,
             github_request=github_request,
             github_repository=github_repository,
+            max_tokens=max_tokens_for(args.phase),
         )
     except AgentBudgetExceeded as exc:
         # Without this, the only signal in the job log used to be "did not
