@@ -1,10 +1,10 @@
-# Agent pilot: Etapa 4b — desenho para `diagnostic` (decisão fechada, implementação pendente)
+# Agent pilot: Etapa 4b — `diagnostic` (design fechado, harness implementado)
 
-Status: **decisão de arquitetura fechada. Nenhum código implementado.**
-Este documento existe para desbloquear a Etapa 5 sem deixar `diagnostic`
-como uma pendência vaga — a pergunta "que formato ele vai ter" está
-respondida; construir o harness é trabalho futuro, do tamanho de uma etapa
-própria, não um ajuste incremental sobre `intake`/`publish`.
+Status: **harness implementado, testado offline (38 casos em
+`test_agent_runtime.py` + 2 em `test_build_diagnostic_context.py`),
+aguardando validação real.** A seção 1-4 abaixo é o desenho original
+(decisão de arquitetura, fechada antes de qualquer código); a seção 5
+documenta o que foi de fato construído.
 
 ## 1. Por que `diagnostic` não cabe no harness atual
 
@@ -95,3 +95,98 @@ Etapa 5.
 - `docs/claude-agent-pilot.md` §Scope aponta para este documento em vez de
   descrever `diagnostic` como "pendente de decisão" -- a decisão já foi
   tomada.
+
+## 5. O que foi implementado
+
+Implementação real do desenho acima, sem desvios de arquitetura.
+
+### 5.1 Harness (`agent_runtime.py`)
+
+- Allowlist: `.open-study-path/instance.yml`, `state/diagnostic-summary.json`
+  -- direto de `instructions/20-diagnostic.md`'s "Diagnostic pull-request
+  policy", cross-checado contra `scripts/review_framework.py`'s próprio
+  `_allowed_domain_path` para o profile `diagnostic` (batem exatamente).
+- Agente `diagnostic` (author, `sonnet` -- já cadastrado em `AGENT_CATALOG`).
+- Dois tools novos, exclusivos do author (o reviewer não ganha nenhum):
+  `list_issue_comments(number)` (lê a thread inteira) e
+  `post_issue_comment(number, body)` (posta pergunta ou resposta de
+  conclusão).
+- `diagnostic` entra em `PHASES_WITH_GITHUB_ISSUES` (para ganhar
+  `github_request`/`repository`), mas é explicitamente excluído do bloco
+  genérico que dá tools de leitura de issue ao *reviewer* -- a instrução
+  exige que o reviewer reconstrua a conclusão só a partir do resumo
+  persistido, nunca da transcrição bruta.
+- Guard estrutural real em `finish_phase`: recusa terminar um turno de
+  `diagnostic` sem que `post_issue_comment` tenha sido chamado antes. Isso é
+  deliberadamente mais fraco que os guards de `intake`/`publish` (que travam
+  em cima de um resultado determinístico de classificação) -- aqui não
+  existe sinal determinístico de "evidência suficiente", a decisão é
+  julgamento do modelo. O guard garante só que nenhum turno termina em
+  silêncio, não que o julgamento em si estava certo.
+
+### 5.2 `scripts/build_diagnostic_context.py`
+
+Novo. Busca o corpo da issue + todos os comentários via API do GitHub e
+monta um texto único (`render_transcript()`) que vira o `extra_context` do
+author -- é o mecanismo completo de "memória" entre turnos, já que cada
+invocação é um processo novo sem estado nenhum. Testado offline (2 casos).
+
+### 5.3 `build_agent_prompt.py`
+
+- `--extra-context-file` novo na CLI: le o contexto de um arquivo em vez de
+  um argumento de shell -- necessário porque uma transcrição de várias
+  perguntas/respostas pode ter aspas e quebras de linha, inseguro como
+  argumento único de shell (mesmo raciocínio que já levou `EXTRA_CONTEXT` a
+  ser passado via `env:` no workflow original, agora um passo além).
+- `instructions/20-diagnostic.md` + `21-diagnostic-completion-recovery.md`
+  como contrato; review profile `diagnostic` (5 checks:
+  `evidence_basis`, `bounded_questioning`, `adjacent_experience_separation`,
+  `placement_consistency`, `privacy_and_minimization`).
+- Nota de escopo do author: passo a passo explícito do turno (ler a thread
+  primeiro sempre, decidir suficiência, postar pergunta OU concluir),
+  adaptando o contrato -- escrito assumindo um chat ao vivo -- para o
+  formato real "um processo novo por resposta do aluno".
+- Nota de escopo do reviewer: reforça que não há tools de issue disponíveis
+  de propósito, e que evidência fraca no resumo já é, por si, um achado
+  (`placement_consistency`), não motivo para tentar investigar a conversa
+  original.
+
+### 5.4 Workflow novo (`.github/workflows/agent-pilot-diagnostic.yml`)
+
+Não é uma opção a mais no workflow existente -- é um arquivo próprio,
+porque o modelo de gatilho e a semântica de sucesso/falha são
+fundamentalmente diferentes:
+
+- Gatilho `issue_comment: [created]`, não `workflow_dispatch`.
+- Guardas: só roda se (a) o comentário foi numa *issue*, não numa PR
+  (`issue_comment` dispara para os dois no modelo do GitHub); (b) a issue
+  tem a label `diagnostic:in-progress`; (c) quem comentou não foi o próprio
+  bot -- sem isso, a pergunta/resposta que o author posta re-dispararia o
+  workflow nele mesmo, um loop infinito real.
+- `TARGET_REPO` é sempre `github.repository` (nunca de input) -- mesma
+  fronteira de segurança de todas as outras fases.
+- **Diff vazio não é falha aqui** -- é o resultado normal da maioria dos
+  turnos (o author só postou a próxima pergunta). Um novo step "Check
+  whether this turn completed the diagnostic" define
+  `completed=true/false` como output do job; o job do reviewer só roda
+  quando `completed=true` (`needs.author.outputs.completed == 'true'`).
+- Ao completar (turno terminal), a label `diagnostic:in-progress` é
+  removida **antes** do commit -- fecha a janela onde uma resposta
+  tardia/duplicada do aluno poderia disparar um segundo turno contra uma
+  sessão já resolvida.
+- **Limitação conhecida, mesma categoria já documentada para
+  `intake`/`publish`**: a resposta de conclusão é postada como comentário
+  pelo *author*, antes do reviewer isolado confirmar. Se o reviewer
+  bloquear (`action_required`), o aluno já viu a mensagem de conclusão
+  mesmo assim -- efeito colateral imediato, independente do PR ser
+  mergeado.
+
+### 5.5 O que falta para "validado"
+
+Diferente de todas as fases anteriores, validar isso de verdade exige
+simular idas e vindas reais de comentário (não um único
+`workflow_dispatch`): criar uma issue de sessão com a label
+`diagnostic:in-progress`, postar uma resposta, conferir que o workflow
+dispara e posta a próxima pergunta, repetir até a conclusão, e então
+aplicar o mesmo critério de sempre (hash na mão, custo real, revisão
+isolada). Pendente -- não tentado ainda nesta etapa.

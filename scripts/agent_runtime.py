@@ -230,12 +230,26 @@ GENERATE_DETAILED_ALLOWED_PREFIXES: tuple[str, ...] = (
     ".github/ISSUE_TEMPLATE/assessment-",
 )
 
+# The exact diagnostic domain-output list from instructions/20-diagnostic.md's
+# "Diagnostic pull-request policy": only the instance marker and the
+# diagnostic summary. Independently cross-checked against
+# scripts/review_framework.py's own `_allowed_domain_path` for the
+# "diagnostic" profile, which lists exactly these same two paths.
+DIAGNOSTIC_ALLOWED_EXACT_PATHS: tuple[str, ...] = (
+    ".open-study-path/instance.yml",
+    "state/diagnostic-summary.json",
+)
+DIAGNOSTIC_ALLOWED_PREFIXES: tuple[str, ...] = ()
+
 # Which allowlist applies to which manifest phase. `generate_proposal` is a
 # harness-level key for the `proposal` suboperation of manifest.yml's
 # `generate` phase (instructions/28-propose-path.md) -- Etapa 5's first
 # slice (proposal, section 7, step 5). `generate_detailed` is the second
 # slice, the `detailed_generation` suboperation
 # (instructions/30-generate-path.md), scoped to slides-off only (Etapa 5b).
+# `diagnostic` is Etapa 4b -- see the module docstring addendum below and
+# docs/claude-agent-pilot-etapa4b-diagnostic-design.md for why it runs on a
+# completely different trigger (issue_comment, not workflow_dispatch).
 PHASE_ALLOWLISTS: dict[str, tuple[tuple[str, ...], tuple[str, ...]]] = {
     "bootstrap_instance": (SETUP_ALLOWED_EXACT_PATHS, SETUP_ALLOWED_PREFIXES),
     "configure_intake": (SETUP_ALLOWED_EXACT_PATHS, SETUP_ALLOWED_PREFIXES),
@@ -243,6 +257,7 @@ PHASE_ALLOWLISTS: dict[str, tuple[tuple[str, ...], tuple[str, ...]]] = {
     "publish": (PUBLISH_ALLOWED_EXACT_PATHS, PUBLISH_ALLOWED_PREFIXES),
     "generate_proposal": (PROPOSAL_ALLOWED_EXACT_PATHS, PROPOSAL_ALLOWED_PREFIXES),
     "generate_detailed": (GENERATE_DETAILED_ALLOWED_EXACT_PATHS, GENERATE_DETAILED_ALLOWED_PREFIXES),
+    "diagnostic": (DIAGNOSTIC_ALLOWED_EXACT_PATHS, DIAGNOSTIC_ALLOWED_PREFIXES),
 }
 
 # Agent ids that exist as real rows in AGENT_CATALOG for the pilot phases.
@@ -259,7 +274,23 @@ PHASE_AUTHOR_AGENT: dict[str, str] = {
     "publish": "publish",
     "generate_proposal": "curriculum_architect",
     "generate_detailed": "content_author",
+    "diagnostic": "diagnostic",
 }
+
+# Etapa 4b (docs/claude-agent-pilot-etapa4b-diagnostic-design.md): unlike
+# every other phase, `diagnostic` never runs via workflow_dispatch. It is
+# triggered once per learner reply (issue_comment on the session issue,
+# .github/workflows/agent-pilot-diagnostic.yml), and each invocation
+# reconstructs the whole running Q&A state from the issue's comment thread
+# (scripts/build_diagnostic_context.py) rather than from any harness-side
+# memory -- the same "context from artifacts, never memory" discipline as
+# every other phase, just triggered by a different event. Most turns only
+# post the next question (a comment) and touch no repository file at all;
+# only the terminal turn, once evidence is sufficient, writes
+# state/diagnostic-summary.json/instance.yml and opens a PR. Phases in this
+# set get post_issue_comment/list_issue_comments in addition to whatever
+# else their allowlist covers.
+PHASES_WITH_ISSUE_COMMENTS: frozenset[str] = frozenset({"diagnostic"})
 
 # Etapa 5b (docs/claude-agent-pilot-etapa5.md, section 7): slides are off by
 # default in this pilot. `render_study_slides.mjs` needs Node.js/Puppeteer/
@@ -281,7 +312,7 @@ def slides_toggle_enabled() -> bool:
 # `publish` is restricted to the github_issues task-manager backend only --
 # Trello/Todoist need their own Secret and their own adapter, deferred (see
 # docs/claude-agent-pilot.md's Scope section).
-PHASES_WITH_GITHUB_ISSUES: frozenset[str] = frozenset({"intake", "publish"})
+PHASES_WITH_GITHUB_ISSUES: frozenset[str] = frozenset({"intake", "publish", "diagnostic"})
 
 # The only label the intake author is ever allowed to apply. Restricting this
 # at the tool layer (not just in the prompt) means a model that misreads its
@@ -448,6 +479,7 @@ class RepoTools:
         self.labels_applied: list[tuple[int, str]] = []
         self._last_candidate_resolution_state: str | None = None
         self._last_publish_status: str | None = None
+        self._diagnostic_comment_posted_this_turn: bool = False
 
     def read_file(self, path: str) -> str:
         target = normalize_relative_path(self.root, path)
@@ -645,6 +677,45 @@ class RepoTools:
         self.labels_applied.append((number, label))
         return f"applied label {label!r} to issue #{number}"
 
+    def list_issue_comments(self, number: int) -> str:
+        """Read the full comment thread of one issue -- the diagnostic session's only state.
+
+        Etapa 4b: each invocation of the diagnostic author reconstructs the
+        entire running Q&A exchange from this thread, never from harness-side
+        memory (there is none -- every turn is a fresh, isolated process).
+        Returns each comment's author, timestamp and body in chronological
+        order, exactly as GitHub returns them (no pagination limit applied
+        here -- a diagnostic session is capped at 10 questions by
+        instructions/20-diagnostic.md's hard maximum, so the thread is always
+        small).
+        """
+        request_json, repository = self._require_github()
+        raw = request_json("GET", f"/repos/{repository}/issues/{number}/comments?per_page=100", None)
+        comments = [
+            {
+                "author_login": (item.get("user") or {}).get("login"),
+                "created_at": item.get("created_at"),
+                "body": item.get("body") or "",
+            }
+            for item in raw or []
+        ]
+        return json.dumps(comments, indent=2)
+
+    def post_issue_comment(self, number: int, body: str) -> str:
+        """Post one comment -- the diagnostic author's only way to reach the learner.
+
+        Used for both a mid-session question (evidence still insufficient)
+        and the terminal completion response (after the repository operation
+        succeeds) -- instructions/20-diagnostic.md requires exactly one
+        question per turn either way, never the whole questionnaire at once.
+        """
+        if self.role != "author":
+            raise AllowlistViolation("post_issue_comment is not available to this role")
+        request_json, repository = self._require_github()
+        request_json("POST", f"/repos/{repository}/issues/{number}/comments", {"body": body})
+        self._diagnostic_comment_posted_this_turn = True
+        return f"posted comment to issue #{number}"
+
     def run_publish_projection(
         self,
         topics: list[dict[str, Any]],
@@ -781,6 +852,20 @@ class RepoTools:
     def finish_phase(self, summary: str, next_action: str) -> str:
         if self.role != "author":
             raise AllowlistViolation("finish_phase is not available to this role")
+        if self.phase == "diagnostic" and not self._diagnostic_comment_posted_this_turn:
+            # Real, achievable structural invariant for a phase with no
+            # deterministic sufficiency signal to gate on (unlike intake's
+            # resolve_intake_candidates or publish's run_publish_projection
+            # status): every diagnostic turn must tell the learner something
+            # -- the next question or the completion response -- before
+            # ending. This does not verify the *sufficiency* judgment itself
+            # (that remains the model's call), only that the turn never ends
+            # silently.
+            raise AllowlistViolation(
+                "refusing to finish this diagnostic turn: post_issue_comment was never called. "
+                "Every turn must post either the next question or the completion response before "
+                "finishing."
+            )
         self.finished = True
         self.finish_payload = {"summary": summary, "next_action": next_action}
         return "phase marked finished"
@@ -835,6 +920,10 @@ class RepoTools:
                 tool_input["operation_id"],
                 tool_input["course_name"],
             )
+        if name == "list_issue_comments":
+            return self.list_issue_comments(tool_input["number"])
+        if name == "post_issue_comment":
+            return self.post_issue_comment(tool_input["number"], tool_input["body"])
         raise AllowlistViolation(f"unknown tool: {name}")
 
 
@@ -986,6 +1075,45 @@ def author_tools(phase: str | None = None) -> list[dict[str, Any]]:
                 },
             }
         )
+    elif phase == "diagnostic":
+        tools.append(
+            {
+                "name": "list_issue_comments",
+                "description": (
+                    "Read the full comment thread of the diagnostic session issue, in "
+                    "chronological order. This is your only source of the running session state "
+                    "-- you have no memory of earlier turns. Call this first, every turn, to "
+                    "reconstruct exactly how many questions have been asked and what the "
+                    "learner answered before deciding your next action."
+                ),
+                "input_schema": {
+                    "type": "object",
+                    "properties": {"number": {"type": "integer"}},
+                    "required": ["number"],
+                },
+            }
+        )
+        tools.append(
+            {
+                "name": "post_issue_comment",
+                "description": (
+                    "Post one comment to the diagnostic session issue -- your only channel to "
+                    "the learner. Use it for exactly one short question per turn while evidence "
+                    "is still insufficient (instructions/20-diagnostic.md's interaction style: "
+                    "never the whole questionnaire at once, no separate transition message), or "
+                    "for the single learner-facing completion response once you have written "
+                    "the domain files and the repository operation is done."
+                ),
+                "input_schema": {
+                    "type": "object",
+                    "properties": {
+                        "number": {"type": "integer"},
+                        "body": {"type": "string"},
+                    },
+                    "required": ["number", "body"],
+                },
+            }
+        )
     return tools
 
 
@@ -1039,12 +1167,19 @@ def reviewer_tools(phase: str | None = None) -> list[dict[str, Any]]:
             },
         },
     ]
-    if phase in PHASES_WITH_GITHUB_ISSUES:
+    if phase in PHASES_WITH_GITHUB_ISSUES and phase != "diagnostic":
         # Reviewer gets read-only issue access -- enough to independently
         # re-fetch the source issue and compare its rendered fields against
         # what the author normalized, but never label_github_issue: the
         # reviewer must never be able to cause the external side effect it is
-        # supposed to be checking.
+        # supposed to be checking. `diagnostic` is deliberately excluded even
+        # though it's in PHASES_WITH_GITHUB_ISSUES (for the author's
+        # comment-thread access): instructions/20-diagnostic.md requires the
+        # reviewer to "reconstruct each placement conclusion from the bounded
+        # evidence recorded in the summary" alone, never the raw comment
+        # thread -- giving it any issue-reading tool here would work against
+        # that privacy/minimization requirement, even though these
+        # particular tools only reach issue bodies, not comments.
         tools.extend(_github_issue_read_tools())
     return tools
 

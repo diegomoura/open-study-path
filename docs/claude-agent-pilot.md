@@ -47,17 +47,15 @@ wired to a real agent call so far:
   (`scripts/render_study_slides.mjs`, Node.js/Puppeteer) is a separate,
   not-yet-built slice of work.
 
-`diagnostic` is not implemented, but its design decision is closed: it needs
-a genuinely different trigger model (`issue_comment` per learner answer,
-not `workflow_dispatch` one-shot), since `instructions/20-diagnostic.md`
-requires a real, multi-turn interactive placement session with the learner
-("ask exactly one short question at a time"), which does not fit this
-harness's one-shot `run_agent()` -> `finish_phase()` shape. See
-`docs/claude-agent-pilot-etapa4b-diagnostic-design.md` for the full design.
-Building it is comparable in size to `intake`+`publish` combined (new
-workflow trigger, comment-posting tools, a question-budget that persists
-implicitly across turns) -- tracked as its own future step, not a blocker
-for `generate` (Etapa 5).
+`diagnostic` (Etapa 4b) has its own workflow now
+(`.github/workflows/agent-pilot-diagnostic.yml`), triggered by
+`issue_comment` per learner answer instead of `workflow_dispatch` one-shot,
+since `instructions/20-diagnostic.md` requires a real, multi-turn
+interactive placement session with the learner ("ask exactly one short
+question at a time"), which does not fit this harness's other phases'
+one-shot `run_agent()` -> `finish_phase()` shape. Design complete and tested
+offline, **not yet validated with a real comment-by-comment dispatch** --
+see `docs/claude-agent-pilot-etapa4b-diagnostic-design.md`, section 5.
 
 `generate` (curriculum/content/slides) has not been picked up either --
 proposal section 7, step 5. `publish`'s real-dispatch validation is

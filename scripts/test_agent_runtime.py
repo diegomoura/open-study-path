@@ -874,6 +874,55 @@ def test_generate_detailed_gets_a_higher_max_tokens_budget() -> None:
     assert max_tokens_for("some_unknown_phase") == DEFAULT_MAX_TOKENS
 
 
+def test_diagnostic_allowlist_matches_pull_request_policy() -> None:
+    assert is_write_allowed("diagnostic", ".open-study-path/instance.yml")
+    assert is_write_allowed("diagnostic", "state/diagnostic-summary.json")
+    assert not is_write_allowed("diagnostic", "state/reviews/agent-pilot-diagnostic.yml")
+    assert not is_write_allowed("diagnostic", "study/roadmap.md")
+
+
+def test_diagnostic_author_gets_comment_tools_reviewer_does_not() -> None:
+    author_names = {t["name"] for t in author_tools("diagnostic")}
+    assert "list_issue_comments" in author_names
+    assert "post_issue_comment" in author_names
+    assert "run_publish_projection" not in author_names
+
+    reviewer_names = {t["name"] for t in reviewer_tools("diagnostic")}
+    assert "list_issue_comments" not in reviewer_names
+    assert "post_issue_comment" not in reviewer_names
+    assert "read_github_issue" not in reviewer_names  # excluded even though phase is in PHASES_WITH_GITHUB_ISSUES
+
+
+def test_diagnostic_finish_phase_requires_a_posted_comment() -> None:
+    with tempfile.TemporaryDirectory() as tmp:
+        root = Path(tmp)
+        tools = RepoTools(
+            root=root,
+            phase="diagnostic",
+            role="author",
+            github_request=lambda *a, **k: {},
+            github_repository="o/r",
+        )
+        try:
+            tools.finish_phase("asked question 1", "waiting for reply")
+            assert False, "expected AllowlistViolation"
+        except AllowlistViolation:
+            pass
+
+        tools.post_issue_comment(5, "Qual sua experiencia com Go?")
+        result = tools.finish_phase("asked question 1", "waiting for reply")
+        assert result == "phase marked finished"
+
+
+def test_diagnostic_finish_phase_guard_does_not_apply_to_other_phases() -> None:
+    with tempfile.TemporaryDirectory() as tmp:
+        root = Path(tmp)
+        tools = RepoTools(root=root, phase="bootstrap_instance", role="author")
+        # No comment was posted (bootstrap_instance has no such tool at all)
+        # -- finish_phase must still work normally for every other phase.
+        assert tools.finish_phase("done", "next") == "phase marked finished"
+
+
 def main() -> None:
     tests = [
         test_write_allowlist_matches_setup_execution_contract,
@@ -910,6 +959,10 @@ def main() -> None:
         test_agent_budget_exceeded_carries_tool_call_diagnostics,
         test_transcript_captures_stop_reason_for_unfinished_runs,
         test_generate_detailed_gets_a_higher_max_tokens_budget,
+        test_diagnostic_allowlist_matches_pull_request_policy,
+        test_diagnostic_author_gets_comment_tools_reviewer_does_not,
+        test_diagnostic_finish_phase_requires_a_posted_comment,
+        test_diagnostic_finish_phase_guard_does_not_apply_to_other_phases,
     ]
     for test in tests:
         test()
