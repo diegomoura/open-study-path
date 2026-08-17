@@ -1,9 +1,12 @@
-# Agent pilot: Etapa 5a — extensão para `generate_proposal`
+# Agent pilot: Etapa 5 — extensão para `generate` (`generate_proposal` + `generate_detailed`)
 
-Status: **design implementado, testado offline, aguardando validação
-real.** Primeira fatia da Etapa 5 (proposta, seção 7, passo 5: "estender
-para `generate` — currículo, conteúdo, slides — a parte mais cara e mais
-sensível a qualidade").
+Status: **`generate_proposal` fechada** (1 dispatch real, hashes conferidos,
+reviewer aprovou -- seção 6). **`generate_detailed` fechada como evidência
+suficiente**, sem `approved` limpo (7 dispatches reais; mecanismo de
+geração + bloqueio correto pelo reviewer isolado provados, mas a última
+tentativa terminou `action_required` por um gap real do author -- seção
+8). Ambas restritas ao escopo já decidido: `generate_detailed` sem slides
+por padrão (`AGENT_PILOT_ENABLE_SLIDES`, seção 7).
 
 ## 1. Por que fatiar `generate` em duas suboperações
 
@@ -174,3 +177,187 @@ Nenhum achado negativo desta vez -- diferente de `intake`/`publish`, este
 dispatch não revelou nenhum comportamento incorreto do harness, só o bug
 pré-existente da tabela de preços (não relacionado à lógica de
 `generate_proposal` em si).
+
+## 7. Extensão para `generate_detailed` (Etapa 5b, sem slides por padrão)
+
+Status: **design implementado, testado offline, aguardando validação
+real.** Segunda fatia da Etapa 5 -- a suboperação `detailed_generation`
+de `instructions/30-generate-path.md` (contratos de tópico, módulos de
+aula completos, rubricas, GitHub Issue Forms), restrita a **sem geração
+de slides** por decisão explícita do dono da instância.
+
+### 7.1 Por que slides ficaram de fora por padrão
+
+`scripts/render_study_slides.mjs` é Node.js, não Python -- renderiza
+Mermaid → SVG → HTML → PDF via Puppeteer. Nenhuma fase anterior deste
+harness precisou de infraestrutura fora de Python/pip no runner do
+Actions. Construir isso corretamente (deck de 12-24 slides, revisão
+independente via `instructions/37-review-study-slides.md`, renderização
+real de PDF, os 14 checks de `REQUIRED_REVIEW_CHECKS` em
+`scripts/study_slides.py`) é um pedaço de trabalho comparável em tamanho
+ao resto de `generate_detailed` -- por isso fica atrás de um toggle,
+não implementado nesta etapa.
+
+### 7.2 Achado de infraestrutura resolvido antes do harness: `study_slides.py` não suportava "desligado"
+
+Antes de sequer desenhar o toggle do harness, descobri que
+`scripts/validate_study_slides.py` roda **sem condição** em todo push
+(`.github/workflows/validate-template.yml`, step "Validate study-slide
+contract", sem `if:` -- diferente dos steps de renderização Node.js, que
+só rodam se `contract_version == 3`). E `slides_enabled()` tratava
+`study_slides.enabled: false` deliberado exatamente como qualquer outra
+misconfiguração -- sempre erro, sem um modo "desligado" real. Corrigido
+em PR #87 (mergeado, `22cf902`): nova função `slides_deliberately_disabled()`
+que só retorna `True` quando `enabled` é exatamente `False` (ausência de
+config continua sendo tratada como esquecimento, não opt-out), e
+`validate_repository()` passa sem erros nesse caso, mesmo com tópicos
+`content_status: materialized` presentes.
+
+### 7.3 O toggle (`AGENT_PILOT_ENABLE_SLIDES`)
+
+- Env var, default `false`/não setada -- nunca exposta como input de
+  `workflow_dispatch` (ficaria fácil demais de ligar sem querer); só
+  editável direto no YAML do workflow, fricção intencional ("trancada").
+- `slides_toggle_enabled()` em `agent_runtime.py` lê a env var.
+- Se alguém setar `true`, `main()` recusa **antes de qualquer chamada de
+  API**, com uma mensagem clara ("não implementado ainda, ver
+  docs/claude-agent-pilot-etapa5.md seção 7") -- confirmado na linha de
+  comando, `exit code 1`, sem custo.
+- O allowlist de `generate_detailed` nunca inclui `study/slides/` nem
+  `state/slide-reviews/`, independente do valor da env var -- a proteção
+  real está no `write_file`, não só na checagem de `main()`.
+
+### 7.4 O que muda no harness
+
+- **Allowlist**: `study/topics/`, `study/modules/`, `study/assessments/`,
+  `state/content-reviews/`, `.github/ISSUE_TEMPLATE/assessment-*` (prefixo
+  restrito o bastante pra não sombrear `create-study-path.yml`, o form de
+  intake), mais `study/roadmap.md`/`.open-study-path/instance.yml`/
+  `study/integrations.md` (podem ser atualizados de novo nesta fase).
+- **Agente**: `content_author`/`content_reviewer`, tier `sonnet`.
+- **Review profile**: `curriculum` (mesmo de `generate_proposal`) -- mas
+  desta vez `content_review_complete`/`assessment_alignment` se aplicam
+  de verdade, já que existe conteúdo materializado.
+- **Nota de escopo do author**: lista exatamente quais dos 18 elementos
+  do "Complete-content contract" se aplicam (17, sem o link de PDF),
+  quais passos de outcome traceability não se aplicam (7 e 8, sobre
+  slides), e reforça materializar só a janela de lookahead configurada
+  em `instance.yml`'s `content_generation`, não o roadmap inteiro.
+- **Nota de escopo do reviewer**: não cobrar `study/slides/`/`slides_review`
+  como achado -- mas cobrar se o módulo/rubrica/Issue Form **prometer**
+  um deck de slides que não existe nesta execução.
+
+### 7.5 Testes offline
+
+`scripts/test_agent_runtime.py` ganhou 2 casos novos (30 no total):
+allowlist exclui slides mesmo com prefixos testados exaustivamente
+(incluindo confirmar que `.github/ISSUE_TEMPLATE/assessment-*` não
+sombreia o form de intake), e `slides_toggle_enabled()` lê a env var
+corretamente em ambas as direções.
+
+### 7.6 O que falta para "validado"
+
+Nenhum dispatch real ainda. Diferente de `generate_proposal`, esta
+suboperação precisa de um `study/roadmap.md` real como input (já existe
+no repositório de teste, gerado no dispatch real da seção 6) -- não
+precisa de fixture adicional além do que já foi commitado. Pendente:
+rodar de verdade, conferir um tópico materializado contra os 17
+elementos aplicáveis do contrato de conteúdo completo, confirmar que o
+reviewer isolado aplica `instructions/36-review-course-content.md`
+corretamente, e confirmar que `scripts/validate_study_slides.py` (CI do
+próprio repositório) passa de verdade com `study_slides.enabled: false`
+e tópicos materializados sem slides.
+
+## 8. Validação real (7 dispatches; mecanismo provado, sem `approved` limpo)
+
+Status: **fechada como evidência suficiente**, decisão explícita com você
+de não gastar mais um dispatch para forçar um `approved` limpo agora. O
+mecanismo central -- geração pedagógica real + bloqueio correto de um gap
+real pelo reviewer isolado -- está provado.
+
+### 8.1 Cronologia dos 7 dispatches
+
+`generate_detailed` foi, de longe, a fase mais difícil de fazer rodar até o
+fim neste piloto -- diferente de `intake`/`publish`/`generate_proposal`,
+que funcionaram no primeiro ou segundo dispatch real.
+
+1. **Tentativa 1**: `AgentBudgetExceeded` -- orçamento padrão de 20
+   iterações (dimensionado para fases menores) insuficiente para ler ~4
+   arquivos de input e escrever ~6-7 saídas. Corrigido: `PHASE_MAX_TOOL_
+   ITERATIONS`, override por fase (não elevação global), `generate_
+   detailed` ganha 40.
+2. **Tentativa 2**: estourou de novo, mesmo com 40. Sem visibilidade
+   nenhuma do que o modelo estava fazendo -- só "did not call its finish
+   tool". Corrigido: `AgentBudgetExceeded` ganha `tool_call_names`, log
+   completo impresso no stderr antes de falhar.
+3. **Tentativa 3** (diagnóstico): revelou um modo de falha *diferente* --
+   o modelo parou de produzir tool calls sem esgotar o orçamento
+   (`run.finished=False` sem exceção). Corrigido: transcript passa a
+   guardar `stop_reason` de cada resposta; `main()` imprime isso e o texto
+   final do modelo antes de falhar.
+4. **Tentativa 4**: o **author terminou com sucesso** -- materializou
+   TOPIC-001 completo (contrato, módulo, rubrica, Issue Form), contratos
+   corretos para todo o roadmap (`content_status: planned` nos demais),
+   `study/integrations.md` coerente (preview `status: proposed`, nem
+   previsto por mim ao montar a allowlist, mas correto). O **reviewer**
+   estourou `stop_reason: max_tokens` (4096, default) escrevendo o
+   artefato de revisão completo contra conteúdo real. Corrigido:
+   `PHASE_MAX_TOKENS`, override por fase, `generate_detailed` ganha 8192.
+5. **Tentativa 5**: desta vez foi o **author** que estourou `max_tokens`
+   a 8192 -- um único `write_file` com um módulo de aula completo pode
+   sozinho consumir a maior parte do orçamento de um turno. Antes de
+   subir mais às cegas, confirmei via busca real: Sonnet 5 aceita até
+   **128.000 tokens de saída** na API síncrona padrão, sem beta header, e
+   `max_tokens` **não afeta custo real nem rate limit** -- é só um teto de
+   resposta. Elevado para 16384.
+6. **Tentativa 6**: falhou **antes de qualquer chamada de API** --
+   `"Your credit balance is too low to access the Anthropic API"`. Não é
+   bug de código; é o limite de gasto real da conta batendo, depois de
+   todos os dispatches desta sessão (Etapas 3, 4, 5 completas). Resolvido
+   por você no Console da Anthropic.
+7. **Tentativa 7**: **sucesso completo**. Author e reviewer terminaram,
+   PR real aberto (#16 no repo de teste). Ver seção 8.2.
+
+### 8.2 Resultado da tentativa 7
+
+Author materializou TOPIC-001 (mesmo conteúdo de qualidade da tentativa
+4: outcomes bem mapeados, pedagogia beginner-first correta considerando o
+perfil real do aluno em `state/diagnostic-summary.json`, fontes
+plausíveis com locators precisos) mas **não criou
+`state/content-reviews/TOPIC-001.yml`** -- a revisão independente de
+conteúdo exigida por `instructions/32-generation-execution.md` como parte
+da mesma operação, não um passo posterior.
+
+O **reviewer isolado pegou isso corretamente**: `status: action_required`,
+citando a instrução exata (`instructions/32-generation-execution.md`,
+`instructions/36-review-course-content.md`, `instance.yml`'s
+`content_review.required_for_materialized_topics: true`), e notou que o
+próprio resumo do author reconhecia a omissão sem corrigi-la --
+"Acknowledging the omission... is not a substitute for doing it." Deu
+feedback positivo específico também (outcome markers bem posicionados,
+rubrica cobrindo todos os outcomes, pedagogia executada corretamente).
+
+3 hashes conferidos na mão (módulo, contrato de tópico, Issue Form) --
+todos batem. Custo real: **$1.5870** (author $0.9754 + reviewer $0.6116,
+Sonnet, 2.028.781 tokens combinados).
+
+### 8.3 Achado de prompt, corrigido nesta mesma etapa (sem revalidar)
+
+`AUTHOR_DETAILED_NOTE` mencionava rodar `instructions/36-review-course-
+content.md` como parte do trabalho, mas não deixava claro o suficiente que
+`state/content-reviews/<TOPIC-ID>.yml` é um **entregável obrigatório desta
+mesma operação**, não um passo posterior opcional. Corrigido: o prompt
+agora afirma isso explicitamente, citando o achado real da tentativa 7
+como o que não deve se repetir. **Não revalidado com um oitavo dispatch**
+-- decisão explícita de tratar a evidência já coletada (mecanismo provado,
+bloqueio correto do reviewer) como suficiente por ora.
+
+### 8.4 Custo total da validação de `generate_detailed`
+
+Só a tentativa 7 (a única que completou e registrou uso) tem custo exato
+registrado: $1.5870. As tentativas 1-5 consumiram API real sem registrar
+uso (o log de custo só é escrito ao final de uma execução bem-sucedida) --
+gap de visibilidade conhecido, não corrigido nesta etapa. A tentativa 6
+não custou nada (falhou antes de qualquer chamada). Custo total real da
+fase é maior que $1.59, mas não é possível recuperar o valor exato das
+tentativas que falharam.

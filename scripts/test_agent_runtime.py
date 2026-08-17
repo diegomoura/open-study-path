@@ -9,6 +9,7 @@ without spending a token.
 
 from __future__ import annotations
 
+import os
 import tempfile
 from pathlib import Path
 
@@ -17,12 +18,16 @@ import json
 from agent_runtime import (
     AgentBudgetExceeded,
     AllowlistViolation,
+    DEFAULT_MAX_TOKENS,
     INTAKE_AUTHOR_ALLOWED_LABEL,
+    MAX_TOOL_ITERATIONS,
     MODEL_PRICING_USD_PER_MTOK,
     PHASE_ALLOWLISTS,
     RepoTools,
     author_tools,
     is_write_allowed,
+    max_tokens_for,
+    max_tool_iterations_for,
     normalize_relative_path,
     resolve_phase_reviewer_model,
     reviewer_tools,
@@ -744,6 +749,131 @@ def test_pricing_table_covers_every_resolvable_model() -> None:
         )
 
 
+def test_generate_detailed_allowlist_excludes_slides_by_default() -> None:
+    # Etapa 5b: slides are off by default in this pilot (docs/claude-agent-
+    # pilot-etapa5.md, section 7). study/slides/ and state/slide-reviews/
+    # must never be write-allowed, regardless of the env var -- the
+    # allowlist itself doesn't grow when the toggle flips; main() refuses to
+    # even start a generate_detailed run when it's on (see
+    # test_slides_toggle_enabled_reads_env_var below).
+    assert is_write_allowed("generate_detailed", "study/topics/TOPIC-001.md")
+    assert is_write_allowed("generate_detailed", "study/modules/TOPIC-001.md")
+    assert is_write_allowed("generate_detailed", "study/assessments/TOPIC-001.md")
+    assert is_write_allowed("generate_detailed", "state/content-reviews/TOPIC-001.yml")
+    assert is_write_allowed("generate_detailed", ".github/ISSUE_TEMPLATE/assessment-topic-001.yml")
+    assert is_write_allowed("generate_detailed", "study/roadmap.md")
+    assert is_write_allowed("generate_detailed", "study/integrations.md")
+    assert not is_write_allowed("generate_detailed", "study/slides/TOPIC-001/index.html")
+    assert not is_write_allowed("generate_detailed", "study/slides/TOPIC-001/slides.pdf")
+    assert not is_write_allowed("generate_detailed", "state/slide-reviews/TOPIC-001.yml")
+    # Prefix matching must not spill onto unrelated Issue Form files --
+    # confirms the intake form is never shadowed by this phase's allowlist.
+    assert not is_write_allowed("generate_detailed", ".github/ISSUE_TEMPLATE/create-study-path.yml")
+
+
+def test_slides_toggle_enabled_reads_env_var() -> None:
+    import agent_runtime as ar
+
+    original = os.environ.get(ar.SLIDES_ENV_VAR)
+    try:
+        os.environ.pop(ar.SLIDES_ENV_VAR, None)
+        assert ar.slides_toggle_enabled() is False
+        for value in ("true", "1", "yes", "on", "True", "ON"):
+            os.environ[ar.SLIDES_ENV_VAR] = value
+            assert ar.slides_toggle_enabled() is True, value
+        for value in ("false", "0", "no", "off", ""):
+            os.environ[ar.SLIDES_ENV_VAR] = value
+            assert ar.slides_toggle_enabled() is False, value
+    finally:
+        if original is None:
+            os.environ.pop(ar.SLIDES_ENV_VAR, None)
+        else:
+            os.environ[ar.SLIDES_ENV_VAR] = original
+
+
+def test_generate_detailed_gets_a_higher_tool_iteration_budget() -> None:
+    # Regression for a real dispatch finding (docs/claude-agent-pilot-
+    # etapa5.md, section 7): the default 20-iteration budget, tuned for
+    # smaller phases, was too tight for generate_detailed's realistic
+    # workload (read ~4 input files, write ~5-6 outputs) and a real author
+    # run hit "did not call its finish tool" before completing. Other
+    # phases keep the original, tighter budget -- a runaway loop there
+    # should still be caught quickly.
+    assert max_tool_iterations_for("generate_detailed") > MAX_TOOL_ITERATIONS
+    assert max_tool_iterations_for("intake") == MAX_TOOL_ITERATIONS
+    assert max_tool_iterations_for("publish") == MAX_TOOL_ITERATIONS
+    assert max_tool_iterations_for("some_unknown_phase") == MAX_TOOL_ITERATIONS
+
+
+def test_agent_budget_exceeded_carries_tool_call_diagnostics() -> None:
+    # Regression for the same Etapa 5b dispatch finding as the budget test
+    # above: when the budget runs out, the exception must carry which tools
+    # were called (and on what path/number) so a human can tell real,
+    # varied progress apart from a repeated/looping pattern -- "did not call
+    # its finish tool" alone doesn't distinguish those.
+    def transport(payload, api_key):
+        return {
+            "content": [
+                {"type": "tool_use", "id": "1", "name": "write_file", "input": {"path": "study/topics/TOPIC-001.md", "content": "x"}}
+            ]
+        }
+
+    with tempfile.TemporaryDirectory() as tmp:
+        root = Path(tmp)
+        try:
+            run_agent(
+                root=root,
+                phase="intake",  # small budget (20) so this finishes quickly
+                role="author",
+                model="claude-haiku-4-5-20251001",
+                system_prompt="sp",
+                user_prompt="up",
+                api_key="key",
+                transport=transport,
+            )
+            assert False, "expected AgentBudgetExceeded"
+        except AgentBudgetExceeded as exc:
+            assert len(exc.tool_call_names) == MAX_TOOL_ITERATIONS
+            assert exc.tool_call_names[0] == "write_file(study/topics/TOPIC-001.md)"
+
+
+def test_transcript_captures_stop_reason_for_unfinished_runs() -> None:
+    # Regression for the second real Etapa 5b dispatch finding: the model
+    # can stop producing tool_use blocks (loop breaks early, run.finished
+    # stays False) without ever hitting the iteration budget. stop_reason
+    # is what distinguishes "response got truncated" from "the model just
+    # stopped" -- it must survive into the transcript for main() to log it.
+    def transport(payload, api_key):
+        return {"content": [{"type": "text", "text": "I'm done here."}], "stop_reason": "end_turn"}
+
+    with tempfile.TemporaryDirectory() as tmp:
+        run = run_agent(
+            root=Path(tmp),
+            phase="intake",
+            role="author",
+            model="claude-haiku-4-5-20251001",
+            system_prompt="sp",
+            user_prompt="up",
+            api_key="key",
+            transport=transport,
+        )
+        assert run.finished is False
+        assert run.transcript[-1]["stop_reason"] == "end_turn"
+        assert run.transcript[-1]["content"][0]["text"] == "I'm done here."
+
+
+def test_generate_detailed_gets_a_higher_max_tokens_budget() -> None:
+    # Regression for the real dispatch that revealed this: the reviewer,
+    # writing a full curriculum review artifact against a real materialized
+    # lesson, hit stop_reason "max_tokens" at the 4096 default -- truncated
+    # mid-turn before producing a complete tool_use block. Other phases keep
+    # the original, smaller cap.
+    assert max_tokens_for("generate_detailed") > DEFAULT_MAX_TOKENS
+    assert max_tokens_for("intake") == DEFAULT_MAX_TOKENS
+    assert max_tokens_for("publish") == DEFAULT_MAX_TOKENS
+    assert max_tokens_for("some_unknown_phase") == DEFAULT_MAX_TOKENS
+
+
 def main() -> None:
     tests = [
         test_write_allowlist_matches_setup_execution_contract,
@@ -774,6 +904,12 @@ def main() -> None:
         test_generate_proposal_allowlist_matches_proposal_outputs,
         test_generate_proposal_has_no_github_issues_tools,
         test_pricing_table_covers_every_resolvable_model,
+        test_generate_detailed_allowlist_excludes_slides_by_default,
+        test_slides_toggle_enabled_reads_env_var,
+        test_generate_detailed_gets_a_higher_tool_iteration_budget,
+        test_agent_budget_exceeded_carries_tool_call_diagnostics,
+        test_transcript_captures_stop_reason_for_unfinished_runs,
+        test_generate_detailed_gets_a_higher_max_tokens_budget,
     ]
     for test in tests:
         test()

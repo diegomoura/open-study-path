@@ -71,6 +71,36 @@ API_URL = "https://api.anthropic.com/v1/messages"
 API_VERSION = "2023-06-01"
 DEFAULT_MAX_TOKENS = 4096
 
+# Per-phase override for max_tokens (the per-response output cap sent to the
+# API), same reasoning as PHASE_MAX_TOOL_ITERATIONS below. Found necessary
+# during the same Etapa 5b dispatch: the reviewer, writing a full curriculum
+# review artifact against a real materialized lesson (17-element content
+# check, source verification, outcome traceability), hit stop_reason
+# "max_tokens" at the 4096 default -- the response was truncated mid-turn,
+# never producing a complete tool_use block, so the run ended without
+# finishing even though the model was doing real, correct work. Raising this
+# to 8192 was not enough either -- a subsequent dispatch showed the AUTHOR
+# also hitting max_tokens at 8192, because a single write_file call
+# containing a full lesson module (or a review artifact) can by itself
+# consume most of one turn's budget. Verified before raising further:
+# Claude Sonnet 5 supports up to 128,000 output tokens on the standard
+# synchronous Messages API (no beta header required, unlike the old Sonnet
+# 3.5 8192-token beta), and max_tokens does not affect billing or rate
+# limits -- it is a cap on the response, not a reservation, so there is no
+# cost or rate downside to setting it generously above what any single turn
+# should realistically need. A per-phase override, not a raised global
+# default, for the same reason as the tool-iteration budget: simpler phases
+# don't need more room, and a larger cap everywhere would raise the ceiling
+# on how much a runaway response could cost before this safety rail catches
+# it.
+PHASE_MAX_TOKENS: dict[str, int] = {
+    "generate_detailed": 16384,
+}
+
+
+def max_tokens_for(phase: str) -> int:
+    return PHASE_MAX_TOKENS.get(phase, DEFAULT_MAX_TOKENS)
+
 # USD per million tokens, verified against platform.claude.com/docs/en/about-claude/pricing
 # (checked 2026-08-14). Update this table if Anthropic changes rates -- it is
 # only used to produce an estimate for the pilot's cost reporting, never sent
@@ -94,6 +124,26 @@ MODEL_PRICING_USD_PER_MTOK: dict[str, dict[str, float]] = {
 # (work proposal, section 6): a bug that makes the model loop on tool calls
 # stops here instead of draining the budget.
 MAX_TOOL_ITERATIONS = 20
+
+# Per-phase override for MAX_TOOL_ITERATIONS. Found necessary during Etapa 5b
+# validation: `generate_detailed` materializes a topic contract, lesson
+# module, rubric, GitHub Issue Form and a content review in one run
+# (instructions/30-generate-path.md) -- reading its ~4 input files
+# (roadmap, study.config.yml, intake/diagnostic summaries) plus writing
+# those ~5-6 outputs already approaches the default 20-iteration budget
+# before accounting for any self-correction, and a real dispatch hit exactly
+# this ("author agent did not call its finish tool" -- 20 was tuned for
+# simpler phases like intake/publish, not this one). Deliberately a
+# per-phase override, not a raised global default: a runaway loop in a
+# smaller phase should still be caught quickly, at the original budget.
+PHASE_MAX_TOOL_ITERATIONS: dict[str, int] = {
+    "generate_detailed": 40,
+}
+
+
+def max_tool_iterations_for(phase: str) -> int:
+    return PHASE_MAX_TOOL_ITERATIONS.get(phase, MAX_TOOL_ITERATIONS)
+
 
 # The exact "Allowed setup diff" list from instructions/02-setup-execution.md,
 # duplicated here deliberately rather than parsed out of the markdown: this
@@ -159,20 +209,40 @@ PROPOSAL_ALLOWED_EXACT_PATHS: tuple[str, ...] = (
 )
 PROPOSAL_ALLOWED_PREFIXES: tuple[str, ...] = ()
 
+# The exact detailed-generation domain-output list from instructions/30-
+# generate-path.md's "Content-generation strategy" and "Planning contract"
+# sections, restricted to the Etapa 5b pilot scope: slides are off by
+# default (AGENT_PILOT_ENABLE_SLIDES, see slides_toggle_enabled() below), so
+# study/slides/ and state/slide-reviews/ are deliberately NOT in this
+# allowlist -- the pilot only supports the slides-off path today; turning
+# the env var on is refused loudly in main() rather than silently allowing
+# writes the harness was never built to validate.
+GENERATE_DETAILED_ALLOWED_EXACT_PATHS: tuple[str, ...] = (
+    "study/roadmap.md",
+    ".open-study-path/instance.yml",
+    "study/integrations.md",
+)
+GENERATE_DETAILED_ALLOWED_PREFIXES: tuple[str, ...] = (
+    "study/topics/",
+    "study/modules/",
+    "study/assessments/",
+    "state/content-reviews/",
+    ".github/ISSUE_TEMPLATE/assessment-",
+)
+
 # Which allowlist applies to which manifest phase. `generate_proposal` is a
 # harness-level key for the `proposal` suboperation of manifest.yml's
 # `generate` phase (instructions/28-propose-path.md) -- Etapa 5's first
-# slice (proposal, section 7, step 5). It is deliberately its own harness
-# phase, distinct from a future `generate_detailed` for
-# instructions/30-generate-path.md's materialization suboperation, since the
-# two have completely different allowed outputs, agents and (for detailed
-# generation) infrastructure needs (Node.js slide rendering).
+# slice (proposal, section 7, step 5). `generate_detailed` is the second
+# slice, the `detailed_generation` suboperation
+# (instructions/30-generate-path.md), scoped to slides-off only (Etapa 5b).
 PHASE_ALLOWLISTS: dict[str, tuple[tuple[str, ...], tuple[str, ...]]] = {
     "bootstrap_instance": (SETUP_ALLOWED_EXACT_PATHS, SETUP_ALLOWED_PREFIXES),
     "configure_intake": (SETUP_ALLOWED_EXACT_PATHS, SETUP_ALLOWED_PREFIXES),
     "intake": (INTAKE_ALLOWED_EXACT_PATHS, INTAKE_ALLOWED_PREFIXES),
     "publish": (PUBLISH_ALLOWED_EXACT_PATHS, PUBLISH_ALLOWED_PREFIXES),
     "generate_proposal": (PROPOSAL_ALLOWED_EXACT_PATHS, PROPOSAL_ALLOWED_PREFIXES),
+    "generate_detailed": (GENERATE_DETAILED_ALLOWED_EXACT_PATHS, GENERATE_DETAILED_ALLOWED_PREFIXES),
 }
 
 # Agent ids that exist as real rows in AGENT_CATALOG for the pilot phases.
@@ -188,7 +258,23 @@ PHASE_AUTHOR_AGENT: dict[str, str] = {
     "intake": "intake_resolution",
     "publish": "publish",
     "generate_proposal": "curriculum_architect",
+    "generate_detailed": "content_author",
 }
+
+# Etapa 5b (docs/claude-agent-pilot-etapa5.md, section 7): slides are off by
+# default in this pilot. `render_study_slides.mjs` needs Node.js/Puppeteer/
+# Mermaid in the runner, which this harness has never set up, and the slide
+# authoring+review+PDF-rendering pipeline (instructions/30-generate-path.md
+# "Study-slide authoring and rendering", instructions/37-review-study-
+# slides.md) is a substantial separate slice of work. `study_slides.py` now
+# supports a genuine, validator-recognized "disabled" state
+# (slides_deliberately_disabled(), PR #87) precisely so this default is safe
+# rather than something that would fail the repository's own existing CI.
+SLIDES_ENV_VAR = "AGENT_PILOT_ENABLE_SLIDES"
+
+
+def slides_toggle_enabled() -> bool:
+    return os.environ.get(SLIDES_ENV_VAR, "false").strip().lower() in ("1", "true", "yes", "on")
 
 # Phases where the RepoTools instance also gets a small, separate GitHub
 # Issues tool group, in addition to the repo-file tools every phase gets.
@@ -210,7 +296,18 @@ class AllowlistViolation(RuntimeError):
 
 
 class AgentBudgetExceeded(RuntimeError):
-    """Raised when MAX_TOOL_ITERATIONS is hit without the agent finishing."""
+    """Raised when MAX_TOOL_ITERATIONS is hit without the agent finishing.
+
+    Carries `tool_call_names`, the ordered sequence of every tool call made
+    before the budget ran out, so a caller can tell steady, varied progress
+    (raise the budget further) apart from a repeated/looping pattern (a real
+    behavioral bug, not a budget problem) -- without this, the only signal
+    was "did not call its finish tool", which looks identical either way.
+    """
+
+    def __init__(self, message: str, tool_call_names: list[str] | None = None) -> None:
+        super().__init__(message)
+        self.tool_call_names = tool_call_names or []
 
 
 def resolve_phase_reviewer_model(phase: str, config: Mapping[str, Any]) -> str:
@@ -973,6 +1070,20 @@ def anthropic_transport(payload: Mapping[str, Any], api_key: str) -> dict[str, A
         raise RuntimeError(f"Anthropic API error {error.code}: {detail}") from error
 
 
+def _describe_tool_call(block: Mapping[str, Any]) -> str:
+    """One short diagnostic line for a tool_use block, for AgentBudgetExceeded's log.
+
+    Includes the path/number a call acted on when there is one, so the
+    resulting sequence shows real progress (different paths each time) or a
+    repeated/looping pattern (the same path or an error over and over) at a
+    glance, without needing the full transcript.
+    """
+    name = block.get("name", "<unknown>")
+    tool_input = block.get("input", {}) or {}
+    detail = tool_input.get("path") or tool_input.get("number") or tool_input.get("operation_id")
+    return f"{name}({detail})" if detail is not None else name
+
+
 def _with_trailing_cache_breakpoint(messages: list[dict[str, Any]]) -> list[dict[str, Any]]:
     """Return a copy of `messages` with a cache_control breakpoint on the last content block.
 
@@ -1038,16 +1149,18 @@ def run_agent(
         github_repository=github_repository,
     )
     tool_schemas = author_tools(phase) if role == "author" else reviewer_tools(phase)
+    max_iterations = max_tool_iterations_for(phase)
 
     messages: list[dict[str, Any]] = [{"role": "user", "content": user_prompt}]
     run = AgentRun(phase=phase, role=role, model=model)
+    tool_call_log: list[str] = []
 
     # The system prompt is identical on every round trip of this loop, so it
     # gets its own permanent cache breakpoint -- separate from the messages
     # breakpoint above, which moves forward each round as the conversation grows.
     system_blocks = [{"type": "text", "text": system_prompt, "cache_control": {"type": "ephemeral"}}]
 
-    for _ in range(MAX_TOOL_ITERATIONS):
+    for _ in range(max_iterations):
         payload = {
             "model": model,
             "max_tokens": max_tokens,
@@ -1056,7 +1169,13 @@ def run_agent(
             "tools": tool_schemas,
         }
         response = transport(payload, api_key or "")
-        run.transcript.append({"role": "assistant_response", "content": response.get("content", [])})
+        run.transcript.append(
+            {
+                "role": "assistant_response",
+                "content": response.get("content", []),
+                "stop_reason": response.get("stop_reason"),
+            }
+        )
         if "usage" in response:
             run.usage.add(response["usage"])
         content = response.get("content", [])
@@ -1068,6 +1187,7 @@ def run_agent(
 
         tool_results: list[dict[str, Any]] = []
         for block in tool_use_blocks:
+            tool_call_log.append(_describe_tool_call(block))
             try:
                 result_text = tools.dispatch(block["name"], block.get("input", {}))
                 tool_results.append(
@@ -1093,7 +1213,8 @@ def run_agent(
             break
     else:
         raise AgentBudgetExceeded(
-            f"{role} agent for phase {phase!r} did not finish within {MAX_TOOL_ITERATIONS} tool round trips"
+            f"{role} agent for phase {phase!r} did not finish within {max_iterations} tool round trips",
+            tool_call_names=tool_call_log,
         )
 
     run.finished = tools.finished
@@ -1133,6 +1254,14 @@ def main(argv: Sequence[str] | None = None) -> None:
     else:
         model = resolve_phase_reviewer_model(args.phase, config)
 
+    if args.phase == "generate_detailed" and slides_toggle_enabled():
+        raise SystemExit(
+            f"{SLIDES_ENV_VAR}=true, but slide generation is not implemented in this harness "
+            "yet (docs/claude-agent-pilot-etapa5.md, section 7 -- Node.js/Puppeteer slide "
+            "rendering is a separate, not-yet-built slice of work). Leave it unset/false to "
+            "run generate_detailed without slides."
+        )
+
     if args.dry_run:
         print(f"role={args.role} phase={args.phase} model={model}")
         return
@@ -1157,19 +1286,46 @@ def main(argv: Sequence[str] | None = None) -> None:
         github_api_url = os.environ.get("GITHUB_API_URL", GITHUB_API_URL_DEFAULT)
         github_request = github_request_factory(github_token, github_api_url)
 
-    run = run_agent(
-        root=Path(args.repo_root),
-        phase=args.phase,
-        role=args.role,
-        model=model,
-        system_prompt=_read_text(args.system_prompt_file),
-        user_prompt=_read_text(args.user_prompt_file),
-        api_key=api_key,
-        github_request=github_request,
-        github_repository=github_repository,
-    )
+    try:
+        run = run_agent(
+            root=Path(args.repo_root),
+            phase=args.phase,
+            role=args.role,
+            model=model,
+            system_prompt=_read_text(args.system_prompt_file),
+            user_prompt=_read_text(args.user_prompt_file),
+            api_key=api_key,
+            github_request=github_request,
+            github_repository=github_repository,
+            max_tokens=max_tokens_for(args.phase),
+        )
+    except AgentBudgetExceeded as exc:
+        # Without this, the only signal in the job log used to be "did not
+        # call its finish tool" -- indistinguishable whether the agent made
+        # real, varied progress that just needed more room, or was stuck
+        # repeating the same call. Printed to stderr (visible in the Actions
+        # log) before still failing the job the same way as before.
+        print(f"::error::{exc}", file=sys.stderr)
+        print("Tool calls made before the budget ran out:", file=sys.stderr)
+        for index, call in enumerate(exc.tool_call_names, start=1):
+            print(f"  {index:2d}. {call}", file=sys.stderr)
+        raise SystemExit(1) from exc
 
     if not run.finished:
+        # Same reasoning as the AgentBudgetExceeded diagnostics above, for
+        # the other way a run can end without finishing: the model stops
+        # producing tool_use blocks (so the loop breaks early, without
+        # exhausting the iteration budget) without ever calling
+        # finish_phase. stop_reason and any final text explain why --
+        # e.g. "max_tokens" means the response was truncated mid-turn,
+        # a model just stopping mid-plan looks different and points at a
+        # prompt/behavior issue instead of a budget one.
+        last_response = run.transcript[-1] if run.transcript else {}
+        print(f"::error::{args.role} agent did not call its finish tool", file=sys.stderr)
+        print(f"stop_reason: {last_response.get('stop_reason')}", file=sys.stderr)
+        for block in last_response.get("content", []):
+            if block.get("type") == "text":
+                print(f"final text from the model:\n{block.get('text', '')}", file=sys.stderr)
         raise SystemExit(f"{args.role} agent did not call its finish tool")
 
     output = dict(run.finish_payload or {})
