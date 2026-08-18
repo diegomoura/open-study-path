@@ -24,6 +24,7 @@ PHASE_INSTRUCTION_FILES = {
     "publish": ["instructions/40-publish-tasks.md"],
     "generate_proposal": ["instructions/28-propose-path.md"],
     "generate_detailed": ["instructions/30-generate-path.md"],
+    "diagnostic": ["instructions/20-diagnostic.md"],
 }
 
 # Files every author/reviewer prompt gets regardless of phase.
@@ -68,6 +69,7 @@ PHASE_EXTRA_AUTHOR_FILES: dict[str, list[str]] = {
         "docs/mermaid-visual-learning.md",
         "docs/integration-capabilities.md",
     ],
+    "diagnostic": ["instructions/21-diagnostic-completion-recovery.md"],
 }
 
 PHASE_EXTRA_REVIEWER_FILES: dict[str, list[str]] = {
@@ -86,6 +88,7 @@ PHASE_EXTRA_REVIEWER_FILES: dict[str, list[str]] = {
         "docs/beginner-first-pedagogy.md",
         "docs/content-quality-and-sources.md",
     ],
+    "diagnostic": ["instructions/21-diagnostic-completion-recovery.md"],
 }
 
 # `review_profile` selects which required-check set instructions/
@@ -102,6 +105,9 @@ PHASE_EXTRA_REVIEWER_FILES: dict[str, list[str]] = {
 # assessment_alignment) are about materialized content, which only exists
 # once `generate_detailed` runs -- trivially satisfied ("nothing in scope")
 # for `generate_proposal`, genuinely evaluated for `generate_detailed`.
+# `diagnostic` uses its own profile (evidence_basis, bounded_questioning,
+# adjacent_experience_separation, placement_consistency,
+# privacy_and_minimization -- scripts/review_framework.py).
 PHASE_REVIEW_PROFILE: dict[str, str] = {
     "bootstrap_instance": "setup",
     "configure_intake": "setup",
@@ -109,6 +115,7 @@ PHASE_REVIEW_PROFILE: dict[str, str] = {
     "publish": "publication",
     "generate_proposal": "curriculum",
     "generate_detailed": "curriculum",
+    "diagnostic": "diagnostic",
 }
 
 AUTHOR_HARNESS_NOTE = """\
@@ -388,6 +395,69 @@ beginner-first progression where the learner's level warrants it, and
 whether the lookahead-window scope (not the whole roadmap) was respected.
 """
 
+AUTHOR_DIAGNOSTIC_NOTE = """\
+## Diagnostic session addendum (Etapa 4b)
+
+This run is one turn of a multi-turn session, not a single self-contained
+operation -- you have no memory of earlier turns, and the same instruction
+contract above was written assuming a live conversational chat. This
+addendum adapts it to how this harness actually invokes you: triggered once
+per learner reply (a GitHub issue comment), always a fresh process.
+
+Every turn, in this order:
+
+1. Call list_issue_comments(number) first, always -- this is your only
+   record of the session. Reconstruct exactly how many questions you have
+   already asked (count your own prior comments that end in a question) and
+   what the learner answered. Never assume this is the first turn without
+   checking.
+2. Decide, using instructions/20-diagnostic.md's stopping rule and question
+   budget computed from the reconstructed count: is evidence sufficient?
+3. If not sufficient: call post_issue_comment(number, body) with exactly one
+   short next question (never the whole remaining questionnaire, never a
+   restatement of the previous answer) -- on the very first turn only,
+   briefly state the expected maximum before the first question, exactly as
+   instructed above. Then call finish_phase with a summary noting the
+   question count and next_action "waiting for the learner's reply" --
+   do NOT write state/diagnostic-summary.json or
+   .open-study-path/instance.yml on a turn like this. Never post a separate
+   "there is enough evidence, I will register it" transition comment.
+4. If sufficient: write state/diagnostic-summary.json and
+   .open-study-path/instance.yml exactly as instructed above, then call
+   post_issue_comment with the single learner-facing completion response
+   (starting depth, and instructions/20-diagnostic.md's exact
+   roadmap-proposal guidance for the next command) -- use
+   instructions/21-diagnostic-completion-recovery.md's "provisional"
+   language, since this comment is posted before the pull request this same
+   operation opens is reviewed and merged. Then call finish_phase.
+
+finish_phase refuses to end a turn where post_issue_comment was never
+called, in either case above -- a diagnostic turn must never end silently.
+This does not check whether your sufficiency judgment itself was correct
+(nothing can verify that mechanically); it only guarantees the learner
+always gets a response.
+
+Do not persist the raw transcript, the learner's literal answers, or any
+comment thread content beyond what instructions/20-diagnostic.md's Output
+section already asks you to record (competencies, gaps, starting depth,
+etc.) -- state/diagnostic-summary.json holds conclusions, never a
+transcript.
+"""
+
+REVIEWER_DIAGNOSTIC_NOTE = """\
+## Diagnostic session addendum (Etapa 4b)
+
+You review only the terminal turn -- the one that wrote
+state/diagnostic-summary.json and .open-study-path/instance.yml and opened
+a pull request. You have no tool access to the issue or its comment thread,
+and that is deliberate: instructions/20-diagnostic.md requires you to
+"reconstruct each placement conclusion from the bounded evidence recorded in
+the summary" alone, never the raw transcript. If the summary's evidence
+looks thin for the conclusion it reaches, that is itself a finding
+(placement_consistency) -- do not try to look up the original conversation
+to fill the gap.
+"""
+
 
 def _read(relative_path: str) -> str:
     return (ROOT / relative_path).read_text(encoding="utf-8")
@@ -417,6 +487,8 @@ def build_author_prompts(phase: str, target_repo: str, extra_context: str) -> tu
         sections.append(AUTHOR_PROPOSAL_NOTE)
     elif phase == "generate_detailed":
         sections.append(AUTHOR_DETAILED_NOTE)
+    elif phase == "diagnostic":
+        sections.append(AUTHOR_DIAGNOSTIC_NOTE)
     system_prompt = "\n\n---\n\n".join(sections)
 
     user_prompt = (
@@ -441,6 +513,8 @@ def build_reviewer_prompts(phase: str, target_repo: str, base_sha: str, author_s
         sections.append(REVIEWER_PROPOSAL_NOTE)
     elif phase == "generate_detailed":
         sections.append(REVIEWER_DETAILED_NOTE)
+    elif phase == "diagnostic":
+        sections.append(REVIEWER_DIAGNOSTIC_NOTE)
     system_prompt = "\n\n---\n\n".join(sections)
 
     review_profile = PHASE_REVIEW_PROFILE.get(phase, "setup")
@@ -466,12 +540,26 @@ def main() -> None:
     parser.add_argument("--out-system", required=True)
     parser.add_argument("--out-user", required=True)
     parser.add_argument("--extra-context", default="")
+    parser.add_argument(
+        "--extra-context-file",
+        default=None,
+        help=(
+            "Path to a file whose content is used as extra_context instead of --extra-context. "
+            "Needed for diagnostic: a multi-turn transcript can contain quotes/newlines that are "
+            "unsafe to pass as a single shell argument, the same reasoning EXTRA_CONTEXT already "
+            "follows via env: in the workflow YAML for --extra-context."
+        ),
+    )
     parser.add_argument("--base-sha", default=None, help="required for role=reviewer")
     parser.add_argument("--author-summary-file", default=None, help="required for role=reviewer")
     args = parser.parse_args()
 
+    extra_context = args.extra_context
+    if args.extra_context_file:
+        extra_context = Path(args.extra_context_file).read_text(encoding="utf-8")
+
     if args.role == "author":
-        system_prompt, user_prompt = build_author_prompts(args.phase, args.target_repo, args.extra_context)
+        system_prompt, user_prompt = build_author_prompts(args.phase, args.target_repo, extra_context)
     else:
         if not args.base_sha:
             raise SystemExit("--base-sha is required for role=reviewer")
