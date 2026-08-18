@@ -49,6 +49,7 @@ sobrescrevendo o dial só para aquele agente.
 | `publish` | publish | autor | haiku | não |
 | `integration_preflight` | publish | revisor | haiku | não |
 | `evaluate` | evaluate | autor | sonnet | **sim** |
+| `track` | track | autor | haiku | não |
 | `replan` | replan | autor | sonnet | não |
 
 "Estrutural" marca agentes cuja decisão é difícil de corrigir depois ou define diretamente a

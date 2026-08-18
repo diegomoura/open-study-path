@@ -931,6 +931,45 @@ def test_diagnostic_gets_a_higher_max_tokens_budget() -> None:
     assert max_tokens_for("diagnostic") > DEFAULT_MAX_TOKENS
 
 
+def test_track_allowlist_matches_progress_review_profile() -> None:
+    # Copied directly from review_framework.py's
+    # phase_allows_artifact("progress") -- see agent_runtime.py's
+    # TRACK_ALLOWED_* comment (Etapa 6a).
+    assert is_write_allowed("track", "state/progress.json")
+    assert is_write_allowed("track", "state/integrations.json")
+    assert not is_write_allowed("track", "study/roadmap.md")
+    assert not is_write_allowed("track", ".open-study-path/instance.yml")
+    assert not is_write_allowed("track", "state/reviews/agent-pilot-track.yml")
+    assert not is_write_allowed("track", "state/assessments/TOPIC-001/attempt-001.json")
+
+
+def test_track_gets_only_the_narrow_read_github_issue_tool() -> None:
+    author_tool_names = {t["name"] for t in author_tools("track")}
+    reviewer_tool_names = {t["name"] for t in reviewer_tools("track")}
+
+    assert "read_github_issue" in author_tool_names
+    assert "read_github_issue" in reviewer_tool_names
+    # The intake-scoped discovery-label listing must never leak into track:
+    # it lists issues by DISCOVERY_LABEL, which has nothing to do with a
+    # topic's authoritative task issue.
+    assert "list_intake_issues" not in author_tool_names
+    assert "list_intake_issues" not in reviewer_tool_names
+    # No write-side GitHub tools -- track only ever reads issue state.
+    assert "label_github_issue" not in author_tool_names
+    assert "post_issue_comment" not in author_tool_names
+    assert "run_publish_projection" not in author_tool_names
+
+
+def test_track_reviewer_model_inherits_the_author_haiku_tier() -> None:
+    # AGENT_CATALOG registers "track" itself as its own author agent id
+    # (Etapa 6a) -- PHASE_AUTHOR_AGENT["track"] == "track" -- so the generic
+    # phase_review pass inherits whatever tier that row resolves to, same
+    # "herda o tier da fase" rule as every other phase without a dedicated
+    # reviewer row.
+    config = _default_config()
+    assert resolve_phase_reviewer_model("track", config) == MODEL_CATALOG["haiku"]
+
+
 def main() -> None:
     tests = [
         test_write_allowlist_matches_setup_execution_contract,
@@ -972,6 +1011,9 @@ def main() -> None:
         test_diagnostic_finish_phase_requires_a_posted_comment,
         test_diagnostic_finish_phase_guard_does_not_apply_to_other_phases,
         test_diagnostic_gets_a_higher_max_tokens_budget,
+        test_track_allowlist_matches_progress_review_profile,
+        test_track_gets_only_the_narrow_read_github_issue_tool,
+        test_track_reviewer_model_inherits_the_author_haiku_tier,
     ]
     for test in tests:
         test()

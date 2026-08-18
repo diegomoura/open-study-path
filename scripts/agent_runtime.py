@@ -248,6 +248,20 @@ DIAGNOSTIC_ALLOWED_EXACT_PATHS: tuple[str, ...] = (
 )
 DIAGNOSTIC_ALLOWED_PREFIXES: tuple[str, ...] = ()
 
+# Etapa 6a (docs/claude-agent-pilot-etapa6-design.md, section 3.2): copied
+# directly from scripts/review_framework.py's phase_allows_artifact("progress"),
+# which already restricted this exact pair before any agent harness touched
+# `track` -- this is the one phase in this pilot where the deterministic
+# review-framework side predates and defines the allowlist, rather than the
+# allowlist being derived from an instruction file's own "Outputs" prose.
+# instructions/50-track-progress.md only ever persists state/progress.json
+# and state/integrations.json; it never writes study/ or .open-study-path/.
+TRACK_ALLOWED_EXACT_PATHS: tuple[str, ...] = (
+    "state/progress.json",
+    "state/integrations.json",
+)
+TRACK_ALLOWED_PREFIXES: tuple[str, ...] = ()
+
 # Which allowlist applies to which manifest phase. `generate_proposal` is a
 # harness-level key for the `proposal` suboperation of manifest.yml's
 # `generate` phase (instructions/28-propose-path.md) -- Etapa 5's first
@@ -265,6 +279,7 @@ PHASE_ALLOWLISTS: dict[str, tuple[tuple[str, ...], tuple[str, ...]]] = {
     "generate_proposal": (PROPOSAL_ALLOWED_EXACT_PATHS, PROPOSAL_ALLOWED_PREFIXES),
     "generate_detailed": (GENERATE_DETAILED_ALLOWED_EXACT_PATHS, GENERATE_DETAILED_ALLOWED_PREFIXES),
     "diagnostic": (DIAGNOSTIC_ALLOWED_EXACT_PATHS, DIAGNOSTIC_ALLOWED_PREFIXES),
+    "track": (TRACK_ALLOWED_EXACT_PATHS, TRACK_ALLOWED_PREFIXES),
 }
 
 # Agent ids that exist as real rows in AGENT_CATALOG for the pilot phases.
@@ -282,6 +297,7 @@ PHASE_AUTHOR_AGENT: dict[str, str] = {
     "generate_proposal": "curriculum_architect",
     "generate_detailed": "content_author",
     "diagnostic": "diagnostic",
+    "track": "track",
 }
 
 # Etapa 4b (docs/claude-agent-pilot-etapa4b-diagnostic-design.md): unlike
@@ -319,7 +335,13 @@ def slides_toggle_enabled() -> bool:
 # `publish` is restricted to the github_issues task-manager backend only --
 # Trello/Todoist need their own Secret and their own adapter, deferred (see
 # docs/claude-agent-pilot.md's Scope section).
-PHASES_WITH_GITHUB_ISSUES: frozenset[str] = frozenset({"intake", "publish", "diagnostic"})
+# Etapa 6a: `track` needs read-only access to the authoritative task issue's
+# current state (instructions/50-track-progress.md's "Synchronize activity
+# state from the single authoritative task backend") to detect activity
+# signals -- but never list_intake_issues (that tool is scoped to the intake
+# discovery label, unrelated to task-tracking issues) and never
+# label_github_issue/post_issue_comment. See _track_issue_read_tool() below.
+PHASES_WITH_GITHUB_ISSUES: frozenset[str] = frozenset({"intake", "publish", "diagnostic", "track"})
 
 # The only label the intake author is ever allowed to apply. Restricting this
 # at the tool layer (not just in the prompt) means a model that misreads its
@@ -958,6 +980,17 @@ def _github_issue_read_tools() -> list[dict[str, Any]]:
     ]
 
 
+def _track_issue_read_tool() -> list[dict[str, Any]]:
+    """Just read_github_issue, not the intake-scoped list_intake_issues.
+
+    Etapa 6a: `track` needs to inspect one already-known authoritative task
+    issue at a time (its external_id comes from state/integrations.json via
+    read_file, not from any discovery-label listing), so only the second
+    entry of _github_issue_read_tools() applies here.
+    """
+    return [_github_issue_read_tools()[1]]
+
+
 def author_tools(phase: str | None = None) -> list[dict[str, Any]]:
     tools = [
         {
@@ -1121,6 +1154,8 @@ def author_tools(phase: str | None = None) -> list[dict[str, Any]]:
                 },
             }
         )
+    elif phase == "track":
+        tools.extend(_track_issue_read_tool())
     return tools
 
 
@@ -1187,7 +1222,13 @@ def reviewer_tools(phase: str | None = None) -> list[dict[str, Any]]:
         # thread -- giving it any issue-reading tool here would work against
         # that privacy/minimization requirement, even though these
         # particular tools only reach issue bodies, not comments.
-        tools.extend(_github_issue_read_tools())
+        #
+        # `track` gets only the narrow single-issue tool
+        # (_track_issue_read_tool()), not the full intake-scoped bundle:
+        # list_intake_issues filters by the intake discovery label, which has
+        # nothing to do with the authoritative task issue the track reviewer
+        # needs to re-check.
+        tools.extend(_track_issue_read_tool() if phase == "track" else _github_issue_read_tools())
     return tools
 
 
