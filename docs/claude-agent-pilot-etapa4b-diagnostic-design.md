@@ -1,10 +1,9 @@
 # Agent pilot: Etapa 4b — `diagnostic` (design fechado, harness implementado)
 
-Status: **harness implementado, testado offline (38 casos em
-`test_agent_runtime.py` + 2 em `test_build_diagnostic_context.py`),
-aguardando validação real.** A seção 1-4 abaixo é o desenho original
-(decisão de arquitetura, fechada antes de qualquer código); a seção 5
-documenta o que foi de fato construído.
+Status: **fechada.** Harness implementado e validado com uma sessão real
+(4 turnos + 1 achado de infraestrutura contornado -- seção 6). Testado
+offline (39 casos em `test_agent_runtime.py` + 2 em
+`test_build_diagnostic_context.py`).
 
 ## 1. Por que `diagnostic` não cabe no harness atual
 
@@ -189,4 +188,76 @@ simular idas e vindas reais de comentário (não um único
 `diagnostic:in-progress`, postar uma resposta, conferir que o workflow
 dispara e posta a próxima pergunta, repetir até a conclusão, e então
 aplicar o mesmo critério de sempre (hash na mão, custo real, revisão
-isolada). Pendente -- não tentado ainda nesta etapa.
+isolada).
+
+## 6. Validação real (4 turnos + 1 achado de infraestrutura; fechada)
+
+Status: **fechada.** Sessão real de diagnóstico simulada issue #17 do
+repositório de teste, aluno com perfil real (Python/JS profissional,
+TypeScript/tsc no dia a dia, zero experiência em Go).
+
+### 6.1 Turnos 1-3 -- funcionaram perfeitamente
+
+- **Turno 1** (comentário inicial "pronto para começar"): author declarou o
+  orçamento (até 5 perguntas), fez a pergunta 1. Diff vazio, job do
+  reviewer corretamente pulado (`needs.author.outputs.completed != 'true'`).
+- **Turno 2**: reconstruiu a thread inteira sozinho, fez a pergunta 2
+  coerente com a resposta anterior. Diff vazio de novo, reviewer pulado.
+- **Turno 3**: idem, pergunta 3 bem direcionada (buscando o sinal prático
+  que faltava).
+
+Em nenhum desses 3 turnos o author teve acesso a nada além do
+`list_issue_comments` -- confirma que a reconstrução de estado a partir da
+própria thread funciona exatamente como desenhado.
+
+### 6.2 Turno 4 -- author concluiu certo, achado real de `max_tokens` (mesma classe do `generate_detailed`)
+
+Com só 3 perguntas (dentro do orçamento `target_min`), o author decidiu
+evidência suficiente, escreveu `state/diagnostic-summary.json`, removeu a
+label `diagnostic:in-progress` **antes** do commit (exatamente como
+desenhado), abriu branch. O **reviewer** estourou `stop_reason: max_tokens`
+-- `diagnostic` nunca tinha sido adicionado a `PHASE_MAX_TOKENS` (mesmo bug
+de omissão que `generate_detailed` teve, não corrigido por analogia na
+hora). Corrigido: `diagnostic` também ganha 16384.
+
+### 6.3 Achado de infraestrutura: `rerun-failed-jobs` não preserva `needs.*.outputs`
+
+Tentativa de aplicar o fix diretamente no branch já criado pelo author e
+re-rodar só o job do reviewer via API (`rerun-failed-jobs`) falhou duas
+vezes sem gerar log nenhum (`BlobNotFound`) -- o job parece falhar antes
+mesmo do checkout, sugerindo que `needs.author.outputs.branch/base_sha`
+não sobrevive a um rerun parcial que exclui o job que os produziu. Não é
+bug deste harness; é uma limitação real do próprio recurso do GitHub
+Actions. Contornado com um turno inteiramente novo (label reaplicada,
+mais um comentário) em vez de insistir no rerun parcial.
+
+### 6.4 Resultado final -- aprovado, hash conferido
+
+Turno de retry: author reconheceu a mesma evidência (3 perguntas já
+respondidas na thread) como suficiente, re-escreveu
+`state/diagnostic-summary.json` com o conteúdo real da sessão -- e
+corretamente **não** re-escreveu `.open-study-path/instance.yml`, porque
+`status.diagnostic_complete: true` já estava lá desde o fixture sintético
+construído para a Etapa 5 (o reviewer notou isso explicitamente como nota
+de escopo, não como falha).
+
+Reviewer isolado: `status: approved`, 5/5 checks `passed`, achados
+substantivos e específicos (citou as 3 perguntas reais, confirmou que
+experiência adjacente em Python/JS/TypeScript não foi confundida com
+domínio de Go, notou a experiência superficial em Java corretamente
+registrada como lacuna e não como competência). Achado extra: o reviewer
+avaliou com nuance a própria narrativa do retry (mencionada no resumo do
+author) como "não verificável só pelos artefatos, mas consistente" --
+nem ignorou, nem superreagiu.
+
+Hash de `state/diagnostic-summary.json` conferido na mão -- bate. Custo
+real do turno que fechou: **$0.3580** (author $0.1326 + reviewer $0.2254,
+Sonnet, 249.748 tokens combinados).
+
+### 6.5 Fechamento
+
+`diagnostic` está validado de ponta a ponta: reconstrução de estado sem
+memória entre turnos, orçamento de perguntas respeitado, guard de
+`finish_phase` nunca testado a ponto de disparar (todos os turnos postaram
+comentário corretamente), diff vazio tratado como sucesso normal, label
+removida no momento certo, revisão isolada substantiva e correta.

@@ -53,9 +53,10 @@ wired to a real agent call so far:
 since `instructions/20-diagnostic.md` requires a real, multi-turn
 interactive placement session with the learner ("ask exactly one short
 question at a time"), which does not fit this harness's other phases'
-one-shot `run_agent()` -> `finish_phase()` shape. Design complete and tested
-offline, **not yet validated with a real comment-by-comment dispatch** --
-see `docs/claude-agent-pilot-etapa4b-diagnostic-design.md`, section 5.
+one-shot `run_agent()` -> `finish_phase()` shape. Validated with a real
+4-turn session (question budget respected, correct placement conclusion,
+reviewer approved with substantive findings) -- see
+`docs/claude-agent-pilot-etapa4b-diagnostic-design.md`, section 6.
 
 `generate` (curriculum/content/slides) has not been picked up either --
 proposal section 7, step 5. `publish`'s real-dispatch validation is

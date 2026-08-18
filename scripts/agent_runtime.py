@@ -95,6 +95,13 @@ DEFAULT_MAX_TOKENS = 4096
 # it.
 PHASE_MAX_TOKENS: dict[str, int] = {
     "generate_detailed": 16384,
+    # Same class of real dispatch finding as generate_detailed (Etapa 5b):
+    # the diagnostic reviewer, writing a full review artifact against real
+    # placement evidence (5 required checks), hit stop_reason "max_tokens"
+    # at the untouched 4096 default -- this phase was never added to this
+    # table when it was first introduced. Same 16384 value, same "no cost
+    # or rate downside" reasoning already verified for generate_detailed.
+    "diagnostic": 16384,
 }
 
 

@@ -923,6 +923,14 @@ def test_diagnostic_finish_phase_guard_does_not_apply_to_other_phases() -> None:
         assert tools.finish_phase("done", "next") == "phase marked finished"
 
 
+def test_diagnostic_gets_a_higher_max_tokens_budget() -> None:
+    # Regression for a real dispatch finding (Etapa 4b validation): the
+    # diagnostic reviewer hit stop_reason "max_tokens" at the untouched 4096
+    # default -- this phase was missing from PHASE_MAX_TOKENS entirely when
+    # it was first introduced, the same class of bug generate_detailed had.
+    assert max_tokens_for("diagnostic") > DEFAULT_MAX_TOKENS
+
+
 def main() -> None:
     tests = [
         test_write_allowlist_matches_setup_execution_contract,
@@ -963,6 +971,7 @@ def main() -> None:
         test_diagnostic_author_gets_comment_tools_reviewer_does_not,
         test_diagnostic_finish_phase_requires_a_posted_comment,
         test_diagnostic_finish_phase_guard_does_not_apply_to_other_phases,
+        test_diagnostic_gets_a_higher_max_tokens_budget,
     ]
     for test in tests:
         test()
