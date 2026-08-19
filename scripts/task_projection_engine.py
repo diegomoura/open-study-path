@@ -61,7 +61,19 @@ VISIBLE_METADATA_PATTERNS: tuple[tuple[str, re.Pattern[str]], ...] = (
     ("HTML comment", re.compile(r"<!--", re.IGNORECASE)),
     (
         "open-study-path marker",
-        re.compile(r"\bopen-study-path\b", re.IGNORECASE),
+        # Etapa 6a/6c real finding: the bare \bopen-study-path\b word-boundary
+        # match also fires on any repository whose *name* merely contains
+        # this product-name substring (e.g. this pilot's own disposable test
+        # repos, "open-study-path-agent-test-..."), which is never a leak --
+        # it's just the repo's URL. The real marker syntax used everywhere
+        # (issue-template HTML comments, hidden metadata) always has a colon
+        # immediately after "open-study-path" (open-study-path:topic_id=...,
+        # open-study-path:assessment topic_id=...); a bare repository name
+        # never does, since repo names use hyphens, not colons. Requiring
+        # the colon keeps this pattern catching every real leak (a marker
+        # that lost its HTML-comment wrapper but kept its own syntax) while
+        # no longer flagging a legitimate, already-public repository URL.
+        re.compile(r"\bopen-study-path:", re.IGNORECASE),
     ),
     ("internal topic id", re.compile(r"\bTOPIC-\d{3,}\b")),
     ("content_version", re.compile(r"\bcontent_version\b", re.IGNORECASE)),

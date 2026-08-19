@@ -11,6 +11,7 @@ sys.path.insert(0, str(SCRIPTS))
 from task_projection_engine import (  # noqa: E402
     AmbiguousMatchError,
     FakeBackend,
+    OperationJournal,
     PartialWriteError,
     ReadbackValidationError,
     TopicProjection,
@@ -20,7 +21,9 @@ from task_projection_engine import (  # noqa: E402
     build_projection_plan,
     ensure_focused_review_resource,
     migrate_legacy_backend,
+    normalized_integration_state,
     publish_projection,
+    render_learner_integration_summary,
     roadmap_fingerprint,
     validate_readback,
     validate_visible_fields,
@@ -238,6 +241,37 @@ class TaskProjectionEngineTests(unittest.TestCase):
         self.assertTrue(any("HTML comment" in error for error in errors))
         self.assertTrue(any("internal topic id" in error for error in errors))
         self.assertTrue(any("content_version" in error for error in errors))
+
+    def test_learner_summary_does_not_false_positive_on_repo_name_substring(self):
+        # Real finding, documented in Etapa 6a's fixture commit and fixed in
+        # Etapa 6d: render_learner_integration_summary() used to raise an
+        # uncaught AssertionError whenever the container/project URL
+        # contained the literal substring "open-study-path" -- which any
+        # repository actually named with that product-name prefix (e.g.
+        # this pilot's own disposable test repos) always does in its URL,
+        # even though nothing was leaking. The real marker syntax always has
+        # a colon immediately after ("open-study-path:topic_id=..."); a bare
+        # repository name never does.
+        state = {
+            "selected_capabilities": {"task_manager": {"provider": "github_issues"}},
+            "resources": [
+                {
+                    "capability": "task_manager",
+                    "type": "project",
+                    "url": "https://github.com/someone/open-study-path-agent-test-1",
+                }
+            ],
+        }
+        summary = render_learner_integration_summary(state)
+        self.assertIn("open-study-path-agent-test-1", summary)
+
+        # The real leak this pattern exists to catch must still be caught.
+        leaking_state = deepcopy(state)
+        leaking_state["resources"][0]["url"] = (
+            "https://example.com/<!-- open-study-path:topic_id=TOPIC-001 -->"
+        )
+        with self.assertRaises(AssertionError):
+            render_learner_integration_summary(leaking_state)
 
     def test_readback_fails_when_list_order_is_wrong(self):
         backend = FakeBackend("trello")
