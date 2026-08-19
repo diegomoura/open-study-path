@@ -1045,6 +1045,7 @@ def test_evaluate_gets_the_full_resolution_and_publish_tool_set() -> None:
     for name in (
         "list_assessment_issues",
         "resolve_assessment_candidates",
+        "read_github_issue",
         "post_issue_comment",
         "label_github_issue",
         "unlabel_github_issue",
@@ -1100,6 +1101,18 @@ def test_evaluate_label_tools_are_scoped_to_exact_labels() -> None:
             assert "only" in str(exc)
         else:
             raise AssertionError("evaluate author must only be able to remove assessment:submitted")
+
+
+def test_evaluate_author_can_actually_read_the_submitted_answers() -> None:
+    # Regression for a real dispatch finding (Etapa 6c validation): the
+    # first real evaluate run correctly refused to grade rather than
+    # fabricate a score, because resolve_assessment_candidates only returns
+    # the classification decision (accepted/rejected + reasons), never the
+    # issue body -- and read_github_issue was missing from the author's
+    # tool list entirely. list_assessment_issues alone only returns
+    # metadata (number, title, labels, author, date), never the answers.
+    author_tool_names = {t["name"] for t in author_tools("evaluate")}
+    assert "read_github_issue" in author_tool_names
 
 
 def test_evaluate_reviewer_model_is_sonnet_and_structural() -> None:
@@ -1168,6 +1181,7 @@ def main() -> None:
         test_replan_gets_a_higher_tool_iteration_and_token_budget,
         test_evaluate_allowlist_matches_grading_only_scope,
         test_evaluate_gets_the_full_resolution_and_publish_tool_set,
+        test_evaluate_author_can_actually_read_the_submitted_answers,
         test_evaluate_label_tools_are_scoped_to_exact_labels,
         test_evaluate_reviewer_model_is_sonnet_and_structural,
         test_evaluate_gets_a_higher_tool_iteration_and_token_budget,

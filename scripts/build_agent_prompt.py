@@ -603,10 +603,15 @@ concludes a topic is mastered:
 
 Resolve the assessment issue with `resolve_assessment_candidates`, never by
 reading `list_assessment_issues`/`read_github_issue` and judging candidates
-yourself. On `state: "none"`, report that no submitted assessment was found
-via finish_phase. On `state: "ambiguous"`, list only the candidate issue
+yourself -- that tool decides *which* issue, not what to do with it. On
+`state: "none"`, report that no submitted assessment was found via
+finish_phase. On `state: "ambiguous"`, list only the candidate issue
 numbers and links via finish_phase and stop -- do not guess. On
-`state: "unique"`, proceed with the one accepted issue number.
+`state: "unique"`, call `read_github_issue` on that one accepted issue
+number to get the actual submitted answers -- `resolve_assessment_candidates`
+only returns the classification decision (accepted/rejected + reasons),
+never the issue body itself. Grade only from what `read_github_issue`
+returns; do not proceed to scoring without it.
 
 Never grade from checklist completion, task state, reminders, habit
 streaks, calendar attendance or a formative quiz/flashcard score --

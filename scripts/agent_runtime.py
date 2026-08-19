@@ -1464,6 +1464,7 @@ def author_tools(phase: str | None = None) -> list[dict[str, Any]]:
         tools.extend(_track_issue_read_tool())
     elif phase == "evaluate":
         tools.extend(_evaluate_resolution_tools())
+        tools.append(_github_issue_read_tools()[1])  # read_github_issue
         tools.append(
             {
                 "name": "post_issue_comment",
