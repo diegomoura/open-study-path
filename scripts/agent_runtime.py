@@ -262,6 +262,26 @@ TRACK_ALLOWED_EXACT_PATHS: tuple[str, ...] = (
 )
 TRACK_ALLOWED_PREFIXES: tuple[str, ...] = ()
 
+# Etapa 6b (docs/claude-agent-pilot-etapa6-design.md, section 4): copied
+# directly from review_framework.py's phase_allows_artifact("replan"), same
+# pattern as TRACK_ALLOWED_* above. Note the prefix-only approximation:
+# phase_allows_artifact additionally requires assessment-topic-*.yml paths to
+# *end* in .yml, but is_write_allowed() only supports prefix matching, not a
+# combined prefix+suffix rule -- a non-.yml file under this prefix would
+# pass this coarser gate and still get caught by the precise rule in
+# validate_review_framework.py's real CI check. Widening is_write_allowed()
+# to support suffix constraints for this one phase was judged not worth
+# touching shared matching logic every other phase also relies on.
+REPLAN_ALLOWED_EXACT_PATHS: tuple[str, ...] = (
+    ".open-study-path/instance.yml",
+    "study.config.yml",
+    "state/progress.json",
+)
+REPLAN_ALLOWED_PREFIXES: tuple[str, ...] = (
+    "study/",
+    ".github/ISSUE_TEMPLATE/assessment-topic-",
+)
+
 # Which allowlist applies to which manifest phase. `generate_proposal` is a
 # harness-level key for the `proposal` suboperation of manifest.yml's
 # `generate` phase (instructions/28-propose-path.md) -- Etapa 5's first
@@ -280,6 +300,7 @@ PHASE_ALLOWLISTS: dict[str, tuple[tuple[str, ...], tuple[str, ...]]] = {
     "generate_detailed": (GENERATE_DETAILED_ALLOWED_EXACT_PATHS, GENERATE_DETAILED_ALLOWED_PREFIXES),
     "diagnostic": (DIAGNOSTIC_ALLOWED_EXACT_PATHS, DIAGNOSTIC_ALLOWED_PREFIXES),
     "track": (TRACK_ALLOWED_EXACT_PATHS, TRACK_ALLOWED_PREFIXES),
+    "replan": (REPLAN_ALLOWED_EXACT_PATHS, REPLAN_ALLOWED_PREFIXES),
 }
 
 # Agent ids that exist as real rows in AGENT_CATALOG for the pilot phases.
@@ -298,6 +319,7 @@ PHASE_AUTHOR_AGENT: dict[str, str] = {
     "generate_detailed": "content_author",
     "diagnostic": "diagnostic",
     "track": "track",
+    "replan": "replan",
 }
 
 # Etapa 4b (docs/claude-agent-pilot-etapa4b-diagnostic-design.md): unlike

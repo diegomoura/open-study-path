@@ -26,6 +26,7 @@ PHASE_INSTRUCTION_FILES = {
     "generate_detailed": ["instructions/30-generate-path.md"],
     "diagnostic": ["instructions/20-diagnostic.md"],
     "track": ["instructions/50-track-progress.md"],
+    "replan": ["instructions/60-replan.md"],
 }
 
 # Files every author/reviewer prompt gets regardless of phase.
@@ -118,6 +119,7 @@ PHASE_REVIEW_PROFILE: dict[str, str] = {
     "generate_detailed": "curriculum",
     "diagnostic": "diagnostic",
     "track": "progress",
+    "replan": "replan",
 }
 
 AUTHOR_HARNESS_NOTE = """\
@@ -512,6 +514,57 @@ check covers.
 """
 
 
+AUTHOR_REPLAN_NOTE = """\
+## Replan tool addendum (Etapa 6b)
+
+You may write only `.open-study-path/instance.yml`, `study.config.yml`,
+`state/progress.json`, anything under `study/`, and
+`.github/ISSUE_TEMPLATE/assessment-topic-*.yml` -- write_file rejects
+anything else. This phase never touches `state/integrations.json` or
+`state/assessments/`; an integration-projection or grading change belongs
+to track or evaluate, not replan.
+
+If `study.config.yml` is part of your change, read
+`schemas/study-config.schema.json` first and match its shape exactly
+(`version: 1`, the `configured`/`intake`/`planning` sections, English enum
+values such as `beginner`/`balanced`, not free-text or another file's
+schema). A real fixture in this pilot's disposable test repo drifted from
+this schema for months before anyone caught it -- confirm your own diff
+against the schema before finishing.
+
+instructions/60-replan.md's "Migration boundary" section describes moving
+state between repositories, providers or incompatible template contracts as
+a *separate* operation with the `migration` profile -- that operation does
+not exist in this harness yet. If the change you are asked to make requires
+a task-backend or repository migration rather than a same-backend
+replan, do not attempt it here: call finish_phase reporting that a
+migration operation is required and out of scope for this dispatch, and
+make no write_file calls.
+"""
+
+REVIEWER_REPLAN_NOTE = """\
+## Replan tool addendum (Etapa 6b)
+
+Your `checks:` block must use these five keys verbatim -- copy them
+exactly from review_framework.py's REVIEW_PROFILES["replan"]["checks"]
+rather than paraphrasing (a real Etapa 6a track dispatch got 3 of 5 keys
+wrong this way before the addendum was corrected to spell them out):
+`evidence_trigger`, `approved_scope_preservation`,
+`dependency_revalidation`, `version_and_review_refresh`,
+`learner_impact_explained`.
+
+A curriculum or provider change that cannot be traced to a learner request,
+changed constraint, diagnostic evidence or mastery result is a blocking
+finding (evidence_trigger) -- do not approve a replan that looks plausible
+but is not grounded in something persisted in the repository. If the diff
+touches `study.config.yml`, also independently check it against
+`schemas/study-config.schema.json`; a schema-shape drift is exactly the
+kind of change dependency_revalidation and version_and_review_refresh
+should catch even though neither check name mentions the config file by
+name.
+"""
+
+
 def _read(relative_path: str) -> str:
     return (ROOT / relative_path).read_text(encoding="utf-8")
 
@@ -544,6 +597,8 @@ def build_author_prompts(phase: str, target_repo: str, extra_context: str) -> tu
         sections.append(AUTHOR_DIAGNOSTIC_NOTE)
     elif phase == "track":
         sections.append(AUTHOR_TRACK_NOTE)
+    elif phase == "replan":
+        sections.append(AUTHOR_REPLAN_NOTE)
     system_prompt = "\n\n---\n\n".join(sections)
 
     user_prompt = (
@@ -572,6 +627,8 @@ def build_reviewer_prompts(phase: str, target_repo: str, base_sha: str, author_s
         sections.append(REVIEWER_DIAGNOSTIC_NOTE)
     elif phase == "track":
         sections.append(REVIEWER_TRACK_NOTE)
+    elif phase == "replan":
+        sections.append(REVIEWER_REPLAN_NOTE)
     system_prompt = "\n\n---\n\n".join(sections)
 
     review_profile = PHASE_REVIEW_PROFILE.get(phase, "setup")

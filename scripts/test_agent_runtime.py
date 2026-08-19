@@ -23,6 +23,7 @@ from agent_runtime import (
     MAX_TOOL_ITERATIONS,
     MODEL_PRICING_USD_PER_MTOK,
     PHASE_ALLOWLISTS,
+    PHASES_WITH_GITHUB_ISSUES,
     RepoTools,
     author_tools,
     is_write_allowed,
@@ -970,6 +971,50 @@ def test_track_reviewer_model_inherits_the_author_haiku_tier() -> None:
     assert resolve_phase_reviewer_model("track", config) == MODEL_CATALOG["haiku"]
 
 
+def test_replan_allowlist_matches_review_framework_profile() -> None:
+    # Copied directly from review_framework.py's phase_allows_artifact
+    # ("replan") -- see agent_runtime.py's REPLAN_ALLOWED_* comment
+    # (Etapa 6b).
+    assert is_write_allowed("replan", ".open-study-path/instance.yml")
+    assert is_write_allowed("replan", "study.config.yml")
+    assert is_write_allowed("replan", "state/progress.json")
+    assert is_write_allowed("replan", "study/roadmap.md")
+    assert is_write_allowed("replan", "study/topics/TOPIC-003/module.md")
+    assert is_write_allowed(
+        "replan", ".github/ISSUE_TEMPLATE/assessment-topic-003.yml"
+    )
+    assert not is_write_allowed("replan", "state/integrations.json")
+    assert not is_write_allowed("replan", "state/assessments/TOPIC-001/attempt-001.json")
+    assert not is_write_allowed("replan", "state/reviews/agent-pilot-replan.yml")
+
+
+def test_replan_has_no_github_issues_tools() -> None:
+    # instructions/60-replan.md never touches GitHub Issues directly -- only
+    # repository files. Unlike track, replan should not appear in
+    # PHASES_WITH_GITHUB_ISSUES and should get none of the GitHub-specific
+    # tool names on either role.
+    assert "replan" not in PHASES_WITH_GITHUB_ISSUES
+    author_tool_names = {t["name"] for t in author_tools("replan")}
+    reviewer_tool_names = {t["name"] for t in reviewer_tools("replan")}
+    github_tool_names = {
+        "list_intake_issues",
+        "read_github_issue",
+        "label_github_issue",
+        "post_issue_comment",
+        "run_publish_projection",
+    }
+    assert not (author_tool_names & github_tool_names)
+    assert not (reviewer_tool_names & github_tool_names)
+
+
+def test_replan_reviewer_model_is_sonnet_per_agent_catalog() -> None:
+    # AGENT_CATALOG already had a "replan" row (Sonnet) before Etapa 6b --
+    # unlike track, there was no catalog gap to close here, only harness
+    # wiring. The generic phase_review pass inherits it the same way.
+    config = _default_config()
+    assert resolve_phase_reviewer_model("replan", config) == MODEL_CATALOG["sonnet"]
+
+
 def main() -> None:
     tests = [
         test_write_allowlist_matches_setup_execution_contract,
@@ -1014,6 +1059,9 @@ def main() -> None:
         test_track_allowlist_matches_progress_review_profile,
         test_track_gets_only_the_narrow_read_github_issue_tool,
         test_track_reviewer_model_inherits_the_author_haiku_tier,
+        test_replan_allowlist_matches_review_framework_profile,
+        test_replan_has_no_github_issues_tools,
+        test_replan_reviewer_model_is_sonnet_per_agent_catalog,
     ]
     for test in tests:
         test()
