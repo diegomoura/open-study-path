@@ -27,7 +27,17 @@ PHASE_INSTRUCTION_FILES = {
     "diagnostic": ["instructions/20-diagnostic.md"],
     "track": ["instructions/50-track-progress.md"],
     "replan": ["instructions/60-replan.md"],
-    "evaluate": ["instructions/55-evaluate-topic.md"],
+    "evaluate": [
+        "instructions/55-evaluate-topic.md",
+        # Etapa 6d: the "When the topic is mastered" -> auto-materialize
+        # chaining path reuses these two contracts verbatim from
+        # generate_detailed -- they are not evaluate-specific, but the
+        # operative text for what run_publish_projection/materialization
+        # must satisfy applies exactly the same way whether reached via
+        # generate_detailed or evaluate's mastery path.
+        "instructions/57-materialize-next-content.md",
+        "instructions/38-finalize-generated-bundle.md",
+    ],
 }
 
 # Files every author/reviewer prompt gets regardless of phase.
@@ -73,6 +83,17 @@ PHASE_EXTRA_AUTHOR_FILES: dict[str, list[str]] = {
         "docs/integration-capabilities.md",
     ],
     "diagnostic": ["instructions/21-diagnostic-completion-recovery.md"],
+    # Etapa 6d: same materialization-quality context generate_detailed's
+    # author already gets, since evaluate's mastery-triggered
+    # materialization path produces the exact same kind of content and
+    # must meet the exact same bar.
+    "evaluate": [
+        "docs/learner-facing-language.md",
+        "docs/beginner-first-pedagogy.md",
+        "docs/content-quality-and-sources.md",
+        "docs/mermaid-visual-learning.md",
+        "docs/integration-capabilities.md",
+    ],
 }
 
 PHASE_EXTRA_REVIEWER_FILES: dict[str, list[str]] = {
@@ -92,6 +113,11 @@ PHASE_EXTRA_REVIEWER_FILES: dict[str, list[str]] = {
         "docs/content-quality-and-sources.md",
     ],
     "diagnostic": ["instructions/21-diagnostic-completion-recovery.md"],
+    "evaluate": [
+        "instructions/36-review-course-content.md",
+        "docs/beginner-first-pedagogy.md",
+        "docs/content-quality-and-sources.md",
+    ],
 }
 
 # `review_profile` selects which required-check set instructions/
@@ -568,38 +594,14 @@ name.
 
 
 AUTHOR_EVALUATE_NOTE = """\
-## Evaluate tool addendum (Etapa 6c: grading only, no auto-materialization)
+## Evaluate tool addendum (Etapa 6d: grading, task-state move, materialization)
 
-You may write only `state/progress.json`, `state/integrations.json`, and
-anything under `state/assessments/` -- write_file rejects anything else.
-This harness slice does not support the "When the topic is mastered" ->
-automatic `instructions/57-materialize-next-content.md` chaining step yet
-(that is Etapa 6d, not this one), and it also does not move the
-authoritative task's own GitHub Issues state (`canonical_state`) toward
-`Concluído` -- that requires `apply_assessment_result` composed with the
-same `run_publish_projection` engine `publish` uses, which is deferred to
-6d together with materialization (see
-docs/claude-agent-pilot-etapa6-design.md's real finding from Etapa 6a:
-`render_learner_integration_summary()` inside that exact call path raises
-an uncaught `AssertionError` on any repository whose name contains
-"open-study-path", which this pilot's own disposable test repo does -- 6d
-should fix that bug before relying on this path for real). If your grading
-concludes a topic is mastered:
-
-- still complete every step this harness *does* support: persist the
-  attempt under `state/assessments/<topic_id>/`, prepare the
-  `state/progress.json` mastery transition, apply `assessment:graded` and
-  remove `assessment:submitted`;
-- do NOT call `run_publish_projection` (you do not have it in this phase)
-  and do NOT attempt to materialize the next content window yourself --
-  inventing study/topics/ or study/modules/ content by hand, or moving the
-  task's GitHub label/state manually instead of through the real engine,
-  would either violate write_file's allowlist or bypass the read-back
-  validation that engine exists for;
-- report through finish_phase that moving the authoritative task to
-  Concluído and materializing the next topic are not enabled in this
-  harness slice yet, so a human knows both are still needed rather than
-  assuming either already happened.
+You may write `state/progress.json`, `state/integrations.json`,
+`study/roadmap.md`, `study/integrations.md`, anything under
+`state/assessments/`, `study/topics/`, `study/modules/`,
+`study/flashcards/`, `study/assessments/`, and
+`.github/ISSUE_TEMPLATE/assessment-topic-*.yml` -- write_file rejects
+anything else.
 
 Resolve the assessment issue with `resolve_assessment_candidates`, never by
 reading `list_assessment_issues`/`read_github_issue` and judging candidates
@@ -619,15 +621,57 @@ streaks, calendar attendance or a formative quiz/flashcard score --
 sufficient mastery evidence by themselves. Grade only the resolved
 assessment issue's actual answers against the rubric.
 
-Do not call `post_issue_comment` or `label_github_issue`/
-`unlabel_github_issue` until after the independent assessment review has
-approved -- the instruction is explicit that publishing before approval is
-not allowed, the same ordering `run_publish_projection`-based phases
-already enforce between draft and finalized state.
+Publish as soon as grading and the task-state/materialization steps below
+are complete, in this same pass -- do not withhold `post_issue_comment`/
+`label_github_issue`/`unlabel_github_issue` waiting for a later step that
+does not exist in this harness. The independent reviewer job plus the
+human merging the resulting PR is what actually gates whether this run's
+conclusions stand.
+
+### If the topic is NOT mastered
+
+Persist the attempt under `state/assessments/<topic_id>/`, prepare the
+`state/progress.json` transition, apply `assessment:recovery-required`,
+remove `assessment:submitted`, post the comment explaining the gap and the
+recovery path. Do not touch `run_publish_projection`,
+`apply_topic_assessment_result`, or anything under `study/` -- there is
+nothing to materialize and no task-state change to make.
+
+### If the topic IS mastered
+
+1. Persist the attempt, prepare the `state/progress.json` mastery
+   transition, apply `assessment:graded`, remove `assessment:submitted`,
+   post the comment.
+2. Read the current roadmap and topic contracts via `read_file` to build
+   the `topics` list `run_publish_projection` expects (same shape
+   `publish`'s own author already builds), including every already-known
+   `external_id` from `state/integrations.json` so the engine updates
+   existing issues instead of duplicating them.
+3. Call `apply_topic_assessment_result(topics, topic_id, passed=true)` to
+   get the updated list with this topic's `canonical_state` set to
+   `completed` -- never hand-edit `canonical_state` in a `write_file` call
+   instead.
+4. Materialize the next topic in the rolling window per
+   `instructions/57-materialize-next-content.md` and
+   `38-finalize-generated-bundle.md` -- the same content bar
+   `generate_detailed` already applies (beginner-first pedagogy, sourced
+   content, Mermaid diagrams, no placeholder text). Slides stay disabled
+   in this pilot, same as `generate_detailed` -- do not create
+   `study/topics/*.md` frontmatter pointing at a `slides_url`.
+5. Call `run_publish_projection` with the updated `topics` list (including
+   the newly materialized topic, `materialized: true`, `canonical_state`
+   reflecting its real readiness) so the real engine projects both the
+   completed task and the newly available one to GitHub Issues in one
+   pass. On `status="success"`, write `state/integrations.json` and
+   `study/integrations.md` from the returned payload. On
+   `status="error"` (ambiguous match, partial write, failed read-back),
+   do not write those two files -- persist only the operation journal if
+   present and report the blocked outcome through `finish_phase`, exactly
+   as `instructions/40-publish-tasks.md` already requires of `publish`.
 """
 
 REVIEWER_EVALUATE_NOTE = """\
-## Evaluate tool addendum (Etapa 6c)
+## Evaluate tool addendum (Etapa 6d)
 
 Your `checks:` block must use these six keys verbatim -- copy them exactly
 from `review_framework.py`'s `REVIEW_PROFILES["assessment"]["checks"]`
@@ -643,17 +687,21 @@ comparing the author's reasoning against each rubric criterion, not just
 checking its arithmetic; a disagreement in scoring is a blocking finding,
 not a note.
 
-`next_materialization_consistency`: this harness slice (Etapa 6c) never
-moves the authoritative task to `Concluído` or auto-materializes the next
-topic, even when mastery is reached -- both require
-`run_publish_projection`/`apply_assessment_result`, which this phase does
-not have (Etapa 6d). When the topic is not mastered, this check is
-trivially satisfied ("nothing in scope"). When the topic *is* mastered,
-mark it passed only together with a non-blocking finding stating plainly
-that the task-state move and materialization were deliberately not
-attempted in this harness slice -- this is a documented, deliberate scope
-boundary, not a silent gap, and must not be reported as if the full
-instruction's steps ran.
+`next_materialization_consistency`: when the topic is not mastered, this
+check is trivially satisfied ("nothing in scope") -- confirm the author
+did not touch `study/` or call `run_publish_projection`/
+`apply_topic_assessment_result` in that case. When the topic *is*
+mastered, verify all of: the authoritative task's `canonical_state` was
+actually moved via the real engine (not hand-edited), the newly
+materialized topic meets the same bar `36-review-course-content.md`
+already holds `generate_detailed` to (outcome markers, sourced content,
+Mermaid diagrams, no placeholder text, slides still disabled), and
+`run_publish_projection`'s real read-back validation actually passed
+(check `state/integrations.json`/`study/integrations.md` were written from
+a `status="success"` result, not fabricated). A materialization that skips
+independent content review, or a task-state move that never called the
+real engine, is a blocking finding here, not a documented scope boundary
+-- Etapa 6d has both tools, so using them correctly is now in scope.
 """
 
 

@@ -50,7 +50,7 @@ import sys
 import urllib.error
 import urllib.parse
 import urllib.request
-from dataclasses import dataclass, field
+from dataclasses import asdict, dataclass, field
 from hashlib import sha256
 from pathlib import Path
 from typing import Any, Callable, Mapping, Sequence
@@ -69,6 +69,7 @@ from assessment_resolution import (
 from task_projection_engine import (
     ProjectionError,
     TopicProjection,
+    apply_assessment_result,
     publish_projection,
 )
 
@@ -318,23 +319,33 @@ REPLAN_ALLOWED_PREFIXES: tuple[str, ...] = (
     ".github/ISSUE_TEMPLATE/assessment-topic-",
 )
 
-# Etapa 6c (docs/claude-agent-pilot-etapa6-design.md, section 5.3): a
-# deliberately *narrower* slice of review_framework.py's
-# phase_allows_artifact("assessment") than the full profile allows. The full
-# profile also permits study/topics/, study/modules/, study/flashcards/,
-# study/roadmap.md, study/integrations.md and assessment-topic-*.yml,
-# because instructions/55-evaluate-topic.md's "When the topic is mastered"
-# section can auto-materialize the next content window
-# (57-materialize-next-content.md) -- that chained path is Etapa 6d, not
-# 6c. Restricting the allowlist here to only the grading domain forces the
-# "mastered but auto-materialization isn't wired yet" refusal the 6c author
-# addendum requires at a code boundary, the same fail-closed shape used for
-# slides in generate_detailed and for migration in replan.
+# Etapa 6c (docs/claude-agent-pilot-etapa6-design.md, section 5.3) started
+# with a deliberately *narrower* slice of review_framework.py's
+# phase_allows_artifact("assessment") than the full profile allows, to force
+# a fail-closed refusal at a code boundary while auto-materialization wasn't
+# wired yet (same shape as slides in generate_detailed, migration in
+# replan). Etapa 6d wires that chained path
+# (instructions/57-materialize-next-content.md,
+# 38-finalize-generated-bundle.md), so the allowlist now matches
+# phase_allows_artifact("assessment") exactly: study/topics/, study/modules/,
+# study/flashcards/, study/assessments/ (a newly materialized topic's own
+# rubric, not just the just-graded one already covered by
+# state/assessments/), study/roadmap.md, study/integrations.md and
+# assessment-topic-*.yml join the grading-only exact paths from 6c.
 EVALUATE_ALLOWED_EXACT_PATHS: tuple[str, ...] = (
     "state/progress.json",
     "state/integrations.json",
+    "study/roadmap.md",
+    "study/integrations.md",
 )
-EVALUATE_ALLOWED_PREFIXES: tuple[str, ...] = ("state/assessments/",)
+EVALUATE_ALLOWED_PREFIXES: tuple[str, ...] = (
+    "state/assessments/",
+    "study/topics/",
+    "study/modules/",
+    "study/flashcards/",
+    "study/assessments/",
+    ".github/ISSUE_TEMPLATE/assessment-topic-",
+)
 
 # Which allowlist applies to which manifest phase. `generate_proposal` is a
 # harness-level key for the `proposal` suboperation of manifest.yml's
@@ -1074,6 +1085,41 @@ class RepoTools:
             indent=2,
         )
 
+    def apply_topic_assessment_result(
+        self, topics: list[dict[str, Any]], topic_id: str, passed: bool
+    ) -> str:
+        """Wrap task_projection_engine.apply_assessment_result() for evaluate (Etapa 6d).
+
+        Pure, in-memory transform: sets one topic's canonical_state to
+        "completed" (passed=True) or "review_required" (passed=False) in an
+        otherwise-unchanged topics list, matching the exact shape
+        run_publish_projection expects as input. This is the step between
+        "grading concluded mastery/not" and "push that conclusion to
+        GitHub" -- the model builds `topics` from the current roadmap (same
+        as publish's author already does), calls this to get the updated
+        list, then passes the result straight to run_publish_projection.
+        Never mutate canonical_state by hand in a write_file call instead
+        of through this function -- that would bypass the same
+        idempotency/read-back guarantees run_publish_projection depends on.
+        """
+        if self.role != "author":
+            raise AllowlistViolation("apply_topic_assessment_result is not available to this role")
+        try:
+            topic_projections = [TopicProjection(**topic) for topic in topics]
+        except (TypeError, ValueError) as exc:
+            return json.dumps({"status": "error", "error_type": "InvalidTopicInput", "message": str(exc)})
+        try:
+            updated = apply_assessment_result(topic_projections, topic_id=topic_id, passed=passed)
+        except KeyError:
+            return json.dumps(
+                {
+                    "status": "error",
+                    "error_type": "UnknownTopicId",
+                    "message": f"topic_id {topic_id!r} is not present in the supplied topics list",
+                }
+            )
+        return json.dumps({"status": "success", "topics": [asdict(t) for t in updated]}, indent=2)
+
     def write_file(self, path: str, content: str) -> str:
         if self.role != "author":
             raise AllowlistViolation("write_file is not available to this role")
@@ -1203,6 +1249,12 @@ class RepoTools:
                 tool_input["topic_id"],
                 tool_input.get("issue_number"),
             )
+        if name == "apply_topic_assessment_result":
+            return self.apply_topic_assessment_result(
+                tool_input["topics"],
+                tool_input["topic_id"],
+                tool_input["passed"],
+            )
         if name == "run_publish_projection":
             return self.run_publish_projection(
                 tool_input["topics"],
@@ -1297,6 +1349,46 @@ def _evaluate_resolution_tools() -> list[dict[str, Any]]:
     ]
 
 
+def _run_publish_projection_tool() -> dict[str, Any]:
+    """Shared tool schema for run_publish_projection, used by publish and evaluate (6d).
+
+    Etapa 6d: evaluate needs this exact same tool to move a mastered
+    topic's authoritative task to Concluído -- same engine, same call
+    shape, so the schema (and its extensive real-usage description) is not
+    duplicated per phase.
+    """
+    return {
+        "name": "run_publish_projection",
+        "description": (
+            "Run the real scripts/task_projection_engine.py projection and read-back "
+            "validation against GitHub Issues -- never construct or validate the "
+            "projection yourself. `topics` is a list of objects matching "
+            "TopicProjection's fields (topic_id, lesson_number, title, "
+            "direct_prerequisite_ids, content_version, canonical_state, materialized, "
+            "external_id, slides_url, lesson_url, practice_url, assessment_url), read "
+            "from the approved roadmap and topic contracts via read_file. For every "
+            "topic already published before, pass its known external_id from "
+            "state/integrations.json so the engine updates the same issue instead of "
+            "creating a duplicate. On status='success', write "
+            "state/integrations.json, study/integrations.md and "
+            "state/operations/<operation_id>.json from the returned payload. On "
+            "status='error', do not write state/integrations.json or "
+            "study/integrations.md -- persist only the operation journal (if present "
+            "in the response) and report the blocked/partial outcome through "
+            "finish_phase, per instructions/40-publish-tasks.md."
+        ),
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "topics": {"type": "array", "items": {"type": "object"}},
+                "operation_id": {"type": "string"},
+                "course_name": {"type": "string"},
+            },
+            "required": ["topics", "operation_id", "course_name"],
+        },
+    }
+
+
 def author_tools(phase: str | None = None) -> list[dict[str, Any]]:
     tools = [
         {
@@ -1389,38 +1481,7 @@ def author_tools(phase: str | None = None) -> list[dict[str, Any]]:
             }
         )
     elif phase == "publish":
-        tools.append(
-            {
-                "name": "run_publish_projection",
-                "description": (
-                    "Run the real scripts/task_projection_engine.py projection and read-back "
-                    "validation against GitHub Issues -- never construct or validate the "
-                    "projection yourself. `topics` is a list of objects matching "
-                    "TopicProjection's fields (topic_id, lesson_number, title, "
-                    "direct_prerequisite_ids, content_version, canonical_state, materialized, "
-                    "external_id, slides_url, lesson_url, practice_url, assessment_url), read "
-                    "from the approved roadmap and topic contracts via read_file. For every "
-                    "topic already published before, pass its known external_id from "
-                    "state/integrations.json so the engine updates the same issue instead of "
-                    "creating a duplicate. On status='success', write "
-                    "state/integrations.json, study/integrations.md and "
-                    "state/operations/<operation_id>.json from the returned payload. On "
-                    "status='error', do not write state/integrations.json or "
-                    "study/integrations.md -- persist only the operation journal (if present "
-                    "in the response) and report the blocked/partial outcome through "
-                    "finish_phase, per instructions/40-publish-tasks.md."
-                ),
-                "input_schema": {
-                    "type": "object",
-                    "properties": {
-                        "topics": {"type": "array", "items": {"type": "object"}},
-                        "operation_id": {"type": "string"},
-                        "course_name": {"type": "string"},
-                    },
-                    "required": ["topics", "operation_id", "course_name"],
-                },
-            }
-        )
+        tools.append(_run_publish_projection_tool())
     elif phase == "diagnostic":
         tools.append(
             {
@@ -1469,11 +1530,16 @@ def author_tools(phase: str | None = None) -> list[dict[str, Any]]:
             {
                 "name": "post_issue_comment",
                 "description": (
-                    "Post the approved detailed evaluation as a comment on the resolved "
-                    "assessment issue. Call this only after the independent assessment review "
-                    "has approved the proposed score and state transition -- never before, per "
-                    "instructions/55-evaluate-topic.md's 'Do not publish the comment ... until "
-                    "the independent assessment review has approved'."
+                    "Post the detailed evaluation as a comment on the resolved assessment "
+                    "issue. Etapa 6d note: instructions/55-evaluate-topic.md's own text says "
+                    "not to publish until the independent assessment review has approved, but "
+                    "this harness's author and reviewer are two separate isolated calls with "
+                    "no step after the reviewer that could publish anything -- the same "
+                    "precedent already established for intake's label write and publish's "
+                    "issue writes: call this now, in the same author pass as your grading, "
+                    "and the independent reviewer job plus the human merging the resulting PR "
+                    "is what actually gates whether this run's conclusions stand, not a delay "
+                    "of the write itself."
                 ),
                 "input_schema": {
                     "type": "object",
@@ -1519,6 +1585,31 @@ def author_tools(phase: str | None = None) -> list[dict[str, Any]]:
                         "label": {"type": "string"},
                     },
                     "required": ["number", "label"],
+                },
+            }
+        )
+        tools.append(_run_publish_projection_tool())
+        tools.append(
+            {
+                "name": "apply_topic_assessment_result",
+                "description": (
+                    "Etapa 6d: given the current `topics` list (same shape as "
+                    "run_publish_projection's own `topics` parameter, read from the approved "
+                    "roadmap and topic contracts), set the graded topic's canonical_state to "
+                    "'completed' (passed=true, mastered) or 'review_required' (passed=false, "
+                    "not mastered) and return the updated list. Call this before "
+                    "run_publish_projection, never mutate canonical_state by hand in a "
+                    "write_file call -- that bypasses run_publish_projection's own "
+                    "idempotency and read-back validation."
+                ),
+                "input_schema": {
+                    "type": "object",
+                    "properties": {
+                        "topics": {"type": "array", "items": {"type": "object"}},
+                        "topic_id": {"type": "string"},
+                        "passed": {"type": "boolean"},
+                    },
+                    "required": ["topics", "topic_id", "passed"],
                 },
             }
         )
