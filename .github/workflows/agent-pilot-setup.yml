@@ -23,6 +23,11 @@ name: Agent pilot
 # `diagnostic` -- it only ever reads a GitHub issue
 # (read_github_issue), never writes one.
 #
+# `replan` (Etapa 6b) also reuses this workflow -- also single-shot, and
+# unlike `track` it never touches GitHub Issues at all: it only reads and
+# writes repository files (roadmap, instance marker, study.config.yml,
+# progress, study/**, assessment-topic issue templates).
+#
 # Untrusted workflow_dispatch inputs (target_repo, extra_context) are only
 # ever passed through step `env:` and read back as shell variables, never
 # interpolated directly into a `run:` script body -- that's what keeps a
@@ -48,6 +53,7 @@ on:
           - generate_proposal
           - generate_detailed
           - track
+          - replan
       target_repo:
         description: Target instance repository, as OWNER/REPOSITORY
         required: true

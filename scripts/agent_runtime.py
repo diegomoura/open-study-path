@@ -102,6 +102,13 @@ PHASE_MAX_TOKENS: dict[str, int] = {
     # table when it was first introduced. Same 16384 value, same "no cost
     # or rate downside" reasoning already verified for generate_detailed.
     "diagnostic": 16384,
+    # Etapa 6b: not yet confirmed to hit max_tokens itself (the real dispatch
+    # that motivated this exhausted tool round trips first, see
+    # PHASE_MAX_TOOL_ITERATIONS below), but a full study/roadmap.md rewrite
+    # is the same class of large single-file write_file call as
+    # generate_detailed's lesson modules -- raised preemptively rather than
+    # waiting for a second real dispatch to hit it separately.
+    "replan": 16384,
 }
 
 
@@ -145,6 +152,15 @@ MAX_TOOL_ITERATIONS = 20
 # smaller phase should still be caught quickly, at the original budget.
 PHASE_MAX_TOOL_ITERATIONS: dict[str, int] = {
     "generate_detailed": 40,
+    # Etapa 6b: a real replan dispatch hit "did not finish within 20 tool
+    # round trips" and failed outright -- replan needs to read the current
+    # roadmap, instance marker, study.config.yml and the evidence that
+    # triggered the change, then write a revised roadmap plus a review
+    # artifact-worthy diff, easily exceeding the untouched 20 default for
+    # the same reason generate_detailed needed 40. Same value, same
+    # reasoning, confirmed necessary by an actual failed run rather than
+    # applied preemptively.
+    "replan": 40,
 }
 
 
@@ -262,6 +278,26 @@ TRACK_ALLOWED_EXACT_PATHS: tuple[str, ...] = (
 )
 TRACK_ALLOWED_PREFIXES: tuple[str, ...] = ()
 
+# Etapa 6b (docs/claude-agent-pilot-etapa6-design.md, section 4): copied
+# directly from review_framework.py's phase_allows_artifact("replan"), same
+# pattern as TRACK_ALLOWED_* above. Note the prefix-only approximation:
+# phase_allows_artifact additionally requires assessment-topic-*.yml paths to
+# *end* in .yml, but is_write_allowed() only supports prefix matching, not a
+# combined prefix+suffix rule -- a non-.yml file under this prefix would
+# pass this coarser gate and still get caught by the precise rule in
+# validate_review_framework.py's real CI check. Widening is_write_allowed()
+# to support suffix constraints for this one phase was judged not worth
+# touching shared matching logic every other phase also relies on.
+REPLAN_ALLOWED_EXACT_PATHS: tuple[str, ...] = (
+    ".open-study-path/instance.yml",
+    "study.config.yml",
+    "state/progress.json",
+)
+REPLAN_ALLOWED_PREFIXES: tuple[str, ...] = (
+    "study/",
+    ".github/ISSUE_TEMPLATE/assessment-topic-",
+)
+
 # Which allowlist applies to which manifest phase. `generate_proposal` is a
 # harness-level key for the `proposal` suboperation of manifest.yml's
 # `generate` phase (instructions/28-propose-path.md) -- Etapa 5's first
@@ -280,6 +316,7 @@ PHASE_ALLOWLISTS: dict[str, tuple[tuple[str, ...], tuple[str, ...]]] = {
     "generate_detailed": (GENERATE_DETAILED_ALLOWED_EXACT_PATHS, GENERATE_DETAILED_ALLOWED_PREFIXES),
     "diagnostic": (DIAGNOSTIC_ALLOWED_EXACT_PATHS, DIAGNOSTIC_ALLOWED_PREFIXES),
     "track": (TRACK_ALLOWED_EXACT_PATHS, TRACK_ALLOWED_PREFIXES),
+    "replan": (REPLAN_ALLOWED_EXACT_PATHS, REPLAN_ALLOWED_PREFIXES),
 }
 
 # Agent ids that exist as real rows in AGENT_CATALOG for the pilot phases.
@@ -298,6 +335,7 @@ PHASE_AUTHOR_AGENT: dict[str, str] = {
     "generate_detailed": "content_author",
     "diagnostic": "diagnostic",
     "track": "track",
+    "replan": "replan",
 }
 
 # Etapa 4b (docs/claude-agent-pilot-etapa4b-diagnostic-design.md): unlike
