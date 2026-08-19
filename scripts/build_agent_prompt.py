@@ -497,6 +497,18 @@ re-fetch the authoritative task issue's current state and verify that every
 mastery value the author wrote traces back to an already-approved assessment
 attempt or pre-existing progress entry, never to task/reminder/habit/
 calendar signals alone (no_competing_authority, source_state_consistency).
+
+Your `checks:` block must use these five keys verbatim -- copy them exactly,
+do not paraphrase or invent a plausible-sounding synonym (a real Etapa 6a
+dispatch got three of these wrong by paraphrasing, which fails CI even
+though the review itself said "approved"):
+`source_state_consistency`, `valid_state_transition` (singular),
+`external_projection_consistency`, `next_action_consistency`,
+`no_competing_authority`. If you are ever unsure whether a key you are about
+to write is the literal one, read_file scripts/review_framework.py and copy
+REVIEW_PROFILES["progress"]["checks"] directly rather than working from
+memory or from docs/review-framework.md's prose description of what each
+check covers.
 """
 
 

@@ -391,6 +391,17 @@ def test_generated_path_classifier() -> None:
     assert not is_generated_artifact("scripts/validate_template.py")
 
 
+def test_usage_ledger_is_not_a_generated_artifact() -> None:
+    # Etapa 6a: the shared per-dispatch cost/token ledger every phase's
+    # workflow appends to is not something any review profile's checks
+    # judge -- requiring it in `artifacts:` produced a real CI failure for
+    # track and, unnoticed until this etapa, the same gap in the
+    # already-merged diagnostic review.
+    assert not is_generated_artifact("state/agent-pilot-usage.jsonl")
+    # Still a normal state/ path for anything else with that shape.
+    assert is_generated_artifact("state/agent-pilot-usage-summary.json")
+
+
 def test_operation_journal_uses_dedicated_validation() -> None:
     assert uses_dedicated_validation(
         "state/operations/publication-trello-v1.json"
@@ -416,6 +427,7 @@ def main() -> None:
         test_marker_deletion_requires_migration_review,
         test_template_changes_do_not_require_instance_review,
         test_generated_path_classifier,
+        test_usage_ledger_is_not_a_generated_artifact,
         test_operation_journal_uses_dedicated_validation,
     ]
     for test in tests:
