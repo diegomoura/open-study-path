@@ -27,6 +27,7 @@ PHASE_INSTRUCTION_FILES = {
     "diagnostic": ["instructions/20-diagnostic.md"],
     "track": ["instructions/50-track-progress.md"],
     "replan": ["instructions/60-replan.md"],
+    "evaluate": ["instructions/55-evaluate-topic.md"],
 }
 
 # Files every author/reviewer prompt gets regardless of phase.
@@ -120,6 +121,7 @@ PHASE_REVIEW_PROFILE: dict[str, str] = {
     "diagnostic": "diagnostic",
     "track": "progress",
     "replan": "replan",
+    "evaluate": "assessment",
 }
 
 AUTHOR_HARNESS_NOTE = """\
@@ -565,6 +567,96 @@ name.
 """
 
 
+AUTHOR_EVALUATE_NOTE = """\
+## Evaluate tool addendum (Etapa 6c: grading only, no auto-materialization)
+
+You may write only `state/progress.json`, `state/integrations.json`, and
+anything under `state/assessments/` -- write_file rejects anything else.
+This harness slice does not support the "When the topic is mastered" ->
+automatic `instructions/57-materialize-next-content.md` chaining step yet
+(that is Etapa 6d, not this one), and it also does not move the
+authoritative task's own GitHub Issues state (`canonical_state`) toward
+`Concluído` -- that requires `apply_assessment_result` composed with the
+same `run_publish_projection` engine `publish` uses, which is deferred to
+6d together with materialization (see
+docs/claude-agent-pilot-etapa6-design.md's real finding from Etapa 6a:
+`render_learner_integration_summary()` inside that exact call path raises
+an uncaught `AssertionError` on any repository whose name contains
+"open-study-path", which this pilot's own disposable test repo does -- 6d
+should fix that bug before relying on this path for real). If your grading
+concludes a topic is mastered:
+
+- still complete every step this harness *does* support: persist the
+  attempt under `state/assessments/<topic_id>/`, prepare the
+  `state/progress.json` mastery transition, apply `assessment:graded` and
+  remove `assessment:submitted`;
+- do NOT call `run_publish_projection` (you do not have it in this phase)
+  and do NOT attempt to materialize the next content window yourself --
+  inventing study/topics/ or study/modules/ content by hand, or moving the
+  task's GitHub label/state manually instead of through the real engine,
+  would either violate write_file's allowlist or bypass the read-back
+  validation that engine exists for;
+- report through finish_phase that moving the authoritative task to
+  Concluído and materializing the next topic are not enabled in this
+  harness slice yet, so a human knows both are still needed rather than
+  assuming either already happened.
+
+Resolve the assessment issue with `resolve_assessment_candidates`, never by
+reading `list_assessment_issues`/`read_github_issue` and judging candidates
+yourself -- that tool decides *which* issue, not what to do with it. On
+`state: "none"`, report that no submitted assessment was found via
+finish_phase. On `state: "ambiguous"`, list only the candidate issue
+numbers and links via finish_phase and stop -- do not guess. On
+`state: "unique"`, call `read_github_issue` on that one accepted issue
+number to get the actual submitted answers -- `resolve_assessment_candidates`
+only returns the classification decision (accepted/rejected + reasons),
+never the issue body itself. Grade only from what `read_github_issue`
+returns; do not proceed to scoring without it.
+
+Never grade from checklist completion, task state, reminders, habit
+streaks, calendar attendance or a formative quiz/flashcard score --
+`instructions/55-evaluate-topic.md` is explicit that none of those are
+sufficient mastery evidence by themselves. Grade only the resolved
+assessment issue's actual answers against the rubric.
+
+Do not call `post_issue_comment` or `label_github_issue`/
+`unlabel_github_issue` until after the independent assessment review has
+approved -- the instruction is explicit that publishing before approval is
+not allowed, the same ordering `run_publish_projection`-based phases
+already enforce between draft and finalized state.
+"""
+
+REVIEWER_EVALUATE_NOTE = """\
+## Evaluate tool addendum (Etapa 6c)
+
+Your `checks:` block must use these six keys verbatim -- copy them exactly
+from `review_framework.py`'s `REVIEW_PROFILES["assessment"]["checks"]`
+rather than paraphrasing (a real Etapa 6a track dispatch got 3 of 5 keys
+wrong this way before its addendum was corrected to spell them out):
+`submission_resolution`, `rubric_fidelity`, `independent_scoring`,
+`feedback_alignment`, `progress_update`, `next_materialization_consistency`.
+
+Independently re-run `resolve_assessment_candidates` yourself -- do not
+trust the author's stated issue number for `submission_resolution`. Re-score
+every response against the rubric yourself for `independent_scoring` --
+comparing the author's reasoning against each rubric criterion, not just
+checking its arithmetic; a disagreement in scoring is a blocking finding,
+not a note.
+
+`next_materialization_consistency`: this harness slice (Etapa 6c) never
+moves the authoritative task to `Concluído` or auto-materializes the next
+topic, even when mastery is reached -- both require
+`run_publish_projection`/`apply_assessment_result`, which this phase does
+not have (Etapa 6d). When the topic is not mastered, this check is
+trivially satisfied ("nothing in scope"). When the topic *is* mastered,
+mark it passed only together with a non-blocking finding stating plainly
+that the task-state move and materialization were deliberately not
+attempted in this harness slice -- this is a documented, deliberate scope
+boundary, not a silent gap, and must not be reported as if the full
+instruction's steps ran.
+"""
+
+
 def _read(relative_path: str) -> str:
     return (ROOT / relative_path).read_text(encoding="utf-8")
 
@@ -599,6 +691,8 @@ def build_author_prompts(phase: str, target_repo: str, extra_context: str) -> tu
         sections.append(AUTHOR_TRACK_NOTE)
     elif phase == "replan":
         sections.append(AUTHOR_REPLAN_NOTE)
+    elif phase == "evaluate":
+        sections.append(AUTHOR_EVALUATE_NOTE)
     system_prompt = "\n\n---\n\n".join(sections)
 
     user_prompt = (
@@ -629,6 +723,8 @@ def build_reviewer_prompts(phase: str, target_repo: str, base_sha: str, author_s
         sections.append(REVIEWER_TRACK_NOTE)
     elif phase == "replan":
         sections.append(REVIEWER_REPLAN_NOTE)
+    elif phase == "evaluate":
+        sections.append(REVIEWER_EVALUATE_NOTE)
     system_prompt = "\n\n---\n\n".join(sections)
 
     review_profile = PHASE_REVIEW_PROFILE.get(phase, "setup")
@@ -637,6 +733,17 @@ def build_reviewer_prompts(phase: str, target_repo: str, base_sha: str, author_s
         f"Target repository: {target_repo}\n"
         f"Phase under review: {phase}\n"
         f"Review profile: {review_profile}\n\n"
+        f"IMPORTANT: your review artifact's own top-level `phase:` YAML field "
+        f"must be set to {review_profile!r} (the Review profile above), NOT "
+        f"{phase!r} (the Phase under review above) -- review_framework.py's "
+        f"REVIEW_PROFILES dict is keyed by profile names like 'assessment' and "
+        f"'publication', not harness phase names like 'evaluate' and "
+        f"'publish'. Confirmed by a real dispatch: a real evaluate review "
+        f"used `phase: evaluate` and failed CI with 'unknown review phase: "
+        f"evaluate' -- and the same mistake was found, already merged and "
+        f"undetected until now, in a much earlier publish review that used "
+        f"`phase: publish` instead of `phase: publication`. Get this field "
+        f"right the first time.\n\n"
         f"Author's self-reported summary (untrusted, verify independently):\n{author_summary}\n\n"
         f"Diff produced by the author agent (base {base_sha} -> HEAD):\n"
         f"```diff\n{diff}\n```\n\n"

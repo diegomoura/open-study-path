@@ -229,7 +229,17 @@ def validate_generated(document: dict[str, Any]) -> None:
         if not isinstance(module_value, str):
             fail(f"materialized topic {topic_id} must define a module")
         module_path = ROOT / module_value
-        module_meta, body = parse_frontmatter(module_path)
+        # Modules deliberately have no YAML frontmatter -- published lesson
+        # Markdown begins directly with its title and learning content, per
+        # the same convention validate_learning_experience.py's
+        # validate_generated_modules() enforces (it fails a module that
+        # *does* expose frontmatter). This function used to call
+        # parse_frontmatter(module_path) here, which unconditionally failed
+        # every real materialized module with "missing frontmatter" --
+        # never caught because this check sat behind an unapproved
+        # action_required CI run until a real Etapa 6c evaluate dispatch
+        # surfaced it.
+        body = read(module_path)
         diagrams = MERMAID.findall(body)
         if len(diagrams) < minimum:
             fail(f"module {topic_id} has fewer Mermaid diagrams than configured")
@@ -247,8 +257,14 @@ def validate_generated(document: dict[str, Any]) -> None:
             fail(f"module {topic_id} needs at least three verified source links")
         if "Como foi usada" not in source_section and "Como foi usado" not in source_section:
             fail(f"module {topic_id} must explain how sources were used")
-        if module_meta.get("visual_diagrams", 0) < minimum:
-            fail(f"module {topic_id} must declare configured visual_diagrams")
+        # visual_diagrams was previously read from the module's own (now
+        # nonexistent) frontmatter as a second, declared-vs-actual check.
+        # The len(diagrams) < minimum check above already verifies the real
+        # diagram count directly from content -- a frontmatter-declared
+        # count would only ever be a duplicate, weaker signal (the model
+        # could declare a number without it matching reality), not
+        # additional guarantee, so it is not reimplemented against a field
+        # that no longer exists rather than invented as a new requirement.
 
 
 def main() -> None:

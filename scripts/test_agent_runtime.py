@@ -1025,6 +1025,112 @@ def test_replan_gets_a_higher_tool_iteration_and_token_budget() -> None:
     assert max_tokens_for("replan") > DEFAULT_MAX_TOKENS
 
 
+def test_evaluate_allowlist_matches_grading_only_scope() -> None:
+    # Etapa 6c: a deliberately narrower slice of
+    # phase_allows_artifact("assessment") than review_framework.py's full
+    # profile allows -- see agent_runtime.py's EVALUATE_ALLOWED_* comment.
+    assert is_write_allowed("evaluate", "state/progress.json")
+    assert is_write_allowed("evaluate", "state/integrations.json")
+    assert is_write_allowed("evaluate", "state/assessments/TOPIC-002/attempt-001.json")
+    assert not is_write_allowed("evaluate", "study/topics/TOPIC-003/module.md")
+    assert not is_write_allowed("evaluate", "study/roadmap.md")
+    assert not is_write_allowed("evaluate", "study/integrations.md")
+    assert not is_write_allowed("evaluate", ".github/ISSUE_TEMPLATE/assessment-topic-003.yml")
+
+
+def test_evaluate_gets_the_full_resolution_and_publish_tool_set() -> None:
+    author_tool_names = {t["name"] for t in author_tools("evaluate")}
+    reviewer_tool_names = {t["name"] for t in reviewer_tools("evaluate")}
+
+    for name in (
+        "list_assessment_issues",
+        "resolve_assessment_candidates",
+        "read_github_issue",
+        "post_issue_comment",
+        "label_github_issue",
+        "unlabel_github_issue",
+    ):
+        assert name in author_tool_names, name
+
+    # Reviewer gets the same two read-only resolution tools plus
+    # read_github_issue for independent re-verification, but never the
+    # publish-side-effect tools -- same "reviewer cannot cause the side
+    # effect it is checking" rule as every other phase.
+    assert "list_assessment_issues" in reviewer_tool_names
+    assert "resolve_assessment_candidates" in reviewer_tool_names
+    assert "read_github_issue" in reviewer_tool_names
+    assert "post_issue_comment" not in reviewer_tool_names
+    assert "label_github_issue" not in reviewer_tool_names
+    assert "unlabel_github_issue" not in reviewer_tool_names
+    # Never the intake-scoped bundle -- list_intake_issues filters by the
+    # discovery label, unrelated to assessment issues.
+    assert "list_intake_issues" not in author_tool_names
+    assert "list_intake_issues" not in reviewer_tool_names
+    # Etapa 6c is grading-only: no task-projection engine access yet.
+    assert "run_publish_projection" not in author_tool_names
+    assert "run_publish_projection" not in reviewer_tool_names
+
+
+def test_evaluate_label_tools_are_scoped_to_exact_labels() -> None:
+    with tempfile.TemporaryDirectory() as tmp:
+        root = Path(tmp)
+        reviewer = RepoTools(root=root, phase="evaluate", role="reviewer")
+        try:
+            reviewer.label_github_issue(1, "assessment:graded")
+        except AllowlistViolation as exc:
+            assert "not available to this role" in str(exc)
+        else:
+            raise AssertionError("reviewer must never be allowed to label an issue")
+
+        author = RepoTools(
+            root=root,
+            phase="evaluate",
+            role="author",
+            github_request=lambda *a, **k: {},
+            github_repository="o/r",
+        )
+        try:
+            author.label_github_issue(1, "intake:imported")
+        except AllowlistViolation as exc:
+            assert "only" in str(exc)
+        else:
+            raise AssertionError("evaluate author must not be able to apply an unrelated label")
+        try:
+            author.unlabel_github_issue(1, "assessment:graded")
+        except AllowlistViolation as exc:
+            assert "only" in str(exc)
+        else:
+            raise AssertionError("evaluate author must only be able to remove assessment:submitted")
+
+
+def test_evaluate_author_can_actually_read_the_submitted_answers() -> None:
+    # Regression for a real dispatch finding (Etapa 6c validation): the
+    # first real evaluate run correctly refused to grade rather than
+    # fabricate a score, because resolve_assessment_candidates only returns
+    # the classification decision (accepted/rejected + reasons), never the
+    # issue body -- and read_github_issue was missing from the author's
+    # tool list entirely. list_assessment_issues alone only returns
+    # metadata (number, title, labels, author, date), never the answers.
+    author_tool_names = {t["name"] for t in author_tools("evaluate")}
+    assert "read_github_issue" in author_tool_names
+
+
+def test_evaluate_reviewer_model_is_sonnet_and_structural() -> None:
+    # AGENT_CATALOG already had an "evaluate" row (Sonnet, structural=True)
+    # before Etapa 6c -- no catalog gap to close here, only harness wiring,
+    # same as replan.
+    config = _default_config()
+    assert resolve_phase_reviewer_model("evaluate", config) == MODEL_CATALOG["sonnet"]
+
+
+def test_evaluate_gets_a_higher_tool_iteration_and_token_budget() -> None:
+    # Applied preemptively (Etapa 6c) rather than waiting for a failed real
+    # dispatch, unlike replan -- diagnostic, generate_detailed and replan
+    # all independently hit the same untouched-default gap first.
+    assert max_tool_iterations_for("evaluate") > MAX_TOOL_ITERATIONS
+    assert max_tokens_for("evaluate") > DEFAULT_MAX_TOKENS
+
+
 def main() -> None:
     tests = [
         test_write_allowlist_matches_setup_execution_contract,
@@ -1073,6 +1179,12 @@ def main() -> None:
         test_replan_has_no_github_issues_tools,
         test_replan_reviewer_model_is_sonnet_per_agent_catalog,
         test_replan_gets_a_higher_tool_iteration_and_token_budget,
+        test_evaluate_allowlist_matches_grading_only_scope,
+        test_evaluate_gets_the_full_resolution_and_publish_tool_set,
+        test_evaluate_author_can_actually_read_the_submitted_answers,
+        test_evaluate_label_tools_are_scoped_to_exact_labels,
+        test_evaluate_reviewer_model_is_sonnet_and_structural,
+        test_evaluate_gets_a_higher_tool_iteration_and_token_budget,
     ]
     for test in tests:
         test()

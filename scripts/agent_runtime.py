@@ -48,6 +48,7 @@ import json
 import os
 import sys
 import urllib.error
+import urllib.parse
 import urllib.request
 from dataclasses import dataclass, field
 from hashlib import sha256
@@ -58,6 +59,13 @@ from agent_model_resolution import AGENT_CATALOG, resolve_effective_models
 from ensure_repository_labels import github_request_factory
 from github_issues_backend import GitHubIssuesBackend
 from intake_resolution import DISCOVERY_LABEL, IMPORTED_LABEL, IntakeIssue, resolve_candidates
+from assessment_resolution import (
+    ASSESSMENT_LABEL,
+    GRADED_LABEL,
+    SUBMITTED_LABEL,
+    AssessmentIssue,
+    resolve_candidates as resolve_assessment_candidates_deterministic,
+)
 from task_projection_engine import (
     ProjectionError,
     TopicProjection,
@@ -109,6 +117,13 @@ PHASE_MAX_TOKENS: dict[str, int] = {
     # generate_detailed's lesson modules -- raised preemptively rather than
     # waiting for a second real dispatch to hit it separately.
     "replan": 16384,
+    # Etapa 6c: applied preemptively this time rather than waiting for a
+    # failed dispatch -- diagnostic, generate_detailed and replan all
+    # independently hit this same gap first, and evaluate's grading pass
+    # (read module + rubric + full issue + prior attempts, then write a
+    # response-by-response evaluation comment plus an attempt record) is at
+    # least as token-heavy as any of them.
+    "evaluate": 16384,
 }
 
 
@@ -161,6 +176,11 @@ PHASE_MAX_TOOL_ITERATIONS: dict[str, int] = {
     # reasoning, confirmed necessary by an actual failed run rather than
     # applied preemptively.
     "replan": 40,
+    # Etapa 6c: same preemptive reasoning as PHASE_MAX_TOKENS above --
+    # resolving the issue, reading the module/rubric/prior attempts, then
+    # writing per-question feedback plus the attempt record is at least as
+    # many round trips as replan's roadmap rewrite.
+    "evaluate": 40,
 }
 
 
@@ -298,6 +318,24 @@ REPLAN_ALLOWED_PREFIXES: tuple[str, ...] = (
     ".github/ISSUE_TEMPLATE/assessment-topic-",
 )
 
+# Etapa 6c (docs/claude-agent-pilot-etapa6-design.md, section 5.3): a
+# deliberately *narrower* slice of review_framework.py's
+# phase_allows_artifact("assessment") than the full profile allows. The full
+# profile also permits study/topics/, study/modules/, study/flashcards/,
+# study/roadmap.md, study/integrations.md and assessment-topic-*.yml,
+# because instructions/55-evaluate-topic.md's "When the topic is mastered"
+# section can auto-materialize the next content window
+# (57-materialize-next-content.md) -- that chained path is Etapa 6d, not
+# 6c. Restricting the allowlist here to only the grading domain forces the
+# "mastered but auto-materialization isn't wired yet" refusal the 6c author
+# addendum requires at a code boundary, the same fail-closed shape used for
+# slides in generate_detailed and for migration in replan.
+EVALUATE_ALLOWED_EXACT_PATHS: tuple[str, ...] = (
+    "state/progress.json",
+    "state/integrations.json",
+)
+EVALUATE_ALLOWED_PREFIXES: tuple[str, ...] = ("state/assessments/",)
+
 # Which allowlist applies to which manifest phase. `generate_proposal` is a
 # harness-level key for the `proposal` suboperation of manifest.yml's
 # `generate` phase (instructions/28-propose-path.md) -- Etapa 5's first
@@ -317,6 +355,7 @@ PHASE_ALLOWLISTS: dict[str, tuple[tuple[str, ...], tuple[str, ...]]] = {
     "diagnostic": (DIAGNOSTIC_ALLOWED_EXACT_PATHS, DIAGNOSTIC_ALLOWED_PREFIXES),
     "track": (TRACK_ALLOWED_EXACT_PATHS, TRACK_ALLOWED_PREFIXES),
     "replan": (REPLAN_ALLOWED_EXACT_PATHS, REPLAN_ALLOWED_PREFIXES),
+    "evaluate": (EVALUATE_ALLOWED_EXACT_PATHS, EVALUATE_ALLOWED_PREFIXES),
 }
 
 # Agent ids that exist as real rows in AGENT_CATALOG for the pilot phases.
@@ -336,6 +375,7 @@ PHASE_AUTHOR_AGENT: dict[str, str] = {
     "diagnostic": "diagnostic",
     "track": "track",
     "replan": "replan",
+    "evaluate": "evaluate",
 }
 
 # Etapa 4b (docs/claude-agent-pilot-etapa4b-diagnostic-design.md): unlike
@@ -379,7 +419,16 @@ def slides_toggle_enabled() -> bool:
 # signals -- but never list_intake_issues (that tool is scoped to the intake
 # discovery label, unrelated to task-tracking issues) and never
 # label_github_issue/post_issue_comment. See _track_issue_read_tool() below.
-PHASES_WITH_GITHUB_ISSUES: frozenset[str] = frozenset({"intake", "publish", "diagnostic", "track"})
+# Etapa 6c: `evaluate` needs the fullest GitHub Issues access of any phase so
+# far -- read (resolve + re-read the assessment issue), write a comment
+# (the evaluation itself), and both add and remove specific labels
+# (assessment:submitted -> assessment:graded / assessment:recovery-required).
+# See PHASE_ALLOWED_APPLIED_LABELS / PHASE_ALLOWED_REMOVED_LABELS below for
+# the exact, hardcoded label sets -- same "the model supplies data, never
+# the allowlist" shape as INTAKE_AUTHOR_ALLOWED_LABEL already established.
+PHASES_WITH_GITHUB_ISSUES: frozenset[str] = frozenset(
+    {"intake", "publish", "diagnostic", "track", "evaluate"}
+)
 
 # The only label the intake author is ever allowed to apply. Restricting this
 # at the tool layer (not just in the prompt) means a model that misreads its
@@ -387,6 +436,20 @@ PHASES_WITH_GITHUB_ISSUES: frozenset[str] = frozenset({"intake", "publish", "dia
 # the same "fail closed on a code boundary, not a prompt boundary" posture
 # `write_file`'s allowlist check already applies to file writes.
 INTAKE_AUTHOR_ALLOWED_LABEL = IMPORTED_LABEL
+
+# Etapa 6c: the exact labels `evaluate` may apply or remove, straight from
+# instructions/55-evaluate-topic.md's "Finalize repository and issue state"
+# section -- generalizes the single-label shape INTAKE_AUTHOR_ALLOWED_LABEL
+# established into a per-phase set, since evaluate needs two different
+# outcomes (mastered vs. recovery-required) rather than one fixed label.
+RECOVERY_REQUIRED_LABEL = "assessment:recovery-required"
+PHASE_ALLOWED_APPLIED_LABELS: dict[str, frozenset[str]] = {
+    "intake": frozenset({INTAKE_AUTHOR_ALLOWED_LABEL}),
+    "evaluate": frozenset({GRADED_LABEL, RECOVERY_REQUIRED_LABEL}),
+}
+PHASE_ALLOWED_REMOVED_LABELS: dict[str, frozenset[str]] = {
+    "evaluate": frozenset({SUBMITTED_LABEL}),
+}
 
 
 class AllowlistViolation(RuntimeError):
@@ -543,7 +606,9 @@ class RepoTools:
         self.github_request = github_request
         self.github_repository = github_repository
         self._issue_summaries: dict[int, dict[str, Any]] | None = None
+        self._assessment_issue_summaries: dict[int, dict[str, Any]] | None = None
         self.labels_applied: list[tuple[int, str]] = []
+        self.labels_removed: list[tuple[int, str]] = []
         self._last_candidate_resolution_state: str | None = None
         self._last_publish_status: str | None = None
         self._diagnostic_comment_posted_this_turn: bool = False
@@ -713,6 +778,133 @@ class RepoTools:
             indent=2,
         )
 
+    def list_assessment_issues(self) -> str:
+        """List open+closed issues carrying assessment:submitted, instance repo only.
+
+        Same cheap-summary-then-full-body shape as list_intake_issues.
+        Filtering server-side by the most specific already-known label
+        (assessment:submitted, not the broader assessment) keeps this to
+        exactly the candidates classify_issue's rules 1-2 would accept
+        anyway on that axis.
+        """
+        request_json, repository = self._require_github()
+        raw = request_json(
+            "GET",
+            f"/repos/{repository}/issues?labels={SUBMITTED_LABEL}&state=all&per_page=100",
+            None,
+        )
+        summaries: dict[int, dict[str, Any]] = {}
+        for item in raw or []:
+            summaries[item["number"]] = {
+                "number": item["number"],
+                "title": item.get("title", ""),
+                "labels": [label.get("name", "") for label in item.get("labels", [])],
+                "author_login": (item.get("user") or {}).get("login"),
+                "is_pull_request": "pull_request" in item,
+                "created_at": item.get("created_at"),
+            }
+        self._assessment_issue_summaries = summaries
+        return json.dumps(list(summaries.values()), indent=2)
+
+    def resolve_assessment_candidates(self, topic_id: str, issue_number: int | None = None) -> str:
+        """Run the real scripts/assessment_resolution.py classification, not a model guess.
+
+        instructions/55-evaluate-topic.md requires this exact algorithm and
+        explicitly forbids choosing an arbitrary newest issue -- same
+        rationale as resolve_intake_candidates. Two modes, matching the two
+        supported learner commands:
+
+        - issue_number given ("...Avalie a issue #<número>."): read that one
+          issue and validate it against topic_id, no search.
+        - issue_number omitted ("...Avalie minhas respostas."): search
+          list_assessment_issues() and classify every candidate.
+
+        recorded_issue_numbers and last_attempt_created_at come from the
+        harness reading state/assessments/<topic_id>/ itself (like
+        resolve_intake_candidates reads state/intake-summary.json), never
+        from the model -- both are used to reject candidates, and a
+        model-supplied value could be used to admit one instead.
+        """
+        request_json, repository = self._require_github()
+        recorded_issue_numbers, last_attempt_created_at = self._known_assessment_state(topic_id)
+        allowed_authors = self._known_instance_owner()
+
+        candidates: list[AssessmentIssue] = []
+        if issue_number is not None:
+            full = json.loads(self.read_github_issue(issue_number))
+            candidates.append(
+                AssessmentIssue(
+                    number=full["number"],
+                    title=full["title"],
+                    body=full["body"],
+                    labels=frozenset(full["labels"]),
+                    created_at=full.get("created_at"),
+                    is_pull_request=full["is_pull_request"],
+                    author_login=full["author_login"],
+                )
+            )
+        else:
+            if self._assessment_issue_summaries is None:
+                self.list_assessment_issues()
+            assert self._assessment_issue_summaries is not None
+            for summary in self._assessment_issue_summaries.values():
+                full = json.loads(self.read_github_issue(summary["number"]))
+                candidates.append(
+                    AssessmentIssue(
+                        number=full["number"],
+                        title=full["title"],
+                        body=full["body"],
+                        labels=frozenset(full["labels"]),
+                        created_at=full.get("created_at"),
+                        is_pull_request=full["is_pull_request"],
+                        author_login=full["author_login"],
+                    )
+                )
+
+        resolution = resolve_assessment_candidates_deterministic(
+            candidates,
+            topic_id,
+            recorded_issue_numbers=recorded_issue_numbers,
+            last_attempt_created_at=last_attempt_created_at,
+            allowed_authors=allowed_authors,
+        )
+        return json.dumps(
+            {
+                "state": resolution.state,
+                "accepted": [decision.__dict__ for decision in resolution.accepted],
+                "rejected": [decision.__dict__ for decision in resolution.rejected],
+            },
+            indent=2,
+        )
+
+    def _known_assessment_state(self, topic_id: str) -> tuple[list[int], str | None]:
+        """Read every recorded attempt for one topic from the repository, not the model.
+
+        Etapa 6c: state/assessments/<topic_id>/attempt-*.json has no
+        checked-in JSON schema yet (instructions/55-evaluate-topic.md only
+        describes its required fields in prose) -- this reads defensively,
+        skipping any file that is not valid JSON or does not carry the two
+        fields resolution needs (issue_number, timestamp), rather than
+        failing the whole operation on one malformed historical attempt.
+        """
+        directory = normalize_relative_path(self.root, f"state/assessments/{topic_id}")
+        if not directory.is_dir():
+            return [], None
+        recorded: list[int] = []
+        latest: str | None = None
+        for path in sorted(directory.glob("attempt-*.json")):
+            try:
+                data = json.loads(path.read_text(encoding="utf-8"))
+            except (OSError, json.JSONDecodeError):
+                continue
+            issue_number = data.get("issue_number")
+            if isinstance(issue_number, int):
+                recorded.append(issue_number)
+            timestamp = data.get("timestamp")
+            if isinstance(timestamp, str) and timestamp and (latest is None or timestamp > latest):
+                latest = timestamp
+        return recorded, latest
+
     def _known_instance_owner(self) -> list[str]:
         marker = normalize_relative_path(self.root, ".open-study-path/instance.yml")
         if not marker.is_file():
@@ -734,15 +926,36 @@ class RepoTools:
     def label_github_issue(self, number: int, label: str) -> str:
         if self.role != "author":
             raise AllowlistViolation("label_github_issue is not available to this role")
-        if label != INTAKE_AUTHOR_ALLOWED_LABEL:
+        allowed = PHASE_ALLOWED_APPLIED_LABELS.get(self.phase, frozenset())
+        if label not in allowed:
             raise AllowlistViolation(
-                f"refusing to apply label {label!r}: the intake author may only apply "
-                f"{INTAKE_AUTHOR_ALLOWED_LABEL!r}"
+                f"refusing to apply label {label!r} for phase {self.phase!r}: only "
+                f"{sorted(allowed)!r} may be applied"
             )
         request_json, repository = self._require_github()
         request_json("POST", f"/repos/{repository}/issues/{number}/labels", {"labels": [label]})
         self.labels_applied.append((number, label))
         return f"applied label {label!r} to issue #{number}"
+
+    def unlabel_github_issue(self, number: int, label: str) -> str:
+        """Remove one label -- currently only evaluate clearing assessment:submitted.
+
+        Mirrors label_github_issue's phase-scoped, hardcoded allowlist shape:
+        the model supplies which issue, never which labels are permitted.
+        """
+        if self.role != "author":
+            raise AllowlistViolation("unlabel_github_issue is not available to this role")
+        allowed = PHASE_ALLOWED_REMOVED_LABELS.get(self.phase, frozenset())
+        if label not in allowed:
+            raise AllowlistViolation(
+                f"refusing to remove label {label!r} for phase {self.phase!r}: only "
+                f"{sorted(allowed)!r} may be removed"
+            )
+        request_json, repository = self._require_github()
+        encoded_label = urllib.parse.quote(label, safe="")
+        request_json("DELETE", f"/repos/{repository}/issues/{number}/labels/{encoded_label}", None)
+        self.labels_removed.append((number, label))
+        return f"removed label {label!r} from issue #{number}"
 
     def list_issue_comments(self, number: int) -> str:
         """Read the full comment thread of one issue -- the diagnostic session's only state.
@@ -981,6 +1194,15 @@ class RepoTools:
             )
         if name == "label_github_issue":
             return self.label_github_issue(tool_input["number"], tool_input["label"])
+        if name == "unlabel_github_issue":
+            return self.unlabel_github_issue(tool_input["number"], tool_input["label"])
+        if name == "list_assessment_issues":
+            return self.list_assessment_issues()
+        if name == "resolve_assessment_candidates":
+            return self.resolve_assessment_candidates(
+                tool_input["topic_id"],
+                tool_input.get("issue_number"),
+            )
         if name == "run_publish_projection":
             return self.run_publish_projection(
                 tool_input["topics"],
@@ -1027,6 +1249,52 @@ def _track_issue_read_tool() -> list[dict[str, Any]]:
     entry of _github_issue_read_tools() applies here.
     """
     return [_github_issue_read_tools()[1]]
+
+
+def _evaluate_resolution_tools() -> list[dict[str, Any]]:
+    """list_assessment_issues + resolve_assessment_candidates, shared by both roles.
+
+    Etapa 6c: the reviewer must independently re-run the same deterministic
+    resolution the author ran (instructions/55-evaluate-topic.md's
+    'independently recompute ... the candidate issue resolution'), not trust
+    the author's stated issue number -- so it gets the same two read-only
+    resolution tools, just never the publish-side-effect tools
+    (post_issue_comment/label_github_issue/unlabel_github_issue) that follow
+    them in author_tools().
+    """
+    return [
+        {
+            "name": "list_assessment_issues",
+            "description": (
+                "List every open+closed issue carrying assessment:submitted in the "
+                "instance repository. Returns summaries only (no body) -- use "
+                "resolve_assessment_candidates to classify them, never read_github_issue "
+                "plus your own judgment."
+            ),
+            "input_schema": {"type": "object", "properties": {}, "required": []},
+        },
+        {
+            "name": "resolve_assessment_candidates",
+            "description": (
+                "Deterministically resolve the assessment issue for one topic using the "
+                "real scripts/assessment_resolution.py algorithm -- never classify "
+                "candidates yourself and never pick an arbitrary newest issue. Pass "
+                "issue_number only when the learner's command gave an explicit issue "
+                "number ('...Avalie a issue #<número>.'); omit it for the standard "
+                "command ('...Avalie minhas respostas.') to search instead. Already-"
+                "recorded attempts and the last attempt's timestamp are resolved by the "
+                "harness itself from state/assessments/<topic_id>/, not supplied by you."
+            ),
+            "input_schema": {
+                "type": "object",
+                "properties": {
+                    "topic_id": {"type": "string"},
+                    "issue_number": {"type": "integer"},
+                },
+                "required": ["topic_id"],
+            },
+        },
+    ]
 
 
 def author_tools(phase: str | None = None) -> list[dict[str, Any]]:
@@ -1194,6 +1462,66 @@ def author_tools(phase: str | None = None) -> list[dict[str, Any]]:
         )
     elif phase == "track":
         tools.extend(_track_issue_read_tool())
+    elif phase == "evaluate":
+        tools.extend(_evaluate_resolution_tools())
+        tools.append(_github_issue_read_tools()[1])  # read_github_issue
+        tools.append(
+            {
+                "name": "post_issue_comment",
+                "description": (
+                    "Post the approved detailed evaluation as a comment on the resolved "
+                    "assessment issue. Call this only after the independent assessment review "
+                    "has approved the proposed score and state transition -- never before, per "
+                    "instructions/55-evaluate-topic.md's 'Do not publish the comment ... until "
+                    "the independent assessment review has approved'."
+                ),
+                "input_schema": {
+                    "type": "object",
+                    "properties": {
+                        "number": {"type": "integer"},
+                        "body": {"type": "string"},
+                    },
+                    "required": ["number", "body"],
+                },
+            }
+        )
+        tools.append(
+            {
+                "name": "label_github_issue",
+                "description": (
+                    f"Apply a label to the resolved assessment issue. Only {GRADED_LABEL!r} "
+                    f"(mastered) or {RECOVERY_REQUIRED_LABEL!r} (not mastered) is accepted -- "
+                    "apply exactly one, after posting the evaluation comment, never both."
+                ),
+                "input_schema": {
+                    "type": "object",
+                    "properties": {
+                        "number": {"type": "integer"},
+                        "label": {"type": "string"},
+                    },
+                    "required": ["number", "label"],
+                },
+            }
+        )
+        tools.append(
+            {
+                "name": "unlabel_github_issue",
+                "description": (
+                    f"Remove a label from the resolved assessment issue. Only "
+                    f"{SUBMITTED_LABEL!r} is accepted -- remove it once grading is finalized, "
+                    "per instructions/55-evaluate-topic.md's 'remove assessment:submitted "
+                    "from the issue'."
+                ),
+                "input_schema": {
+                    "type": "object",
+                    "properties": {
+                        "number": {"type": "integer"},
+                        "label": {"type": "string"},
+                    },
+                    "required": ["number", "label"],
+                },
+            }
+        )
     return tools
 
 
@@ -1265,8 +1593,18 @@ def reviewer_tools(phase: str | None = None) -> list[dict[str, Any]]:
         # (_track_issue_read_tool()), not the full intake-scoped bundle:
         # list_intake_issues filters by the intake discovery label, which has
         # nothing to do with the authoritative task issue the track reviewer
-        # needs to re-check.
-        tools.extend(_track_issue_read_tool() if phase == "track" else _github_issue_read_tools())
+        # needs to re-check. `evaluate` is the same story: it needs
+        # read_github_issue only, plus _evaluate_resolution_tools() added
+        # below (list_assessment_issues/resolve_assessment_candidates), not
+        # the intake-scoped bundle either.
+        if phase == "track":
+            tools.extend(_track_issue_read_tool())
+        elif phase == "evaluate":
+            tools.append(_github_issue_read_tools()[1])  # read_github_issue only
+        else:
+            tools.extend(_github_issue_read_tools())
+    if phase == "evaluate":
+        tools.extend(_evaluate_resolution_tools())
     return tools
 
 
