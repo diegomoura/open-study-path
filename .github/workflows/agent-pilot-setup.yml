@@ -17,6 +17,12 @@ name: Agent pilot
 # updates GitHub Issues as real, immediate writes during the author step,
 # independent of the pull request that records state/integrations.json.
 #
+# `track` (Etapa 6a, docs/claude-agent-pilot-etapa6-design.md) reuses this
+# same generic workflow rather than a dedicated one, since it is a single
+# workflow_dispatch operation like intake/publish, not multi-turn like
+# `diagnostic` -- it only ever reads a GitHub issue
+# (read_github_issue), never writes one.
+#
 # Untrusted workflow_dispatch inputs (target_repo, extra_context) are only
 # ever passed through step `env:` and read back as shell variables, never
 # interpolated directly into a `run:` script body -- that's what keeps a
@@ -41,6 +47,7 @@ on:
           - publish
           - generate_proposal
           - generate_detailed
+          - track
       target_repo:
         description: Target instance repository, as OWNER/REPOSITORY
         required: true
@@ -57,11 +64,13 @@ permissions:
   # Needed by the `intake` phase's label_github_issue tool (applies
   # `intake:imported` to the source issue) and by `publish`'s
   # run_publish_projection tool (creates/updates GitHub Issues via
-  # GitHubIssuesBackend). Harmless no-op permission for
-  # bootstrap_instance/configure_intake, which never call either tool --
-  # RepoTools._require_github rejects GitHub Issues access outside
-  # PHASES_WITH_GITHUB_ISSUES regardless of what this token can technically
-  # do.
+  # GitHubIssuesBackend). `track` (Etapa 6a) only ever reads an issue
+  # (read_github_issue) through this same scope -- it has no write-side
+  # GitHub tool at all. Harmless no-op permission for
+  # bootstrap_instance/configure_intake/generate_proposal/generate_detailed,
+  # which never call any GitHub Issues tool -- RepoTools._require_github
+  # rejects GitHub Issues access outside PHASES_WITH_GITHUB_ISSUES regardless
+  # of what this token can technically do.
   issues: write
 
 concurrency:

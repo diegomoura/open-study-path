@@ -184,6 +184,21 @@ def is_generated_artifact(path: str) -> bool:
     """Return whether an instance PR output requires review coverage."""
 
     normalized = normalize_path(path)
+    # Etapa 6a (docs/claude-agent-pilot-etapa6-design.md): a real track
+    # dispatch's own review artifact failed CI over this exact file --
+    # "generated artifacts are not covered by an approved current review:
+    # state/agent-pilot-usage.jsonl" -- and the same gap was confirmed
+    # already present, unnoticed, in the already-merged diagnostic PR
+    # (state/agent-pilot-usage.jsonl was never listed in its `artifacts:`
+    # either). It is the harness's own per-dispatch cost/token ledger,
+    # appended by every phase's workflow step, not a domain artifact any
+    # review profile's checks are about -- no profile's `checks` tuple has
+    # anything to say about token usage. Excluding it here, at the
+    # classification that every profile shares, fixes this for every phase
+    # at once instead of asking each phase's reviewer prompt to remember to
+    # declare a file it has no judgment to offer on.
+    if normalized == "state/agent-pilot-usage.jsonl":
+        return False
     if normalized in {INSTANCE_MARKER, "study.config.yml", "README.md"}:
         return True
     if normalized.startswith(REVIEW_PATH_PREFIX) or normalized.startswith(CONTENT_REVIEW_PATH_PREFIX):

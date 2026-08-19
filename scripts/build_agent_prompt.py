@@ -25,6 +25,7 @@ PHASE_INSTRUCTION_FILES = {
     "generate_proposal": ["instructions/28-propose-path.md"],
     "generate_detailed": ["instructions/30-generate-path.md"],
     "diagnostic": ["instructions/20-diagnostic.md"],
+    "track": ["instructions/50-track-progress.md"],
 }
 
 # Files every author/reviewer prompt gets regardless of phase.
@@ -116,6 +117,7 @@ PHASE_REVIEW_PROFILE: dict[str, str] = {
     "generate_proposal": "curriculum",
     "generate_detailed": "curriculum",
     "diagnostic": "diagnostic",
+    "track": "progress",
 }
 
 AUTHOR_HARNESS_NOTE = """\
@@ -459,6 +461,57 @@ to fill the gap.
 """
 
 
+AUTHOR_TRACK_NOTE = """\
+## Track tool addendum (Etapa 6a)
+
+You may write only `state/progress.json` and `state/integrations.json` --
+write_file rejects anything else regardless of what you attempt. This phase
+never touches `study/`, `.open-study-path/instance.yml` or any content or
+curriculum file; a structural pedagogical change belongs to replan, not
+track.
+
+You have one narrow GitHub tool: read_github_issue(number), for the already-
+known authoritative task issue whose number comes from
+`state/integrations.json` (via read_file), never from any discovery-label
+listing -- you do not have list_intake_issues here, since that tool is
+scoped to intake discovery, not task tracking. Use it to check the current
+labels/state of the authoritative task issue before deciding the progress
+transition.
+
+Mastery only ever comes from a verified evaluation already recorded in
+`state/assessments/` or an existing `state/progress.json` mastery entry --
+never from this phase's own reading of task, reminder, habit, calendar or
+formative-practice signals, exactly as instructions/50-track-progress.md's
+"Activity completion is not equivalent to learning" section requires. If an
+assessment issue exists but has not yet been evaluated, keep the topic in
+the pending/`Em avaliação` state and surface the normal evaluate command
+through finish_phase -- do not attempt to grade it yourself in this phase.
+"""
+
+REVIEWER_TRACK_NOTE = """\
+## Track tool addendum (Etapa 6a)
+
+You have the same narrow read_github_issue(number) tool as the track author,
+not the intake-scoped list_intake_issues bundle. Use it to independently
+re-fetch the authoritative task issue's current state and verify that every
+mastery value the author wrote traces back to an already-approved assessment
+attempt or pre-existing progress entry, never to task/reminder/habit/
+calendar signals alone (no_competing_authority, source_state_consistency).
+
+Your `checks:` block must use these five keys verbatim -- copy them exactly,
+do not paraphrase or invent a plausible-sounding synonym (a real Etapa 6a
+dispatch got three of these wrong by paraphrasing, which fails CI even
+though the review itself said "approved"):
+`source_state_consistency`, `valid_state_transition` (singular),
+`external_projection_consistency`, `next_action_consistency`,
+`no_competing_authority`. If you are ever unsure whether a key you are about
+to write is the literal one, read_file scripts/review_framework.py and copy
+REVIEW_PROFILES["progress"]["checks"] directly rather than working from
+memory or from docs/review-framework.md's prose description of what each
+check covers.
+"""
+
+
 def _read(relative_path: str) -> str:
     return (ROOT / relative_path).read_text(encoding="utf-8")
 
@@ -489,6 +542,8 @@ def build_author_prompts(phase: str, target_repo: str, extra_context: str) -> tu
         sections.append(AUTHOR_DETAILED_NOTE)
     elif phase == "diagnostic":
         sections.append(AUTHOR_DIAGNOSTIC_NOTE)
+    elif phase == "track":
+        sections.append(AUTHOR_TRACK_NOTE)
     system_prompt = "\n\n---\n\n".join(sections)
 
     user_prompt = (
@@ -515,6 +570,8 @@ def build_reviewer_prompts(phase: str, target_repo: str, base_sha: str, author_s
         sections.append(REVIEWER_DETAILED_NOTE)
     elif phase == "diagnostic":
         sections.append(REVIEWER_DIAGNOSTIC_NOTE)
+    elif phase == "track":
+        sections.append(REVIEWER_TRACK_NOTE)
     system_prompt = "\n\n---\n\n".join(sections)
 
     review_profile = PHASE_REVIEW_PROFILE.get(phase, "setup")

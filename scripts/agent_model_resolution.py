@@ -77,6 +77,15 @@ AGENT_CATALOG: dict[str, AgentSpec] = {
     "publish": AgentSpec("publish", "publish", "author", "haiku", False),
     "integration_preflight": AgentSpec("integration_preflight", "publish", "reviewer", "haiku", False),
     "evaluate": AgentSpec("evaluate", "evaluate", "author", "sonnet", True),
+    # Etapa 6a (docs/claude-agent-pilot-etapa6-design.md, section 3.1): `track`
+    # never had a row here or in templates/agent-models.yml -- a real gap in
+    # the original model-tier design, not just harness wiring. Haiku,
+    # non-structural: in the pilot's restricted scope (github_issues backend
+    # only), instructions/50-track-progress.md is state synchronization
+    # against well-defined transition rules (mastery only from a verified
+    # evaluation, external activity never sufficient alone), same class as
+    # publish/integration_preflight, not curriculum_architect/evaluate.
+    "track": AgentSpec("track", "track", "author", "haiku", False),
     "replan": AgentSpec("replan", "replan", "author", "sonnet", False),
 }
 

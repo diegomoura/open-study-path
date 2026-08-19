@@ -205,6 +205,12 @@ non-blocking warning whenever a structural agent (`curriculum_architect`,
 below its recommended tier. The warning documents a deliberate cost/quality choice; it
 never blocks CI.
 
+`track` (`instructions/50-track-progress.md`) is Haiku and not structural: it
+synchronizes state against well-defined transition rules (mastery only from a verified
+evaluation; external activity such as a checked task, reminder or habit streak is never
+sufficient alone), the same class as `publish`/`integration_preflight` rather than
+`curriculum_architect`/`evaluate`.
+
 ## Safety
 
 Never commit credentials, secrets, raw submissions, original uploaded files, diagnostic transcripts or unnecessary personal data. Prefer pull requests for structural and material changes. Ask before destructive operations.

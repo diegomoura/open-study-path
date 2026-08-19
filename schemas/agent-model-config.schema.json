@@ -26,6 +26,7 @@
         "publish": {"$ref": "#/$defs/tier_or_null"},
         "integration_preflight": {"$ref": "#/$defs/tier_or_null"},
         "evaluate": {"$ref": "#/$defs/tier_or_null"},
+        "track": {"$ref": "#/$defs/tier_or_null"},
         "replan": {"$ref": "#/$defs/tier_or_null"}
       }
     }
