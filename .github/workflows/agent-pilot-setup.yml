@@ -28,6 +28,16 @@ name: Agent pilot
 # writes repository files (roadmap, instance marker, study.config.yml,
 # progress, study/**, assessment-topic issue templates).
 #
+# `evaluate` (Etapa 6c, grading only -- no auto-materialization or task-state
+# move yet, see docs/claude-agent-pilot-etapa6-design.md section 5.3) also
+# reuses this workflow. Unlike every other phase here, its `extra_context`
+# input carries the learner's literal command
+# ("Finalizei o TOPIC-000. Avalie minhas respostas." or "...Avalie a issue
+# #<número>.") rather than free-form notes -- instructions/55-evaluate-topic.md
+# already specifies parsing that exact natural-language command, so no new
+# structured workflow_dispatch input (topic_id/issue_number) was added; the
+# author extracts both from extra_context itself.
+#
 # Untrusted workflow_dispatch inputs (target_repo, extra_context) are only
 # ever passed through step `env:` and read back as shell variables, never
 # interpolated directly into a `run:` script body -- that's what keeps a
@@ -54,6 +64,7 @@ on:
           - generate_detailed
           - track
           - replan
+          - evaluate
       target_repo:
         description: Target instance repository, as OWNER/REPOSITORY
         required: true
@@ -72,7 +83,12 @@ permissions:
   # run_publish_projection tool (creates/updates GitHub Issues via
   # GitHubIssuesBackend). `track` (Etapa 6a) only ever reads an issue
   # (read_github_issue) through this same scope -- it has no write-side
-  # GitHub tool at all. Harmless no-op permission for
+  # GitHub tool at all. `evaluate` (Etapa 6c) uses the fullest slice of this
+  # scope so far: reads (resolve_assessment_candidates/read_github_issue),
+  # posts a comment (post_issue_comment), and both applies and removes
+  # specific labels (label_github_issue/unlabel_github_issue) -- `issues:
+  # write` already covers label deletion and comment creation, no separate
+  # permission needed. Harmless no-op permission for
   # bootstrap_instance/configure_intake/generate_proposal/generate_detailed,
   # which never call any GitHub Issues tool -- RepoTools._require_github
   # rejects GitHub Issues access outside PHASES_WITH_GITHUB_ISSUES regardless
