@@ -1015,6 +1015,16 @@ def test_replan_reviewer_model_is_sonnet_per_agent_catalog() -> None:
     assert resolve_phase_reviewer_model("replan", config) == MODEL_CATALOG["sonnet"]
 
 
+def test_replan_gets_a_higher_tool_iteration_and_token_budget() -> None:
+    # Regression for a real dispatch finding (Etapa 6b validation): the
+    # first real replan run failed outright with "did not finish within 20
+    # tool round trips" at the untouched MAX_TOOL_ITERATIONS default --
+    # replan was missing from PHASE_MAX_TOOL_ITERATIONS entirely, the same
+    # class of gap diagnostic and generate_detailed already hit before it.
+    assert max_tool_iterations_for("replan") > MAX_TOOL_ITERATIONS
+    assert max_tokens_for("replan") > DEFAULT_MAX_TOKENS
+
+
 def main() -> None:
     tests = [
         test_write_allowlist_matches_setup_execution_contract,
@@ -1062,6 +1072,7 @@ def main() -> None:
         test_replan_allowlist_matches_review_framework_profile,
         test_replan_has_no_github_issues_tools,
         test_replan_reviewer_model_is_sonnet_per_agent_catalog,
+        test_replan_gets_a_higher_tool_iteration_and_token_budget,
     ]
     for test in tests:
         test()

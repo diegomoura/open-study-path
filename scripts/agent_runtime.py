@@ -102,6 +102,13 @@ PHASE_MAX_TOKENS: dict[str, int] = {
     # table when it was first introduced. Same 16384 value, same "no cost
     # or rate downside" reasoning already verified for generate_detailed.
     "diagnostic": 16384,
+    # Etapa 6b: not yet confirmed to hit max_tokens itself (the real dispatch
+    # that motivated this exhausted tool round trips first, see
+    # PHASE_MAX_TOOL_ITERATIONS below), but a full study/roadmap.md rewrite
+    # is the same class of large single-file write_file call as
+    # generate_detailed's lesson modules -- raised preemptively rather than
+    # waiting for a second real dispatch to hit it separately.
+    "replan": 16384,
 }
 
 
@@ -145,6 +152,15 @@ MAX_TOOL_ITERATIONS = 20
 # smaller phase should still be caught quickly, at the original budget.
 PHASE_MAX_TOOL_ITERATIONS: dict[str, int] = {
     "generate_detailed": 40,
+    # Etapa 6b: a real replan dispatch hit "did not finish within 20 tool
+    # round trips" and failed outright -- replan needs to read the current
+    # roadmap, instance marker, study.config.yml and the evidence that
+    # triggered the change, then write a revised roadmap plus a review
+    # artifact-worthy diff, easily exceeding the untouched 20 default for
+    # the same reason generate_detailed needed 40. Same value, same
+    # reasoning, confirmed necessary by an actual failed run rather than
+    # applied preemptively.
+    "replan": 40,
 }
 
 
