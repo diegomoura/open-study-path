@@ -273,6 +273,35 @@ class TaskProjectionEngineTests(unittest.TestCase):
         with self.assertRaises(AssertionError):
             render_learner_integration_summary(leaking_state)
 
+    def test_publish_succeeds_for_materialized_topic_without_slides(self):
+        # Real finding from a real Etapa 6d evaluate dispatch:
+        # run_publish_projection returned status="error" (ReadbackValidationError)
+        # for a genuinely correct, fully materialized topic, because
+        # validate_readback unconditionally required a slides URL for every
+        # materialized, non-Planejado lesson -- but this entire pilot (and
+        # any real instance with study_slides.enabled: false) never has one.
+        # The author correctly refused to fabricate a slides URL rather than
+        # pass this false requirement. This is the exact scenario, run
+        # through the real engine end to end, confirming it now succeeds.
+        no_slides_topic = TopicProjection(
+            topic_id="TOPIC-001",
+            lesson_number=1,
+            title="Tema 1",
+            direct_prerequisite_ids=(),
+            content_version=1,
+            canonical_state="ready",
+            materialized=True,
+            external_id=None,
+            lesson_url="https://github.example/aula-1",
+            slides_url=None,
+            assessment_url="https://github.example/avaliacao-1",
+        )
+        backend = FakeBackend("github_issues")
+        result = publish_projection(
+            topics=(no_slides_topic,), backend=backend, operation_id="no-slides-v1"
+        )
+        self.assertEqual("success", result.journal["status"])
+
     def test_readback_fails_when_list_order_is_wrong(self):
         backend = FakeBackend("trello")
         result = publish_projection(

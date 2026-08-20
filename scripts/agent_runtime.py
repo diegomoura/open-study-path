@@ -345,6 +345,21 @@ EVALUATE_ALLOWED_PREFIXES: tuple[str, ...] = (
     "study/flashcards/",
     "study/assessments/",
     ".github/ISSUE_TEMPLATE/assessment-topic-",
+    # Etapa 6d real finding: a real materialization dispatch needed both of
+    # these and had neither. generate_detailed's own allowlist already has
+    # state/content-reviews/ (the independent content-review artifact
+    # 36-review-course-content.md requires for a newly materialized topic --
+    # evaluate's materialization path produces the exact same review
+    # obligation); state/operations/ is publish's own operation-journal
+    # prefix, needed here because evaluate now calls the same
+    # run_publish_projection engine and must be able to persist a journal
+    # entry on a failed/partial attempt for auditability, per
+    # instructions/manifest.yml listing state/operations/ as an explicit
+    # evaluate-phase output. Without this, a real dispatch's author
+    # correctly refused to write the journal rather than violate the
+    # allowlist -- but that meant a failed projection left no audit trail.
+    "state/content-reviews/",
+    "state/operations/",
 )
 
 # Which allowlist applies to which manifest phase. `generate_proposal` is a

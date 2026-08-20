@@ -1027,11 +1027,16 @@ def test_replan_gets_a_higher_tool_iteration_and_token_budget() -> None:
 
 def test_evaluate_allowlist_matches_full_assessment_profile() -> None:
     # Etapa 6d: expanded to match review_framework.py's full
-    # phase_allows_artifact("assessment") exactly, now that materialization
+    # phase_allows_artifact("assessment") scope, now that materialization
     # and the task-state move are wired -- see agent_runtime.py's
     # EVALUATE_ALLOWED_* comment. Etapa 6c's version of this test asserted
     # the opposite (narrower) scope; that assertion is now stale by design,
-    # not a regression.
+    # not a regression. state/content-reviews/ and state/operations/ are
+    # additionally allowed here even though phase_allows_artifact("assessment")
+    # itself doesn't cover them -- both are real gaps a real dispatch hit:
+    # the reviewer blocked on a missing content-review artifact, and the
+    # author refused to journal a failed run_publish_projection attempt
+    # because the prefix wasn't allowed.
     assert is_write_allowed("evaluate", "state/progress.json")
     assert is_write_allowed("evaluate", "state/integrations.json")
     assert is_write_allowed("evaluate", "state/assessments/TOPIC-002/attempt-001.json")
@@ -1042,6 +1047,8 @@ def test_evaluate_allowlist_matches_full_assessment_profile() -> None:
     assert is_write_allowed("evaluate", "study/flashcards/TOPIC-003.md")
     assert is_write_allowed("evaluate", "study/assessments/TOPIC-003.yml")
     assert is_write_allowed("evaluate", ".github/ISSUE_TEMPLATE/assessment-topic-003.yml")
+    assert is_write_allowed("evaluate", "state/content-reviews/TOPIC-003.yml")
+    assert is_write_allowed("evaluate", "state/operations/assessment-topic-003-attempt-01.json")
     assert not is_write_allowed("evaluate", "state/reviews/agent-pilot-evaluate.yml")
     assert not is_write_allowed("evaluate", ".open-study-path/instance.yml")
 

@@ -657,7 +657,13 @@ nothing to materialize and no task-state change to make.
    `generate_detailed` already applies (beginner-first pedagogy, sourced
    content, Mermaid diagrams, no placeholder text). Slides stay disabled
    in this pilot, same as `generate_detailed` -- do not create
-   `study/topics/*.md` frontmatter pointing at a `slides_url`.
+   `study/topics/*.md` frontmatter pointing at a `slides_url`. A real
+   Etapa 6d dispatch's reviewer correctly blocked on this exact omission:
+   also write `state/content-reviews/<new_topic_id>.yml`, the independent
+   content-review artifact `36-review-course-content.md` requires for any
+   newly materialized topic (matching the one already committed for
+   TOPIC-001) -- materializing content and presenting it as ready without
+   that review is a blocking finding, not optional.
 5. Call `run_publish_projection` with the updated `topics` list (including
    the newly materialized topic, `materialized: true`, `canonical_state`
    reflecting its real readiness) so the real engine projects both the

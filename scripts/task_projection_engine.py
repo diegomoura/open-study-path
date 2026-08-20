@@ -840,7 +840,20 @@ def validate_readback(
         if urls != expected_urls:
             errors.append(f"resource URLs differ for {lesson.topic.topic_id}")
         if lesson.topic.materialized and lesson.visible_state != "Planejado":
-            for key in ("slides", "lesson", "assessment"):
+            # "slides" deliberately excluded from this mandatory-presence
+            # check: unlike lesson/assessment, every real instance with
+            # study_slides.enabled: false (this entire pilot, since Etapa 4)
+            # never has a slides_url for any topic, materialized or not --
+            # that is the correct, expected state, not a missing resource.
+            # A real evaluate dispatch's own run_publish_projection call hit
+            # this exact false requirement and correctly refused to
+            # fabricate a slides URL rather than pass this check. The
+            # separate `urls != expected_urls` comparison above already
+            # catches a genuine mismatch if slides really were expected
+            # (topic.slides_url set) and the backend dropped them, so
+            # dropping "slides" from this list does not weaken that
+            # protection.
+            for key in ("lesson", "assessment"):
                 if not expected_urls.get(key):
                     errors.append(
                         f"materialized eligible lesson {lesson.topic.topic_id} is missing {key} URL"
