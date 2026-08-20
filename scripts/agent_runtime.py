@@ -118,13 +118,16 @@ PHASE_MAX_TOKENS: dict[str, int] = {
     # generate_detailed's lesson modules -- raised preemptively rather than
     # waiting for a second real dispatch to hit it separately.
     "replan": 16384,
-    # Etapa 6c: applied preemptively this time rather than waiting for a
-    # failed dispatch -- diagnostic, generate_detailed and replan all
-    # independently hit this same gap first, and evaluate's grading pass
-    # (read module + rubric + full issue + prior attempts, then write a
-    # response-by-response evaluation comment plus an attempt record) is at
-    # least as token-heavy as any of them.
-    "evaluate": 16384,
+    # Etapa 6d real finding: 16384 (set preemptively in Etapa 6c) was not
+    # enough -- a real materialization dispatch hit stop_reason="max_tokens"
+    # mid-turn, never reaching finish_phase, almost certainly while writing
+    # a single ~300-line materialized module (study/modules/TOPIC-002.md in
+    # the run that hit this) in one write_file call alongside grading
+    # output in the same turn. generate_detailed itself only ever writes
+    # one module per turn without also grading a submission first, so
+    # evaluate's mastery path is a strictly heavier single-turn combination
+    # than any phase 16384 was already confirmed to cover.
+    "evaluate": 32768,
 }
 
 
