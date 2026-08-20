@@ -732,6 +732,20 @@ issue for the recovery plan still needs to be opened by hand.
    is -- the real independent check for this materialization is the
    separate evaluate reviewer job's own `next_materialization_consistency`
    inspection, not this file.
+
+   `course_content_review.py`'s real validator deterministically
+   cross-checks two things the LLM review pass can miss: each outcome
+   marker (`LO-1`, `LO-2`, ...) must appear in the module exactly once,
+   never repeated; and `state/content-reviews/<new_topic_id>.yml`'s own
+   `outcome_coverage[].assessment_questions` for each outcome must exactly
+   match that outcome's real `assessed_by` question list in
+   `study/assessments/<new_topic_id>.yml` -- not an approximation, not a
+   subset. A real Etapa 6d dispatch got full LLM-reviewer approval with a
+   repeated `LO-4` marker and two stale `assessment_questions` lists, and
+   still failed this deterministic check. Before finishing, read the
+   assessment file you just wrote and verify the content-review's
+   `outcome_coverage` matches it question-for-question, and grep the
+   module for each outcome marker to confirm it appears exactly once.
 5. Call `run_publish_projection` with the updated `topics` list (including
    the newly materialized topic, `materialized: true`, `canonical_state`
    reflecting its real readiness) so the real engine projects both the
