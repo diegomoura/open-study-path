@@ -755,6 +755,19 @@ issue for the recovery plan still needs to be opened by hand.
 REVIEWER_EVALUATE_NOTE = """\
 ## Evaluate tool addendum (Etapa 6d)
 
+Your own `artifacts:` list must NOT include `state/operations/*.json` or
+`state/content-reviews/*.yml` paths, even though both are real files this
+operation legitimately changed. `review_framework.py`'s
+`phase_allows_artifact("assessment", ...)` does not cover either path --
+they are validated by their own dedicated contracts
+(`scripts/validate_task_projection.py` for operation journals,
+`scripts/course_content_review.py` for content reviews), not by this
+generic review's artifact-coverage mechanism. A real Etapa 6d dispatch
+listed both and failed CI with "cannot approve out-of-scope artifact" for
+each. List every other real artifact this operation changed as usual;
+just leave these two path prefixes out of this specific file's own
+`artifacts:` block.
+
 Your `checks:` block must use these six keys verbatim -- copy them exactly
 from `review_framework.py`'s `REVIEW_PROFILES["assessment"]["checks"]`
 rather than paraphrasing (a real Etapa 6a track dispatch got 3 of 5 keys
