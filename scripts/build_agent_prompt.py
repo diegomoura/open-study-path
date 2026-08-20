@@ -684,13 +684,35 @@ issue for the recovery plan still needs to be opened by hand.
    `generate_detailed` already applies (beginner-first pedagogy, sourced
    content, Mermaid diagrams, no placeholder text). Slides stay disabled
    in this pilot, same as `generate_detailed` -- do not create
-   `study/topics/*.md` frontmatter pointing at a `slides_url`. A real
-   Etapa 6d dispatch's reviewer correctly blocked on this exact omission:
-   also write `state/content-reviews/<new_topic_id>.yml`, the independent
-   content-review artifact `36-review-course-content.md` requires for any
-   newly materialized topic (matching the one already committed for
-   TOPIC-001) -- materializing content and presenting it as ready without
-   that review is a blocking finding, not optional.
+   `study/topics/*.md` frontmatter pointing at a `slides_url`. Never put
+   the literal internal `topic_id` string (e.g. `TOPIC-002`) inside a
+   `lesson_url`/`assessment_url` value -- a real Etapa 6d dispatch hit
+   `run_publish_projection` failing read-back validation for exactly this
+   (the visible-content leak detector correctly treats an internal ID
+   appearing in a rendered resource URL as a metadata leak, the same rule
+   that already applies to descriptions). Use a URL that identifies the
+   lesson by slug/title instead, e.g.
+   `https://example.com/study/aula-02-tipos-tipagem-estatica-e-erros`, not
+   one containing the literal topic ID.
+
+   Also write `state/content-reviews/<new_topic_id>.yml`, the content-review
+   artifact `36-review-course-content.md` requires for any newly
+   materialized topic (matching the one already committed for TOPIC-001)
+   -- materializing content and presenting it as ready without that
+   review is a blocking finding, not optional.
+   `scripts/course_content_review.py`'s real validator requires
+   `status: approved` and `review_mode: independent_pass` unconditionally
+   (do not write anything else, it will fail CI) -- only actually approve
+   if the content genuinely meets every one of the 9 required checks at
+   the same bar `generate_detailed`'s separate `content_reviewer` agent
+   holds it to, since this is the only artifact claiming that check
+   happened. Be honest about what this pass actually is: add a
+   `non_blocking_findings` entry stating plainly that this review was
+   written in the same turn as the content itself, not by a genuinely
+   separate isolated call the way `generate_detailed`'s `content_reviewer`
+   is -- the real independent check for this materialization is the
+   separate evaluate reviewer job's own `next_materialization_consistency`
+   inspection, not this file.
 5. Call `run_publish_projection` with the updated `topics` list (including
    the newly materialized topic, `materialized: true`, `canonical_state`
    reflecting its real readiness) so the real engine projects both the
@@ -745,16 +767,28 @@ author did not touch `study/` and did not attempt
 `57-materialize-next-content.md`, since there is nothing to materialize
 without mastery. When the topic *is* mastered, verify all of: the
 authoritative task's `canonical_state` was actually moved via the real
-engine (not hand-edited), the newly
-materialized topic meets the same bar `36-review-course-content.md`
-already holds `generate_detailed` to (outcome markers, sourced content,
-Mermaid diagrams, no placeholder text, slides still disabled), and
-`run_publish_projection`'s real read-back validation actually passed
-(check `state/integrations.json`/`study/integrations.md` were written from
-a `status="success"` result, not fabricated). A materialization that skips
-independent content review, or a task-state move that never called the
-real engine, is a blocking finding here, not a documented scope boundary
--- Etapa 6d has both tools, so using them correctly is now in scope.
+engine (not hand-edited); `state/content-reviews/<new_topic_id>.yml` is
+present, claims `status: approved`, and honestly discloses in a
+`non_blocking_findings` entry that it was written in the same pass as the
+content (that disclosure is expected and correct, not itself a finding --
+do not block on it); the newly materialized topic itself genuinely meets
+the same bar `36-review-course-content.md` already holds `generate_detailed`
+to (outcome markers actually beside the content that teaches each one --
+not beside a restatement of the objective, a real Etapa 6d dispatch's own
+mistake this exact check is meant to catch -- sourced content, Mermaid
+diagrams, no placeholder text, slides still disabled, no literal internal
+`topic_id` string inside any resource URL); and `run_publish_projection`'s
+real read-back validation actually passed (check
+`state/integrations.json`/`study/integrations.md` were written from a
+`status="success"` result, not fabricated). You are the genuinely
+independent check this materialization depends on -- re-verify the
+content-review file's own claims yourself against the actual module text
+rather than trusting them, since it was written in the same pass as the
+content it is reviewing. A materialization that skips content review
+entirely, misplaces outcome markers, leaks an internal ID into a resource
+URL, or a task-state move that never called the real engine, is a
+blocking finding here, not a documented scope boundary -- Etapa 6d has
+both tools, so using them correctly is now in scope.
 """
 
 
