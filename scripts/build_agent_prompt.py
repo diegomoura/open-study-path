@@ -737,11 +737,19 @@ issue for the recovery plan still needs to be opened by hand.
    reflecting its real readiness) so the real engine projects both the
    completed task and the newly available one to GitHub Issues in one
    pass. On `status="success"`, write `state/integrations.json` and
-   `study/integrations.md` from the returned payload. On
-   `status="error"` (ambiguous match, partial write, failed read-back),
-   do not write those two files -- persist only the operation journal if
-   present and report the blocked outcome through `finish_phase`, exactly
-   as `instructions/40-publish-tasks.md` already requires of `publish`.
+   `study/integrations.md` from the returned payload, and update
+   `state/progress.json`'s entry for the newly materialized topic to set
+   its own `external_task` (`provider`, `external_id`, `last_synced_at`)
+   from that same response -- a real Etapa 6d dispatch left this `null`
+   while `state/integrations.json` and the live GitHub issue already
+   showed a real created task, an internal disagreement between the two
+   files that risks a duplicate task on the next publish/track run. Match
+   the same `external_task` shape already used for the graded topic's own
+   entry. On `status="error"` (ambiguous match, partial write, failed
+   read-back), do not write those two files -- persist only the operation
+   journal if present and report the blocked outcome through
+   `finish_phase`, exactly as `instructions/40-publish-tasks.md` already
+   requires of `publish`.
 """
 
 REVIEWER_EVALUATE_NOTE = """\
