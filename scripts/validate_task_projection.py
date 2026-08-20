@@ -118,8 +118,15 @@ def validate_operation(path: Path) -> list[str]:
         "migration",
     }:
         errors.append(f"{label} has invalid operation_type")
-    if data.get("mode") not in {"active_window", "full_curriculum"}:
-        errors.append(f"{label} has invalid mode")
+    # Etapa 6d real finding: `mode` and `topics` were never fields on the
+    # real task_projection_engine.OperationJournal dataclass -- this
+    # validator's schema for them predates (or was never reconciled with)
+    # what the real engine actually writes. A real evaluate dispatch
+    # persisted the real, unmodified journal returned by
+    # run_publish_projection and was rejected for missing both. This
+    # validator's own existing tests never caught the mismatch either,
+    # since their fixture was hand-built to include both fields rather
+    # than sourced from a real OperationJournal.as_dict()/asdict() call.
     if data.get("status") not in {
         "not_started",
         "in_progress",
@@ -129,13 +136,6 @@ def validate_operation(path: Path) -> list[str]:
         "success",
     }:
         errors.append(f"{label} has invalid status")
-    topics = data.get("topics")
-    if not isinstance(topics, list) or any(
-        not isinstance(topic, str) or not TOPIC_ID.fullmatch(topic) for topic in topics
-    ):
-        errors.append(f"{label} has invalid topics")
-    elif len(topics) != len(set(topics)):
-        errors.append(f"{label} contains duplicate topics")
     for name in ("attempt", "external_read_count", "external_write_count", "commit_budget"):
         value = data.get(name)
         minimum = 1 if name in {"attempt", "commit_budget"} else 0

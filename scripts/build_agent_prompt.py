@@ -754,6 +754,17 @@ wrong this way before its addendum was corrected to spell them out):
 `submission_resolution`, `rubric_fidelity`, `independent_scoring`,
 `feedback_alignment`, `progress_update`, `next_materialization_consistency`.
 
+Keep the `checks:` block self-consistent with `blocking_findings`: a check
+marked `failed` needs at least one `blocking_findings` entry explaining
+why, and `status: action_required` needs at least one `failed` check
+behind it -- a real Etapa 6d dispatch marked `next_materialization_consistency:
+failed` with an empty `blocking_findings: []` and every other piece of its
+own reasoning actually supporting "passed," which failed CI outright on a
+self-contradiction alone (`validate_review_framework.py` requires every
+listed check to equal `passed`, regardless of whether findings explain
+the deviation). If your own investigation found nothing wrong, mark the
+check `passed`.
+
 Independently re-run `resolve_assessment_candidates` yourself -- do not
 trust the author's stated issue number for `submission_resolution`. Re-score
 every response against the rubric yourself for `independent_scoring` --
