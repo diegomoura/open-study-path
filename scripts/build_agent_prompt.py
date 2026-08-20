@@ -632,10 +632,37 @@ conclusions stand.
 
 Persist the attempt under `state/assessments/<topic_id>/`, prepare the
 `state/progress.json` transition, apply `assessment:recovery-required`,
-remove `assessment:submitted`, post the comment explaining the gap and the
-recovery path. Do not touch `run_publish_projection`,
-`apply_topic_assessment_result`, or anything under `study/` -- there is
-nothing to materialize and no task-state change to make.
+remove `assessment:submitted`, post the comment explaining the gap.
+
+`instructions/55-evaluate-topic.md`'s "Synchronize derived providers"
+section ("Move or complete the authoritative task backend according to
+the GitHub result") applies regardless of mastery outcome, not only when
+mastered -- a real Etapa 6d dispatch's reviewer correctly caught this
+being skipped entirely, leaving the authoritative task issue showing a
+stale "concluded" label/body while `state/progress.json` recorded
+`review_required`, a visible contradiction. Do not skip it: build the
+`topics` list the same way as the mastered path, call
+`apply_topic_assessment_result(topics, topic_id, passed=false)` (sets
+`canonical_state` to `review_required`, not `completed`), then call
+`run_publish_projection` with the result so the authoritative task's real
+label/body reflect the recovery outcome. Handle a `status="error"` result
+the same way as the mastered path: no `study/`, `state/integrations.json`
+or `study/integrations.md` writes, report via `finish_phase`.
+
+`instructions/55-evaluate-topic.md`'s "Recovery and focused reassessment"
+section also calls for creating a dedicated focused-recovery GitHub issue
+(targeted study tasks, reassessment scoped to weak areas,
+`RECOVERY-<topic_id>-A<attempt>` tracked in the task backend, linked to
+the original assessment/module/task). This harness slice has no tool that
+creates a new GitHub issue -- only `post_issue_comment` (comments on an
+issue that already exists) and `label_github_issue`/`unlabel_github_issue`
+(labels on an issue that already exists). Do not fabricate this by
+commenting a "recovery issue" body onto the original assessment issue
+instead of a real new one, and do not invent a `create_github_issue` call
+that does not exist in your tool list. Complete the task-state sync above,
+then report through `finish_phase` that focused-recovery-issue creation
+is not enabled in this harness slice yet, so a human knows a real GitHub
+issue for the recovery plan still needs to be opened by hand.
 
 ### If the topic IS mastered
 
@@ -693,12 +720,32 @@ comparing the author's reasoning against each rubric criterion, not just
 checking its arithmetic; a disagreement in scoring is a blocking finding,
 not a note.
 
+`progress_update`: the authoritative task's real state must reflect the
+graded outcome regardless of mastery -- `55-evaluate-topic.md`'s
+"Synchronize derived providers" section is not gated on mastery. Whether
+mastered or not, confirm `apply_topic_assessment_result` +
+`run_publish_projection` were actually called (not skipped, not
+hand-edited) and that the real task issue's label/body genuinely changed
+to match (`Concluído` when mastered, `Revisão necessária` when not). A
+real Etapa 6d dispatch's reviewer correctly caught exactly the failure
+mode to watch for here: grading persisted correctly in
+`state/assessments/`/`state/progress.json`, but the live task issue was
+never resynced, leaving it visibly contradicting the graded result. Also
+confirm that when NOT mastered, the author reported (via `finish_phase`,
+not fabricated) that this harness slice has no tool to create the
+dedicated focused-recovery GitHub issue `55-evaluate-topic.md`'s
+"Recovery and focused reassessment" section calls for -- a comment posted
+onto the *original* assessment issue pretending to be that recovery issue
+is a blocking finding, not an acceptable substitute.
+
 `next_materialization_consistency`: when the topic is not mastered, this
-check is trivially satisfied ("nothing in scope") -- confirm the author
-did not touch `study/` or call `run_publish_projection`/
-`apply_topic_assessment_result` in that case. When the topic *is*
-mastered, verify all of: the authoritative task's `canonical_state` was
-actually moved via the real engine (not hand-edited), the newly
+check covers only the next-topic materialization step specifically (not
+the task-state sync, which `progress_update` above covers) -- confirm the
+author did not touch `study/` and did not attempt
+`57-materialize-next-content.md`, since there is nothing to materialize
+without mastery. When the topic *is* mastered, verify all of: the
+authoritative task's `canonical_state` was actually moved via the real
+engine (not hand-edited), the newly
 materialized topic meets the same bar `36-review-course-content.md`
 already holds `generate_detailed` to (outcome markers, sourced content,
 Mermaid diagrams, no placeholder text, slides still disabled), and
