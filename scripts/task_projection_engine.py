@@ -1072,11 +1072,36 @@ def render_learner_integration_summary(state: Mapping[str, Any]) -> str:
     lines = [
         "# Integrações ativas",
         "",
-        f"A trilha está organizada no **{provider}**.",
-        "",
-        f"- Quadro ou projeto: {container.get('url', 'link indisponível')}",
-        "- Use as colunas para escolher uma aula disponível e mova somente a aula iniciada para **Em estudo**.",
     ]
+    # Etapa 6d real finding: this text was unconditionally Kanban/board-style
+    # ("Quadro ou projeto", "Use as colunas... mova para Em estudo") for
+    # every provider, including github_issues -- which has no board and no
+    # columns at all, only issue labels. GitHubIssuesBackend synthesizes a
+    # "project"-kind resource for the repository itself (so the `container`
+    # lookup above always matches something for github_issues too), which
+    # made this read as if a real Kanban board existed when it never did.
+    # This was the first time this function's real output was ever
+    # inspected against a genuinely successful github_issues projection --
+    # every earlier real dispatch either predated a working
+    # run_publish_projection call (Etapa 4/5) or had this file hand-written
+    # to bypass an unrelated AssertionError bug (Etapa 6a fixture prep).
+    if provider == "github_issues":
+        lines.extend(
+            [
+                f"A trilha está organizada nas Issues deste repositório GitHub ({container.get('url', 'link indisponível')}).",
+                "",
+                "- Cada aula é uma issue; use os labels `study:*` para ver em que estado ela está.",
+            ]
+        )
+    else:
+        lines.extend(
+            [
+                f"A trilha está organizada no **{provider}**.",
+                "",
+                f"- Quadro ou projeto: {container.get('url', 'link indisponível')}",
+                "- Use as colunas para escolher uma aula disponível e mova somente a aula iniciada para **Em estudo**.",
+            ]
+        )
     reminders = dict((state.get("selected_capabilities") or {}).get("reminders") or {})
     if reminders.get("status") == "success":
         lines.append(

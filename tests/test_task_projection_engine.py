@@ -302,6 +302,47 @@ class TaskProjectionEngineTests(unittest.TestCase):
         )
         self.assertEqual("success", result.journal["status"])
 
+    def test_learner_summary_uses_label_based_language_for_github_issues(self):
+        # Real finding from a real Etapa 6d evaluate dispatch:
+        # render_learner_integration_summary()'s text was unconditionally
+        # Kanban/board-style ("Quadro ou projeto", "Use as colunas...
+        # mova... para Em estudo") for every provider, including
+        # github_issues -- which has no board and no columns, only issue
+        # labels. GitHubIssuesBackend synthesizes a "project"-kind resource
+        # for the repository itself, so the container lookup always
+        # matched something for github_issues too, making the rendered
+        # text describe a UI that does not exist and would mislead a real
+        # learner about how to track their own progress. This was the
+        # first time this function's real output was ever produced by a
+        # genuinely successful github_issues publish_projection() call --
+        # every earlier real dispatch either predated a working
+        # run_publish_projection or had this file hand-written to bypass
+        # the unrelated AssertionError bug (Etapa 6a fixture prep).
+        topic = TopicProjection(
+            topic_id="TOPIC-001",
+            lesson_number=1,
+            title="Tema 1",
+            direct_prerequisite_ids=(),
+            content_version=1,
+            canonical_state="ready",
+            materialized=True,
+            external_id=None,
+            lesson_url="https://github.example/aula-1",
+            slides_url=None,
+            assessment_url="https://github.example/avaliacao-1",
+        )
+        backend = FakeBackend("github_issues")
+        result = publish_projection(
+            topics=(topic,), backend=backend, operation_id="label-language-v1"
+        )
+        self.assertEqual("success", result.journal["status"])
+        summary = result.learner_summary
+        self.assertIn("Issues", summary)
+        self.assertIn("labels", summary)
+        self.assertNotIn("Quadro ou projeto", summary)
+        self.assertNotIn("colunas", summary)
+        self.assertNotIn("Em estudo", summary)
+
     def test_readback_fails_when_list_order_is_wrong(self):
         backend = FakeBackend("trello")
         result = publish_projection(
