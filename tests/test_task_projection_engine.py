@@ -343,6 +343,46 @@ class TaskProjectionEngineTests(unittest.TestCase):
         self.assertNotIn("colunas", summary)
         self.assertNotIn("Em estudo", summary)
 
+    def test_learner_summary_mentions_routine_mode(self):
+        # Real finding from a real Etapa 6d evaluate dispatch:
+        # scripts/integration_resolution.py's real validate_plan() requires
+        # study.config.yml's integration_preferences.routine.mode value to
+        # appear verbatim in study/integrations.md -- but
+        # render_learner_integration_summary() only ever receives the
+        # projection state (GitHub + roadmap + journal), never the
+        # instance config file, so it structurally had no way to know that
+        # value. Etapa 6a's own hand-written fixture happened to include
+        # this line by coincidence; the real render function never did
+        # until this fix. Defaults to "none" (this pilot's only real
+        # value) when the caller does not supply a different one.
+        topic = TopicProjection(
+            topic_id="TOPIC-001",
+            lesson_number=1,
+            title="Tema 1",
+            direct_prerequisite_ids=(),
+            content_version=1,
+            canonical_state="ready",
+            materialized=True,
+            external_id=None,
+            lesson_url="https://github.example/aula-1",
+            slides_url=None,
+            assessment_url="https://github.example/avaliacao-1",
+        )
+        backend = FakeBackend("github_issues")
+        result = publish_projection(
+            topics=(topic,), backend=backend, operation_id="routine-mode-v1"
+        )
+        self.assertIn("none", result.learner_summary.lower())
+
+        backend2 = FakeBackend("github_issues")
+        result2 = publish_projection(
+            topics=(topic,),
+            backend=backend2,
+            operation_id="routine-mode-v2",
+            routine_mode="fixed_calendar",
+        )
+        self.assertIn("fixed_calendar", result2.learner_summary)
+
     def test_readback_fails_when_list_order_is_wrong(self):
         backend = FakeBackend("trello")
         result = publish_projection(

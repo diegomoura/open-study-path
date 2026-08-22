@@ -1030,6 +1030,7 @@ class RepoTools:
         topics: list[dict[str, Any]],
         operation_id: str,
         course_name: str,
+        routine_mode: str = "none",
     ) -> str:
         """Run the real task_projection_engine.publish_projection() against GitHub Issues.
 
@@ -1079,6 +1080,7 @@ class RepoTools:
                 journal_state=journal_state,
                 previous_integration_state=previous_integration_state,
                 course_name=course_name,
+                routine_mode=routine_mode,
             )
         except ProjectionError as exc:
             self._last_publish_status = "error"
@@ -1278,6 +1280,7 @@ class RepoTools:
                 tool_input["topics"],
                 tool_input["operation_id"],
                 tool_input["course_name"],
+                tool_input.get("routine_mode", "none"),
             )
         if name == "list_issue_comments":
             return self.list_issue_comments(tool_input["number"])
@@ -1393,7 +1396,13 @@ def _run_publish_projection_tool() -> dict[str, Any]:
             "status='error', do not write state/integrations.json or "
             "study/integrations.md -- persist only the operation journal (if present "
             "in the response) and report the blocked/partial outcome through "
-            "finish_phase, per instructions/40-publish-tasks.md."
+            "finish_phase, per instructions/40-publish-tasks.md. `routine_mode` "
+            "(optional, defaults to 'none') should be the real "
+            "integration_preferences.routine.mode value from study.config.yml, read "
+            "via read_file -- it appears verbatim in the generated "
+            "study/integrations.md so scripts/integration_resolution.py's real "
+            "validator can find it; the default only covers this pilot's single "
+            "actual configuration."
         ),
         "input_schema": {
             "type": "object",
@@ -1401,6 +1410,7 @@ def _run_publish_projection_tool() -> dict[str, Any]:
                 "topics": {"type": "array", "items": {"type": "object"}},
                 "operation_id": {"type": "string"},
                 "course_name": {"type": "string"},
+                "routine_mode": {"type": "string"},
             },
             "required": ["topics", "operation_id", "course_name"],
         },

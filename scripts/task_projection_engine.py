@@ -1056,7 +1056,9 @@ def normalized_integration_state(
     return state
 
 
-def render_learner_integration_summary(state: Mapping[str, Any]) -> str:
+def render_learner_integration_summary(
+    state: Mapping[str, Any], *, routine_mode: str = "none"
+) -> str:
     task = dict((state.get("selected_capabilities") or {}).get("task_manager") or {})
     provider = str(task.get("provider") or "ferramenta de tarefas")
     container = next(
@@ -1109,6 +1111,26 @@ def render_learner_integration_summary(state: Mapping[str, Any]) -> str:
         )
     else:
         lines.append("- Nenhum lembrete adicional está ativo.")
+    # Etapa 6d real finding: scripts/integration_resolution.py's real
+    # validate_plan() requires study.config.yml's own
+    # integration_preferences.routine.mode value to appear verbatim
+    # somewhere in this text -- but this function only ever receives the
+    # projection `state` (built from GitHub Issues + the roadmap), never
+    # the instance config file, so it structurally had no way to know that
+    # value at all. Etapa 6a's own hand-written fixture happened to
+    # include this line by coincidence; the real render function never
+    # did until now. routine_mode defaults to "none" because that is the
+    # only value this pilot's single real configuration ever uses -- a
+    # harness supporting other routine modes would need the caller to
+    # read study.config.yml and pass the real value through
+    # run_publish_projection instead of relying on this default.
+    if routine_mode == "none":
+        lines.append(
+            "- Rotina de estudo: modo **none** (sem calendário fixo nem lembretes "
+            "externos configurados) -- você avança conforme sua disponibilidade."
+        )
+    else:
+        lines.append(f"- Rotina de estudo: modo **{routine_mode}**.")
     lines.extend(
         [
             "- O GitHub continua sendo a fonte de verdade para conteúdo, avaliações e progresso.",
@@ -1130,6 +1152,7 @@ def publish_projection(
     previous_integration_state: Mapping[str, Any] | None = None,
     course_name: str = "Minha trilha de estudos",
     reminder_writer: Callable[[Mapping[str, Any]], Mapping[str, Any]] | None = None,
+    routine_mode: str = "none",
 ) -> PublicationResult:
     plan = build_projection_plan(topics, provider=backend.provider)
     journal = OperationJournal.from_mapping(
@@ -1225,7 +1248,7 @@ def publish_projection(
         )
         journal.checkpoint("durable_state_persisted")
         integration_state["operations"][journal.operation_id]["status"] = "success"
-        summary = render_learner_integration_summary(integration_state)
+        summary = render_learner_integration_summary(integration_state, routine_mode=routine_mode)
         return PublicationResult(
             integration_state=integration_state,
             journal=journal.as_dict(),
