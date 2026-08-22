@@ -746,11 +746,16 @@ issue for the recovery plan still needs to be opened by hand.
    assessment file you just wrote and verify the content-review's
    `outcome_coverage` matches it question-for-question, and grep the
    module for each outcome marker to confirm it appears exactly once.
-5. Call `run_publish_projection` with the updated `topics` list (including
-   the newly materialized topic, `materialized: true`, `canonical_state`
-   reflecting its real readiness) so the real engine projects both the
-   completed task and the newly available one to GitHub Issues in one
-   pass. On `status="success"`, write `state/integrations.json` and
+5. Read `study.config.yml`'s `integration_preferences.routine.mode` value
+   via `read_file`, then call `run_publish_projection` with the updated
+   `topics` list (including the newly materialized topic,
+   `materialized: true`, `canonical_state` reflecting its real readiness)
+   and that real `routine_mode` value, so the real engine projects both
+   the completed task and the newly available one to GitHub Issues in one
+   pass and the generated `study/integrations.md` records the actual
+   configured routine mode (required verbatim by
+   `scripts/integration_resolution.py`'s real validator). On
+   `status="success"`, write `state/integrations.json` and
    `study/integrations.md` from the returned payload, and update
    `state/progress.json`'s entry for the newly materialized topic to set
    its own `external_task` (`provider`, `external_id`, `last_synced_at`)
