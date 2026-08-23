@@ -312,6 +312,11 @@ You have exactly one tool for the actual publication:
   "Ready lesson card" and "Future lesson card" sections require all of
   this content, and the engine now has fields for it but still needs the
   real values from the topic contract and module, not a placeholder.
+  This also applies to a topic already moved to **Em estudo** by the
+  learner -- it is the same materialized lesson, just moved, so populate
+  these fields for it too, not only for topics still in Próxima aula/
+  Disponível em paralelo. A real dispatch's reviewer caught a republish
+  silently dropping this content for an in-progress topic.
 
 The tool's response has a `status` field:
 

@@ -517,6 +517,65 @@ class TaskProjectionEngineTests(unittest.TestCase):
                 session_checklist=("Só um passo",),
             )
 
+    def test_in_progress_card_keeps_full_content_after_learner_moves_it(self):
+        # Real finding from the real Etapa 6d card-content-fix validation
+        # dispatch: an independent reviewer republished TOPIC-001 (already
+        # moved by the learner to Em estudo/in_progress) and found the
+        # rendered card had regressed to a bare one-line description and a
+        # generic 3-item checklist -- nothing in instructions/40-publish-
+        # tasks.md or 41-task-backend-projection.md says moving a card to
+        # Em estudo should drop its resources, learning summary or
+        # checklist; it is the same materialized lesson, just moved by the
+        # learner. render_visible_lesson() must keep the full Ready-lesson-
+        # card content for Em estudo too.
+        in_progress_topic = TopicProjection(
+            topic_id="TOPIC-001",
+            lesson_number=1,
+            title="Primeiro programa em Go",
+            direct_prerequisite_ids=(),
+            content_version=1,
+            canonical_state="in_progress",
+            materialized=True,
+            external_id=None,
+            lesson_url="https://github.example/aula-1",
+            slides_url=None,
+            assessment_url="https://github.example/avaliacao-1",
+            learning_summary="Explicar a diferença entre rodar e compilar um programa em Go.",
+            estimated_minutes=60,
+            deliverable_summary="Um programa que compila e roda, explicando a diferença.",
+            completion_criterion="Responder corretamente as questões sobre compilação e módulos.",
+            session_checklist=(
+                "Instalar o Go e criar um módulo",
+                "Escrever e rodar um primeiro programa",
+                "Compilar e executar o binário",
+                "Enviar a avaliação",
+            ),
+        )
+        backend = FakeBackend("github_issues")
+        result = publish_projection(
+            topics=(in_progress_topic,), backend=backend, operation_id="em-estudo-v1"
+        )
+        self.assertEqual("success", result.journal["status"])
+        managed = [
+            item
+            for item in result.normalized_snapshot["resources"]
+            if item.get("managed") and item.get("kind") == "lesson"
+        ]
+        body = managed[0]["visible"]["description"]
+        self.assertIn("O que você vai aprender", body)
+        self.assertIn(
+            "Explicar a diferença entre rodar e compilar um programa em Go.", body
+        )
+        self.assertIn("Tempo sugerido", body)
+        self.assertIn("60 minutos", body)
+        self.assertIn("O que você vai produzir", body)
+        self.assertIn("Para concluir", body)
+        self.assertIn(
+            '**"Terminei Primeiro programa em Go. Avalie minhas respostas."**', body
+        )
+        checklist = managed[0]["visible"]["checklist"]
+        self.assertEqual(list(in_progress_topic.session_checklist), checklist)
+
     def test_student_sections_resources_comments_and_attachments_are_preserved(self):
         backend = FakeBackend(
             "trello",

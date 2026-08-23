@@ -597,6 +597,50 @@ def _deliverable_summary_or_default(topic: TopicProjection) -> str:
     return topic.deliverable_summary or "Aplicar o que foi estudado nesta aula."
 
 
+def _completion_criterion_or_default(topic: TopicProjection) -> str:
+    return (
+        topic.completion_criterion
+        or "Responder a avaliação de acordo com o critério de aprovação definido."
+    )
+
+
+def _session_checklist_or_default(topic: TopicProjection) -> tuple[str, ...]:
+    return topic.session_checklist or (
+        "Estudar a aula",
+        "Praticar",
+        "Enviar a avaliação",
+    )
+
+
+def _rich_lesson_body(topic: TopicProjection, *, intro: str) -> str:
+    """Shared body for any lesson card that must show the full learner-facing
+    content (Ready lesson card, and Em estudo -- the same materialized lesson
+    the learner manually moved, not a different card). A real Etapa 6d
+    dispatch's independent reviewer caught the Em estudo card losing this
+    content entirely after a republish, even though nothing in
+    instructions/40-publish-tasks.md or 41-task-backend-projection.md says
+    moving a card to Em estudo should drop its resources, learning summary or
+    checklist -- it is the same lesson, just moved by the learner.
+    """
+    resources = _resource_lines(topic)
+    completion_command = f'**"Terminei {topic.title}. Avalie minhas respostas."**'
+    return "\n\n".join(
+        [
+            intro,
+            "**O que você vai aprender:** "
+            + _learning_summary_or_default(topic)
+            + "  \n**Tempo sugerido:** "
+            + _estimated_minutes_copy(topic),
+            "**Recursos**\n\n" + "\n".join(resources),
+            "**O que você vai produzir:** "
+            + _deliverable_summary_or_default(topic)
+            + "  \n**Para concluir:** "
+            + _completion_criterion_or_default(topic),
+            "Quando terminar, envie a avaliação e escreva:  \n" + completion_command,
+        ]
+    )
+
+
 def render_visible_lesson(topic: TopicProjection, visible_state: str) -> VisibleFields:
     title = f"Aula {topic.lesson_number:02d} · {topic.title}"
     if visible_state in {"Próxima aula", "Disponível em paralelo"}:
@@ -605,32 +649,8 @@ def render_visible_lesson(topic: TopicProjection, visible_state: str) -> Visible
             if visible_state == "Próxima aula"
             else "**Esta aula também está disponível.**"
         )
-        resources = _resource_lines(topic)
-        completion_criterion = (
-            topic.completion_criterion
-            or "Responder a avaliação de acordo com o critério de aprovação definido."
-        )
-        completion_command = f'**"Terminei {topic.title}. Avalie minhas respostas."**'
-        description = "\n\n".join(
-            [
-                intro,
-                "**O que você vai aprender:** "
-                + _learning_summary_or_default(topic)
-                + "  \n**Tempo sugerido:** "
-                + _estimated_minutes_copy(topic),
-                "**Recursos**\n\n" + "\n".join(resources),
-                "**O que você vai produzir:** "
-                + _deliverable_summary_or_default(topic)
-                + "  \n**Para concluir:** "
-                + completion_criterion,
-                "Quando terminar, envie a avaliação e escreva:  \n" + completion_command,
-            ]
-        )
-        checklist = topic.session_checklist or (
-            "Estudar a aula",
-            "Praticar",
-            "Enviar a avaliação",
-        )
+        description = _rich_lesson_body(topic, intro=intro)
+        checklist = _session_checklist_or_default(topic)
     elif visible_state == "Planejado":
         if topic.direct_prerequisite_ids:
             prerequisite_copy = (
@@ -652,8 +672,10 @@ def render_visible_lesson(topic: TopicProjection, visible_state: str) -> Visible
         )
         checklist = ()
     elif visible_state == "Em estudo":
-        description = "Aula em estudo. Use os recursos atuais e envie a avaliação ao concluir."
-        checklist = ("Estudar", "Praticar", "Enviar a avaliação")
+        description = _rich_lesson_body(
+            topic, intro="**Aula em estudo.** Use os recursos abaixo e envie a avaliação ao concluir."
+        )
+        checklist = _session_checklist_or_default(topic)
     elif visible_state == "Em avaliação":
         description = "Avaliação enviada e aguardando correção durável no GitHub."
         checklist = ()
