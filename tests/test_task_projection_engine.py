@@ -243,6 +243,94 @@ class TaskProjectionEngineTests(unittest.TestCase):
         self.assertTrue(any("internal topic id" in error for error in errors))
         self.assertTrue(any("content_version" in error for error in errors))
 
+    def test_own_topic_id_inside_own_resource_url_is_not_a_leak(self):
+        # Real finding from a real Etapa 6d dispatch: TOPIC-001 predates the
+        # slug-filename convention later materializations use, so its real
+        # lesson_url/assessment_url necessarily contain "TOPIC-001" as a
+        # path segment (study/modules/TOPIC-001.md). Once the Em estudo
+        # card started including real resource links, every real dispatch
+        # attempt was blocked by this exact check treating a legitimate
+        # self-referential resource link as an internal-ID leak. This is
+        # not a leak -- it's the topic's own ID inside its own real URL.
+        fields = VisibleFields(
+            title="Aula 01",
+            description=(
+                "**Recursos**\n\n"
+                "- **Aula:** https://github.com/OWNER/REPO/blob/main/study/modules/TOPIC-001.md\n"
+                "- **Avaliação:** https://github.com/OWNER/REPO/blob/main/study/assessments/TOPIC-001.yml"
+            ),
+        )
+        errors = validate_visible_fields(fields, own_topic_id="TOPIC-001")
+        self.assertEqual([], errors)
+
+    def test_other_topic_id_inside_a_url_is_still_a_leak(self):
+        # The exemption above must stay narrow: a URL containing a
+        # *different* topic's internal ID inside another topic's card is
+        # exactly the leak the check exists to catch, and must still fail
+        # even when own_topic_id is provided for the card being validated.
+        fields = VisibleFields(
+            title="Aula 01",
+            description=(
+                "- **Aula:** https://github.com/OWNER/REPO/blob/main/study/modules/TOPIC-002.md"
+            ),
+        )
+        errors = validate_visible_fields(fields, own_topic_id="TOPIC-001")
+        self.assertTrue(any("internal topic id" in error for error in errors))
+
+    def test_own_topic_id_outside_a_url_is_still_a_leak(self):
+        # The exemption only covers the topic's own ID *inside a URL*. A
+        # bare mention of the topic's own ID outside any URL (e.g. leaked
+        # into prose) must still be caught.
+        fields = VisibleFields(
+            title="Aula 01",
+            description="Este é o card interno para TOPIC-001, não mostrar ao aluno.",
+        )
+        errors = validate_visible_fields(fields, own_topic_id="TOPIC-001")
+        self.assertTrue(any("internal topic id" in error for error in errors))
+
+    def test_publish_succeeds_with_real_topic_id_shaped_urls(self):
+        # End-to-end version of the two unit tests above, through the real
+        # publish_projection() -> validate_readback() path with a topic
+        # whose real URLs are shaped exactly like TOPIC-001's actual
+        # materialized files -- the real dispatch scenario this fix
+        # resolves.
+        real_shaped_topic = TopicProjection(
+            topic_id="TOPIC-001",
+            lesson_number=1,
+            title="Primeiro programa em Go",
+            direct_prerequisite_ids=(),
+            content_version=1,
+            canonical_state="in_progress",
+            materialized=True,
+            external_id=None,
+            lesson_url="https://github.com/OWNER/REPO/blob/main/study/modules/TOPIC-001.md",
+            slides_url=None,
+            assessment_url="https://github.com/OWNER/REPO/blob/main/study/assessments/TOPIC-001.yml",
+            learning_summary="Explicar a diferença entre rodar e compilar um programa em Go.",
+            estimated_minutes=60,
+            deliverable_summary="Um programa que compila e roda.",
+            completion_criterion="Responder corretamente as questões da avaliação.",
+            session_checklist=(
+                "Instalar o Go e criar um módulo",
+                "Escrever e rodar um primeiro programa",
+                "Compilar e executar o binário",
+                "Enviar a avaliação",
+            ),
+        )
+        backend = FakeBackend("github_issues")
+        result = publish_projection(
+            topics=(real_shaped_topic,), backend=backend, operation_id="topic-id-url-v1"
+        )
+        self.assertEqual("success", result.journal["status"])
+        managed = [
+            item
+            for item in result.normalized_snapshot["resources"]
+            if item.get("managed") and item.get("kind") == "lesson"
+        ]
+        body = managed[0]["visible"]["description"]
+        self.assertIn("study/modules/TOPIC-001.md", body)
+        self.assertIn("study/assessments/TOPIC-001.yml", body)
+
     def test_learner_summary_does_not_false_positive_on_repo_name_substring(self):
         # Real finding, documented in Etapa 6a's fixture commit and fixed in
         # Etapa 6d: render_learner_integration_summary() used to raise an

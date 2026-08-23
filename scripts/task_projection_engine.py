@@ -546,18 +546,51 @@ def sanitize_known_marker(value: str) -> str:
     return KNOWN_HTML_MARKER.sub("", value).strip()
 
 
+_URL_SPAN_PATTERN = re.compile(r"https?://\S+")
+
+
 def validate_visible_fields(
-    value: VisibleFields | Mapping[str, Any], *, allow_topic_id: bool = False
+    value: VisibleFields | Mapping[str, Any],
+    *,
+    allow_topic_id: bool = False,
+    own_topic_id: str | None = None,
 ) -> list[str]:
+    """Validate that no managed learner-visible field leaks internal metadata.
+
+    `own_topic_id`, when provided, exempts exactly that topic_id from the
+    "internal topic id" check, but only where it appears inside a URL
+    substring (e.g. a resource link built from the topic's own real file
+    path, such as .../study/modules/TOPIC-001.md) -- never when it appears
+    as a bare mention outside a URL. A real Etapa 6d dispatch's readback
+    validation blocked every attempt to publish TOPIC-001's Em estudo card
+    once it started including real resource links, because TOPIC-001
+    predates the slug-filename convention later materializations use and
+    its real lesson_url/assessment_url necessarily contain "TOPIC-001" as
+    a path segment. That is a legitimate self-referential resource link,
+    not a leak of *another* topic's internal ID -- the actual case this
+    check exists to catch -- so it must not be flagged. `allow_topic_id`
+    (unconditional) is kept separate and unaffected by this narrower
+    exemption.
+    """
     payload = asdict(value) if isinstance(value, VisibleFields) else dict(value)
     errors: list[str] = []
 
     def inspect(field_name: str, item: Any) -> None:
         if isinstance(item, str):
             for label, pattern in VISIBLE_METADATA_PATTERNS:
-                if label == "internal topic id" and allow_topic_id:
-                    continue
-                if pattern.search(item):
+                if label == "internal topic id":
+                    if allow_topic_id:
+                        continue
+                    url_spans = [m.span() for m in _URL_SPAN_PATTERN.finditer(item)]
+                    for match in pattern.finditer(item):
+                        if own_topic_id and match.group() == own_topic_id and any(
+                            start <= match.start() and match.end() <= end
+                            for start, end in url_spans
+                        ):
+                            continue
+                        errors.append(f"{field_name} contains {label}")
+                        break
+                elif pattern.search(item):
                     errors.append(f"{field_name} contains {label}")
         elif isinstance(item, Mapping):
             for key, nested in item.items():
@@ -867,7 +900,7 @@ def validate_readback(
         if isinstance(visible, Mapping):
             errors.extend(
                 f"{topic_id}: {message}"
-                for message in validate_visible_fields(visible)
+                for message in validate_visible_fields(visible, own_topic_id=topic_id)
             )
         else:
             errors.append(f"{topic_id}: missing visible fields")

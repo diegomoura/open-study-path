@@ -318,6 +318,20 @@ You have exactly one tool for the actual publication:
   Disponível em paralelo. A real dispatch's reviewer caught a republish
   silently dropping this content for an in-progress topic.
 
+  When a topic's real, materialized file paths happen to contain its own
+  `TOPIC-000`-style ID (true for TOPIC-001, which predates the slug-
+  filename convention `generate_detailed`/`evaluate` use for newer
+  materializations), that is fine -- the engine's metadata-leak check now
+  exempts a topic's own ID when it appears strictly inside its own
+  resource URL, never for another topic's ID or a bare mention outside a
+  URL. Do not invent a workaround (a placeholder URL, a null URL, or a
+  made-up alternate path) to dodge this; a real Etapa 6d dispatch made 7
+  increasingly strained attempts to route around what turned out to be a
+  validator false positive, and every workaround either broke a different
+  required check or produced a card with no working resource links at
+  all. Pass the topic's actual, real URL, exactly as it exists in the
+  repository.
+
 The tool's response has a `status` field:
 
 - `status: "success"`: write `state/integrations.json` (the returned
