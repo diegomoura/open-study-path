@@ -297,6 +297,22 @@ You have exactly one tool for the actual publication:
   `state/integrations.json` first and pass it back in -- this is what lets
   the engine update the same issue instead of creating a duplicate.
 
+  Also populate `learning_summary` (plain-language capability summary,
+  becomes "O que você vai aprender:"), `estimated_minutes` (integer,
+  becomes "Tempo sugerido:"), `deliverable_summary` (becomes "O que você
+  vai produzir:"), `completion_criterion` (plain-language pass/scoring
+  criterion, becomes "Para concluir:") and `session_checklist` (3 to 7
+  granular actions taken from the module -- not a generic placeholder,
+  becomes the "Sua sessão de estudo" checklist) for every topic, read from
+  its real topic contract (`study/topics/<id>.md`) and module
+  (`study/modules/<id>.md`). A real Etapa 6d dispatch's independent
+  reviewer read a materialized card back from GitHub and found only a
+  bare "Recursos" block and a generic 3-item checklist because these
+  fields were left `None`/empty -- instructions/40-publish-tasks.md's
+  "Ready lesson card" and "Future lesson card" sections require all of
+  this content, and the engine now has fields for it but still needs the
+  real values from the topic contract and module, not a placeholder.
+
 The tool's response has a `status` field:
 
 - `status: "success"`: write `state/integrations.json` (the returned
@@ -326,8 +342,16 @@ updated, and compare title, labels and rendered description against what
 instructions/40-publish-tasks.md and instructions/41-task-backend-
 projection.md require (numbered title format, exactly one `Próxima aula`,
 correct `study:*` label, no internal metadata leaked into visible fields).
-You do not have run_publish_projection: you are checking the result, not
-reproducing or re-running the publication.
+For a ready lesson card, also confirm the body actually contains "O que
+você vai aprender:", "Tempo sugerido:", "O que você vai produzir:", "Para
+concluir:", the literal completion-command quote
+(`**"Terminei <título da aula>. Avalie minhas respostas."**`) and a real
+"Sua sessão de estudo" checklist with 3-7 granular items -- a bare
+"Recursos" block plus a generic 3-item checklist is the exact structural
+gap a real Etapa 6d dispatch's reviewer previously caught, so read the
+actual issue body back rather than trusting that the author populated
+these fields. You do not have run_publish_projection: you are checking
+the result, not reproducing or re-running the publication.
 """
 
 AUTHOR_PROPOSAL_NOTE = """\

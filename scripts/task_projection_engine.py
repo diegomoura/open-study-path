@@ -146,6 +146,21 @@ class TopicProjection:
     slides_url: str | None = None
     practice_url: str | None = None
     assessment_url: str | None = None
+    # Etapa 6d follow-up (task-card-content gap): the engine previously had
+    # nowhere to put the human-readable card content instructions/40-
+    # publish-tasks.md's "Ready lesson card"/"Future lesson card" sections
+    # require -- render_visible_lesson() fell back to a bare Recursos block
+    # and a generic 3-item checklist for every lesson, which a real
+    # independent evaluate reviewer caught reading a materialized card back
+    # from GitHub. These fields are optional so existing callers/tests that
+    # never set them keep working; render_visible_lesson() falls back to a
+    # generic (but non-empty) placeholder when they are absent, same shape
+    # as before this fix, rather than raising.
+    learning_summary: str | None = None
+    estimated_minutes: int | None = None
+    deliverable_summary: str | None = None
+    completion_criterion: str | None = None
+    session_checklist: tuple[str, ...] = ()
 
     def __post_init__(self) -> None:
         if not re.fullmatch(r"TOPIC-\d{3,}", self.topic_id):
@@ -158,6 +173,13 @@ class TopicProjection:
             set(self.direct_prerequisite_ids)
         ):
             raise ValueError(f"duplicate prerequisites for {self.topic_id}")
+        if self.estimated_minutes is not None and self.estimated_minutes < 1:
+            raise ValueError("estimated_minutes must be positive when provided")
+        if self.session_checklist and not (3 <= len(self.session_checklist) <= 7):
+            raise ValueError(
+                "session_checklist must have 3 to 7 items when provided, got "
+                f"{len(self.session_checklist)}"
+            )
 
 
 @dataclass(frozen=True)
@@ -563,6 +585,18 @@ def _resource_lines(topic: TopicProjection) -> list[str]:
     return lines
 
 
+def _learning_summary_or_default(topic: TopicProjection) -> str:
+    return topic.learning_summary or f"Praticar e aplicar os conceitos de {topic.title}."
+
+
+def _estimated_minutes_copy(topic: TopicProjection) -> str:
+    return f"{topic.estimated_minutes} minutos" if topic.estimated_minutes else "A definir"
+
+
+def _deliverable_summary_or_default(topic: TopicProjection) -> str:
+    return topic.deliverable_summary or "Aplicar o que foi estudado nesta aula."
+
+
 def render_visible_lesson(topic: TopicProjection, visible_state: str) -> VisibleFields:
     title = f"Aula {topic.lesson_number:02d} · {topic.title}"
     if visible_state in {"Próxima aula", "Disponível em paralelo"}:
@@ -572,14 +606,31 @@ def render_visible_lesson(topic: TopicProjection, visible_state: str) -> Visible
             else "**Esta aula também está disponível.**"
         )
         resources = _resource_lines(topic)
+        completion_criterion = (
+            topic.completion_criterion
+            or "Responder a avaliação de acordo com o critério de aprovação definido."
+        )
+        completion_command = f'**"Terminei {topic.title}. Avalie minhas respostas."**'
         description = "\n\n".join(
             [
                 intro,
-                "**Recursos**\n" + "\n".join(resources),
-                "Quando terminar, envie a avaliação e peça a correção pelo título da aula.",
+                "**O que você vai aprender:** "
+                + _learning_summary_or_default(topic)
+                + "  \n**Tempo sugerido:** "
+                + _estimated_minutes_copy(topic),
+                "**Recursos**\n\n" + "\n".join(resources),
+                "**O que você vai produzir:** "
+                + _deliverable_summary_or_default(topic)
+                + "  \n**Para concluir:** "
+                + completion_criterion,
+                "Quando terminar, envie a avaliação e escreva:  \n" + completion_command,
             ]
         )
-        checklist = ("Estudar a aula", "Praticar", "Enviar a avaliação")
+        checklist = topic.session_checklist or (
+            "Estudar a aula",
+            "Praticar",
+            "Enviar a avaliação",
+        )
     elif visible_state == "Planejado":
         if topic.direct_prerequisite_ids:
             prerequisite_copy = (
@@ -591,7 +642,13 @@ def render_visible_lesson(topic: TopicProjection, visible_state: str) -> Visible
             )
         description = (
             f"**Pré-requisitos desta aula:** {prerequisite_copy}\n\n"
-            "A numeração ajuda a localizar a aula; a disponibilidade depende do progresso durável."
+            "A numeração ajuda a localizar a aula; a disponibilidade depende do progresso durável.\n\n"
+            "**O que você vai aprender:** "
+            + _learning_summary_or_default(topic)
+            + "  \n**Tempo sugerido:** "
+            + _estimated_minutes_copy(topic)
+            + "  \n**O que você vai produzir:** "
+            + _deliverable_summary_or_default(topic)
         )
         checklist = ()
     elif visible_state == "Em estudo":

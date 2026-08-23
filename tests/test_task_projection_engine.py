@@ -24,6 +24,7 @@ from task_projection_engine import (  # noqa: E402
     normalized_integration_state,
     publish_projection,
     render_learner_integration_summary,
+    render_visible_lesson,
     roadmap_fingerprint,
     validate_readback,
     validate_visible_fields,
@@ -397,6 +398,124 @@ class TaskProjectionEngineTests(unittest.TestCase):
         plan = build_projection_plan((topic(1), topic(2)), provider="trello")
         errors = validate_readback(plan, snapshot)
         self.assertTrue(any("order is incorrect" in error for error in errors))
+
+    def test_ready_card_renders_full_instructions_40_contract_shape(self):
+        # Real finding from a real Etapa 6d evaluate dispatch: an
+        # independent reviewer read a materialized TOPIC-002 issue back
+        # from GitHub and found only a bare "Recursos" block and a generic
+        # 3-item checklist -- instructions/40-publish-tasks.md's "Ready
+        # lesson card" section requires "O que você vai aprender:",
+        # "Tempo sugerido:", "O que você vai produzir:", "Para concluir:"
+        # and the literal completion-command quote, none of which
+        # TopicProjection had fields for. This exercises the full
+        # end-to-end publish_projection() -> render_visible_lesson() path
+        # with those fields populated the way a real author call must now
+        # populate them, and asserts the rendered card body actually
+        # contains every required piece -- not just that the function
+        # runs without error.
+        rich_topic = TopicProjection(
+            topic_id="TOPIC-001",
+            lesson_number=1,
+            title="Tipos e tipagem estática",
+            direct_prerequisite_ids=(),
+            content_version=1,
+            canonical_state="ready",
+            materialized=True,
+            external_id=None,
+            lesson_url="https://github.example/aula-1",
+            slides_url=None,
+            assessment_url="https://github.example/avaliacao-1",
+            learning_summary="Diferenciar tipagem estática de dinâmica na prática.",
+            estimated_minutes=45,
+            deliverable_summary="Um trecho de código anotado com os tipos corretos.",
+            completion_criterion="Acertar pelo menos 4 das 5 questões da avaliação.",
+            session_checklist=(
+                "Ler a seção sobre tipagem estática",
+                "Rodar os três exemplos do módulo",
+                "Anotar os tipos no exercício guiado",
+                "Enviar a avaliação",
+            ),
+        )
+        backend = FakeBackend("github_issues")
+        result = publish_projection(
+            topics=(rich_topic,), backend=backend, operation_id="ready-card-contract-v1"
+        )
+        self.assertEqual("success", result.journal["status"])
+        managed = [
+            item
+            for item in result.normalized_snapshot["resources"]
+            if item.get("managed") and item.get("kind") == "lesson"
+        ]
+        self.assertEqual(1, len(managed))
+        body = managed[0]["visible"]["description"]
+        self.assertIn("O que você vai aprender", body)
+        self.assertIn("Diferenciar tipagem estática de dinâmica na prática.", body)
+        self.assertIn("Tempo sugerido", body)
+        self.assertIn("45 minutos", body)
+        self.assertIn("O que você vai produzir", body)
+        self.assertIn("Um trecho de código anotado com os tipos corretos.", body)
+        self.assertIn("Para concluir", body)
+        self.assertIn("Acertar pelo menos 4 das 5 questões da avaliação.", body)
+        self.assertIn(
+            '**"Terminei Tipos e tipagem estática. Avalie minhas respostas."**', body
+        )
+        checklist = managed[0]["visible"]["checklist"]
+        self.assertEqual(list(rich_topic.session_checklist), checklist)
+
+    def test_future_card_includes_learning_time_and_deliverable(self):
+        # Same instructions/40-publish-tasks.md gap as the ready-card test
+        # above, but for the "Future lesson card" section, which also
+        # requires "O que você vai aprender:", "Tempo sugerido:" and
+        # "O que você vai produzir:" -- the Planejado branch of
+        # render_visible_lesson() omitted all three before this fix.
+        future_topic = TopicProjection(
+            topic_id="TOPIC-002",
+            lesson_number=2,
+            title="Funções de ordem superior",
+            direct_prerequisite_ids=("TOPIC-001",),
+            content_version=0,
+            canonical_state="planned",
+            materialized=False,
+            learning_summary="Reconhecer e escrever funções que recebem outras funções.",
+            estimated_minutes=30,
+            deliverable_summary="Uma função de ordem superior própria, testada.",
+        )
+        visible = render_visible_lesson(future_topic, "Planejado")
+        self.assertIn("O que você vai aprender", visible.description)
+        self.assertIn(
+            "Reconhecer e escrever funções que recebem outras funções.",
+            visible.description,
+        )
+        self.assertIn("Tempo sugerido", visible.description)
+        self.assertIn("30 minutos", visible.description)
+        self.assertIn("O que você vai produzir", visible.description)
+        self.assertIn(
+            "Uma função de ordem superior própria, testada.", visible.description
+        )
+
+    def test_ready_card_falls_back_gracefully_without_new_fields(self):
+        # Backward compatibility: existing callers/tests (and any real
+        # topic contract not yet updated to populate the new optional
+        # fields) must not break or produce an empty-looking card --
+        # render_visible_lesson() falls back to non-empty generic text
+        # for each new field instead of omitting the section or raising.
+        plain_topic = topic(1)
+        visible = render_visible_lesson(plain_topic, "Próxima aula")
+        self.assertIn("O que você vai aprender", visible.description)
+        self.assertIn("Tempo sugerido", visible.description)
+        self.assertIn("O que você vai produzir", visible.description)
+        self.assertIn("Para concluir", visible.description)
+        self.assertIn(f'"Terminei {plain_topic.title}.', visible.description)
+        self.assertEqual(3, len(visible.checklist))
+
+    def test_session_checklist_length_is_validated(self):
+        with self.assertRaises(ValueError):
+            TopicProjection(
+                topic_id="TOPIC-001",
+                lesson_number=1,
+                title="Tema 1",
+                session_checklist=("Só um passo",),
+            )
 
     def test_student_sections_resources_comments_and_attachments_are_preserved(self):
         backend = FakeBackend(
