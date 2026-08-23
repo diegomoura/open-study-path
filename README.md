@@ -96,6 +96,10 @@ Terminei <título da aula>. Avalie minhas respostas.
 
 Comandos técnicos antigos continuam aceitos como aliases, mas não precisam ser ensinados à pessoa.
 
+### Alternativa: pipeline automatizado via GitHub Actions
+
+Existe um segundo caminho, ainda em piloto, pra quem já quer despachar cada fase como uma chamada real à API da Claude em vez de uma conversa manual: adicionar sua própria `ANTHROPIC_API_KEY` como Secret do repositório e rodar a Action **Agent pilot**. Veja `docs/claude-agent-setup.md` para o passo a passo e `docs/claude-agent-pilot.md` para o que já foi validado em cada fase e quais restrições ainda existem. Os dois caminhos podem ser usados na mesma instância; nenhum dos dois é obrigatório.
+
 ## Ciclo de aprendizagem
 
 ```mermaid
