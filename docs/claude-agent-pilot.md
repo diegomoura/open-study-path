@@ -66,14 +66,15 @@ list passed through `extra_context` rather than a real curriculum.
 
 `configure_intake` in this pilot always resolves as if the owner already
 selected the `github_issue` provider. The instruction file
-(`instructions/05-configure-intake.md`) lets the owner choose interactively
-among three providers; an unattended GitHub Actions run has no one to ask, so
-the author prompt does not present a choice. If your instance needs Jotform
-or manual YAML intake, run that phase manually (ChatGPT Project or a Claude
-chat) until a later stage adds a `workflow_dispatch` input for provider
-selection. `intake` (Etapa 4) inherits the same restriction: only the
-`github_issue` provider path is wired to a real agent call; Jotform and
-manual YAML intake still need the manual flow.
+(`instructions/05-configure-intake.md`) still describes an interactive
+owner choice among three providers for whenever a future stage adds a
+`workflow_dispatch` input for provider selection, but an unattended run has
+no one to ask, so the author prompt defaults to the recommended option
+instead. Jotform and manual YAML intake are currently unreachable: the
+manual chat path that used to run them was removed entirely (Etapa 8), and
+no dispatched phase wires either one yet. `intake` (Etapa 4) inherits the
+same restriction: only the `github_issue` provider path is wired to a real
+agent call.
 
 ## Files
 
@@ -91,8 +92,9 @@ manual YAML intake still need the manual flow.
   `instructions/phase-completion.md` for the author;
   `instructions/04-review-generated-artifacts.md` and
   `docs/review-framework.md` for the reviewer). It reads these files at
-  workflow run time rather than duplicating their text, so the automated path
-  can't silently drift from the manual (ChatGPT Project) path.
+  workflow run time rather than duplicating their text, so this stays the
+  single source of truth for every phase's contract (the manual chat path it
+  once had to stay in sync with was removed entirely in Etapa 8).
 - `scripts/summarize_agent_pilot_usage.py` -- combines the author's and
   reviewer's token usage/cost into one record, appended to
   `state/agent-pilot-usage.jsonl` in the target repository.
@@ -209,9 +211,11 @@ Both instruction files now carry an explicit exception for the isolated
 harness, and `scripts/agent_runtime.py`'s write allowlist enforces it
 structurally: `state/reviews/` is no longer a path the author's `write_file`
 tool can write to at all (only the reviewer's `submit_review` result,
-recorded by the workflow itself, ever lands there in this pilot). The manual,
-single-context flow is unaffected -- the exception only applies when
-`docs/claude-agent-pilot.md` (this file) is the flow in use.
+recorded by the workflow itself, ever lands there in this pilot). The
+manual, single-context flow this exception carves out from no longer
+exists (Etapa 8 removed it entirely) -- every setup and configure_intake
+run today is this isolated harness, so the exception is what actually
+applies now, not a special case beside a live default.
 
 ## Required repository secret
 

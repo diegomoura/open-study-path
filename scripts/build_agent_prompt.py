@@ -3,10 +3,12 @@
 
 Deliberately reads the real instruction files instead of duplicating their
 text: `instructions/*.md` are the contract each phase already runs under, and
-the point of stage 2 is that an API call reads the same contract a human
-running the ChatGPT Project used to read (proposal, section 2 -- "o que não
-muda"). Keeping this a thin assembler instead of a second copy of the prose
-means the contract can't silently drift between the manual and automated path.
+the point of stage 2 was that an API call reads the same contract a human
+running a manual chat conversation used to read (proposal, section 2 -- "o
+que não muda"). The manual chat path itself was later removed entirely
+(Etapa 8), but this stays a thin assembler rather than a second copy of the
+prose regardless -- there is still exactly one place, `instructions/*.md`,
+that can drift out of date.
 """
 
 from __future__ import annotations

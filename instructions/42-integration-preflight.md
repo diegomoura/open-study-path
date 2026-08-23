@@ -117,12 +117,9 @@ When one or more required providers are unavailable:
 1. create no resource in the required publication set;
 2. do not partially publish through other required providers;
 3. name only the unavailable required providers;
-4. tell the owner to connect or authorize those apps in the current Project;
-5. provide the exact return command:
+4. tell the owner to connect or authorize those apps, then re-run this phase.
 
-`Conectei <providers> ao ChatGPT. Verifique novamente e continue a publicação.`
-
-The return command does not prove access. Run the read-only probes again.
+There is no persistent chat session to resume in the automated-only flow: the owner fixes the missing connection or configuration and simply dispatches `publish` again. Re-running does not by itself prove access -- run the read-only probes again on the next dispatch.
 
 ## Optional-provider fallback
 
@@ -154,8 +151,6 @@ Use a brief response equivalent to:
 >
 > Atenção: não foi possível verificar a conexão com `<providers>`.
 >
-> Depois, envie:
->
-> `Conectei <providers> ao ChatGPT. Verifique novamente e continue a publicação.`
+> Depois de resolver a conexão, despache a fase `publish` novamente.
 
 Do not list inactive optional providers in the blocked response.

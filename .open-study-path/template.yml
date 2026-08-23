@@ -5,10 +5,8 @@ canonical_repository: diegomoura/open-study-path
 generation_allowed: false
 
 instance_setup:
-  chatgpt_project_instructions_template: templates/chatgpt-project-instructions.md
-  chatgpt_project_instructions_renderer: scripts/render_project_instructions.py
-  chatgpt_project_instructions_workflow: .github/workflows/render-project-instructions.yml
-  chatgpt_project_setup_guide: docs/chatgpt-project-setup.md
+  agent_pilot_setup_guide: docs/claude-agent-setup.md
+  label_provisioning_workflow: .github/workflows/ensure-repository-labels.yml
   instance_marker: .open-study-path/instance.yml
   configuration_template: study.config.example.yml
   state_templates:
@@ -23,7 +21,7 @@ instance_setup:
 rules:
   - Never generate learner-specific content in the canonical template repository.
   - A fork or derived repository becomes an instance only after the instance marker is created.
-  - Prepare the ChatGPT Project Instructions automatically with the exact repository identity after template creation.
-  - Resolve the exact OWNER/REPOSITORY from prepared ChatGPT Project Instructions or an explicit user message before bootstrap.
+  - Provision intake repository labels automatically after template creation.
+  - Resolve the exact OWNER/REPOSITORY from the explicit "Target repository" line every agent-pilot dispatch supplies, or an explicit user message, before bootstrap.
   - Persist the exact repository identity in the instance marker during bootstrap.
   - Instance setup and curriculum generation are separate explicit operations.

@@ -13,7 +13,6 @@ TARGETS = (
     "instructions/38-complete-usable-generation.md",
     "instructions/40-publish-tasks.md",
     "instructions/57-materialize-next-content.md",
-    "templates/chatgpt-project-instructions.md",
     "templates/module.md",
     "templates/topic.md",
 )
@@ -82,7 +81,7 @@ def main() -> None:
         after = before
         for old, new in REPLACEMENTS:
             after = replace_unmigrated(after, old, new)
-        if relative in {"AGENTS.md", "templates/chatgpt-project-instructions.md", "instructions/30-generate-path.md"}:
+        if relative in {"AGENTS.md", "instructions/30-generate-path.md"}:
             after = replace_unmigrated(
                 after,
                 "Create semantic HTML/CSS and Mermaid source files under `study/slides/TOPIC-000/`, derive concise slides",

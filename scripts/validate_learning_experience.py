@@ -117,11 +117,6 @@ def validate_contracts() -> None:
         "contratos internos em `study/topics/`",
         "Terminei <título da aula>. Avalie minhas respostas.",
     ])
-    require_terms("templates/chatgpt-project-instructions.md", [
-        "not an inventory of repository artifacts",
-        "Do not generate flashcards, Markdown decks, TSV exports or Quizlet sets.",
-        "Do not add “O restante ficou assim”",
-    ])
     require_terms("AGENTS.md", [
         "A task backend is not a repository inventory",
         "Do not generate flashcards, Markdown decks, TSV exports or Quizlet sets.",

@@ -24,7 +24,7 @@ Do not silently select Jotform or create external resources without the owner's 
 
    The marker identifies the checked-in form contract. It lives inside a form `markdown` block and is not expected to appear in the body of a submitted issue.
 4. Confirm the form does not prefill the native issue title and that its first visible instructions explain: use **Add a title** for the course name. GitHub requires that title before submission; the form must not ask for the name a second time.
-5. Verify repository labels `study-request` and `intake:imported` exist. Create only missing labels through the GitHub labels API or run **Prepare ChatGPT Project Instructions**, which invokes `scripts/ensure_repository_labels.py`. Read the labels again after provisioning.
+5. Verify repository labels `study-request` and `intake:imported` exist. Create only missing labels through the GitHub labels API or run **Ensure repository labels**, which invokes `scripts/ensure_repository_labels.py`. Read the labels again after provisioning.
 6. Configure the inherited GitHub Issue Form with these exact metadata values:
 
    ```yaml

@@ -78,14 +78,6 @@ def main() -> None:
         "Do not ask for an issue or submission number",
         "multiple valid candidates",
     ])
-    require("templates/chatgpt-project-instructions.md", [
-        NATURAL_COMMAND,
-        "course name comes from the issue title",
-        "Ask for an issue number only when multiple valid candidates remain",
-        "Internal review, correction, CI, safe merge",
-        "form marker identifies the checked-in form contract",
-        "Never ask the learner to edit an issue to add a technical marker",
-    ])
     require("AGENTS.md", [
         "course name comes from the issue title",
         "current repository form contract",

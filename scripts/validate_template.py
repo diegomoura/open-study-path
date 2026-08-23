@@ -36,9 +36,8 @@ REUSABLE_YAML_FILES = [
 REQUIRED_REUSABLE_FILES = [
     "README.md",
     "AGENTS.md",
-    "docs/chatgpt-project-setup.md",
+    "docs/claude-agent-setup.md",
     "docs/integration-capabilities.md",
-    "templates/chatgpt-project-instructions.md",
     "templates/integrations-plan.md",
     "templates/integrations-state.json",
     "instructions/00-bootstrap.md",
@@ -159,8 +158,8 @@ def check_reusable_contract(marker: dict[str, Any]) -> None:
 
     setup = marker.get("instance_setup", {})
     expected_assets = {
-        "chatgpt_project_instructions_template": "templates/chatgpt-project-instructions.md",
-        "chatgpt_project_setup_guide": "docs/chatgpt-project-setup.md",
+        "agent_pilot_setup_guide": "docs/claude-agent-setup.md",
+        "label_provisioning_workflow": ".github/workflows/ensure-repository-labels.yml",
         "instance_marker": INSTANCE_MARKER,
         "configuration_template": "study.config.example.yml",
     }
@@ -189,11 +188,6 @@ def check_reusable_contract(marker: dict[str, Any]) -> None:
         fail("new instances must default intake to auto_when_unambiguous")
     if workflow.get("diagnostic_merge_policy") != "auto_when_unambiguous":
         fail("new instances must default diagnostic to auto_when_unambiguous")
-
-    project_instructions = load_text("templates/chatgpt-project-instructions.md")
-    for term in ["OWNER/REPOSITORY", INSTANCE_MARKER, "diegomoura/open-study-path", "Keep the process guided", "exact command to continue"]:
-        if term not in project_instructions:
-            fail(f"ChatGPT Project Instructions template is missing required term: {term}")
 
     completion = load_text(COMPLETION_CONTRACT)
     for term in ["Next step", "Continue command", "Concision rule", "auto_when_unambiguous", "Do not send a separate transition message"]:

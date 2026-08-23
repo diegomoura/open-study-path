@@ -109,6 +109,6 @@ Liste as fontes mais importantes para esta etapa com localizador preciso. A aula
 
 - Recurso complementar com objetivo claro: artigo, vídeo, aula aberta, exercício, curso, TCC, dissertação, livro ou paper.
 
-## Ao estudar com o ChatGPT
+## Ao estudar com um assistente de IA
 
 Use a aula completa como fonte principal quando ela estiver pronta. O chat pode explicar de outra forma, fazer perguntas e ajudar na prática, mas não deve improvisar um conteúdo desconectado das fontes e do contrato desta etapa.

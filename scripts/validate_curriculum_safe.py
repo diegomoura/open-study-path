@@ -82,7 +82,7 @@ def topic_contract(topic_id: str) -> tuple[dict[str, Any], str]:
 
 def required_resource_lines(body: str, path: Path) -> list[str]:
     match = re.search(
-        r"### Essenciais\s*(.*?)(?:\n### Para aprofundar|\n## Ao estudar com o ChatGPT|\Z)",
+        r"### Essenciais\s*(.*?)(?:\n### Para aprofundar|\n## Ao estudar com um assistente de IA|\Z)",
         body,
         re.DOTALL,
     )

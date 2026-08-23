@@ -149,15 +149,9 @@ def validate_contract_terms() -> None:
         "# Ferramentas que podem ajudar nesta trilha",
         "<details>",
     ])
-    require("templates/chatgpt-project-instructions.md", [
-        "Experience for the person",
-        "Do not lead successful responses",
-        "scripts/lifecycle_next_action.py",
-        "Never route directly from generation to evaluation.",
-        "Fontes e caminhos para aprofundar",
-    ])
     require("README.md", [
-        "Configure este repositório como uma nova trilha de estudos",
+        "Agent pilot",
+        "ANTHROPIC_API_KEY",
         "Conteúdo com fontes",
         "Linguagem voltada para quem estuda",
     ])
