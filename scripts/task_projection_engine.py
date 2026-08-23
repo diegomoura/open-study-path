@@ -61,7 +61,19 @@ VISIBLE_METADATA_PATTERNS: tuple[tuple[str, re.Pattern[str]], ...] = (
     ("HTML comment", re.compile(r"<!--", re.IGNORECASE)),
     (
         "open-study-path marker",
-        re.compile(r"\bopen-study-path\b", re.IGNORECASE),
+        # Etapa 6a/6c real finding: the bare \bopen-study-path\b word-boundary
+        # match also fires on any repository whose *name* merely contains
+        # this product-name substring (e.g. this pilot's own disposable test
+        # repos, "open-study-path-agent-test-..."), which is never a leak --
+        # it's just the repo's URL. The real marker syntax used everywhere
+        # (issue-template HTML comments, hidden metadata) always has a colon
+        # immediately after "open-study-path" (open-study-path:topic_id=...,
+        # open-study-path:assessment topic_id=...); a bare repository name
+        # never does, since repo names use hyphens, not colons. Requiring
+        # the colon keeps this pattern catching every real leak (a marker
+        # that lost its HTML-comment wrapper but kept its own syntax) while
+        # no longer flagging a legitimate, already-public repository URL.
+        re.compile(r"\bopen-study-path:", re.IGNORECASE),
     ),
     ("internal topic id", re.compile(r"\bTOPIC-\d{3,}\b")),
     ("content_version", re.compile(r"\bcontent_version\b", re.IGNORECASE)),
@@ -134,6 +146,21 @@ class TopicProjection:
     slides_url: str | None = None
     practice_url: str | None = None
     assessment_url: str | None = None
+    # Etapa 6d follow-up (task-card-content gap): the engine previously had
+    # nowhere to put the human-readable card content instructions/40-
+    # publish-tasks.md's "Ready lesson card"/"Future lesson card" sections
+    # require -- render_visible_lesson() fell back to a bare Recursos block
+    # and a generic 3-item checklist for every lesson, which a real
+    # independent evaluate reviewer caught reading a materialized card back
+    # from GitHub. These fields are optional so existing callers/tests that
+    # never set them keep working; render_visible_lesson() falls back to a
+    # generic (but non-empty) placeholder when they are absent, same shape
+    # as before this fix, rather than raising.
+    learning_summary: str | None = None
+    estimated_minutes: int | None = None
+    deliverable_summary: str | None = None
+    completion_criterion: str | None = None
+    session_checklist: tuple[str, ...] = ()
 
     def __post_init__(self) -> None:
         if not re.fullmatch(r"TOPIC-\d{3,}", self.topic_id):
@@ -146,6 +173,13 @@ class TopicProjection:
             set(self.direct_prerequisite_ids)
         ):
             raise ValueError(f"duplicate prerequisites for {self.topic_id}")
+        if self.estimated_minutes is not None and self.estimated_minutes < 1:
+            raise ValueError("estimated_minutes must be positive when provided")
+        if self.session_checklist and not (3 <= len(self.session_checklist) <= 7):
+            raise ValueError(
+                "session_checklist must have 3 to 7 items when provided, got "
+                f"{len(self.session_checklist)}"
+            )
 
 
 @dataclass(frozen=True)
@@ -512,18 +546,51 @@ def sanitize_known_marker(value: str) -> str:
     return KNOWN_HTML_MARKER.sub("", value).strip()
 
 
+_URL_SPAN_PATTERN = re.compile(r"https?://\S+")
+
+
 def validate_visible_fields(
-    value: VisibleFields | Mapping[str, Any], *, allow_topic_id: bool = False
+    value: VisibleFields | Mapping[str, Any],
+    *,
+    allow_topic_id: bool = False,
+    own_topic_id: str | None = None,
 ) -> list[str]:
+    """Validate that no managed learner-visible field leaks internal metadata.
+
+    `own_topic_id`, when provided, exempts exactly that topic_id from the
+    "internal topic id" check, but only where it appears inside a URL
+    substring (e.g. a resource link built from the topic's own real file
+    path, such as .../study/modules/TOPIC-001.md) -- never when it appears
+    as a bare mention outside a URL. A real Etapa 6d dispatch's readback
+    validation blocked every attempt to publish TOPIC-001's Em estudo card
+    once it started including real resource links, because TOPIC-001
+    predates the slug-filename convention later materializations use and
+    its real lesson_url/assessment_url necessarily contain "TOPIC-001" as
+    a path segment. That is a legitimate self-referential resource link,
+    not a leak of *another* topic's internal ID -- the actual case this
+    check exists to catch -- so it must not be flagged. `allow_topic_id`
+    (unconditional) is kept separate and unaffected by this narrower
+    exemption.
+    """
     payload = asdict(value) if isinstance(value, VisibleFields) else dict(value)
     errors: list[str] = []
 
     def inspect(field_name: str, item: Any) -> None:
         if isinstance(item, str):
             for label, pattern in VISIBLE_METADATA_PATTERNS:
-                if label == "internal topic id" and allow_topic_id:
-                    continue
-                if pattern.search(item):
+                if label == "internal topic id":
+                    if allow_topic_id:
+                        continue
+                    url_spans = [m.span() for m in _URL_SPAN_PATTERN.finditer(item)]
+                    for match in pattern.finditer(item):
+                        if own_topic_id and match.group() == own_topic_id and any(
+                            start <= match.start() and match.end() <= end
+                            for start, end in url_spans
+                        ):
+                            continue
+                        errors.append(f"{field_name} contains {label}")
+                        break
+                elif pattern.search(item):
                     errors.append(f"{field_name} contains {label}")
         elif isinstance(item, Mapping):
             for key, nested in item.items():
@@ -551,6 +618,62 @@ def _resource_lines(topic: TopicProjection) -> list[str]:
     return lines
 
 
+def _learning_summary_or_default(topic: TopicProjection) -> str:
+    return topic.learning_summary or f"Praticar e aplicar os conceitos de {topic.title}."
+
+
+def _estimated_minutes_copy(topic: TopicProjection) -> str:
+    return f"{topic.estimated_minutes} minutos" if topic.estimated_minutes else "A definir"
+
+
+def _deliverable_summary_or_default(topic: TopicProjection) -> str:
+    return topic.deliverable_summary or "Aplicar o que foi estudado nesta aula."
+
+
+def _completion_criterion_or_default(topic: TopicProjection) -> str:
+    return (
+        topic.completion_criterion
+        or "Responder a avaliação de acordo com o critério de aprovação definido."
+    )
+
+
+def _session_checklist_or_default(topic: TopicProjection) -> tuple[str, ...]:
+    return topic.session_checklist or (
+        "Estudar a aula",
+        "Praticar",
+        "Enviar a avaliação",
+    )
+
+
+def _rich_lesson_body(topic: TopicProjection, *, intro: str) -> str:
+    """Shared body for any lesson card that must show the full learner-facing
+    content (Ready lesson card, and Em estudo -- the same materialized lesson
+    the learner manually moved, not a different card). A real Etapa 6d
+    dispatch's independent reviewer caught the Em estudo card losing this
+    content entirely after a republish, even though nothing in
+    instructions/40-publish-tasks.md or 41-task-backend-projection.md says
+    moving a card to Em estudo should drop its resources, learning summary or
+    checklist -- it is the same lesson, just moved by the learner.
+    """
+    resources = _resource_lines(topic)
+    completion_command = f'**"Terminei {topic.title}. Avalie minhas respostas."**'
+    return "\n\n".join(
+        [
+            intro,
+            "**O que você vai aprender:** "
+            + _learning_summary_or_default(topic)
+            + "  \n**Tempo sugerido:** "
+            + _estimated_minutes_copy(topic),
+            "**Recursos**\n\n" + "\n".join(resources),
+            "**O que você vai produzir:** "
+            + _deliverable_summary_or_default(topic)
+            + "  \n**Para concluir:** "
+            + _completion_criterion_or_default(topic),
+            "Quando terminar, envie a avaliação e escreva:  \n" + completion_command,
+        ]
+    )
+
+
 def render_visible_lesson(topic: TopicProjection, visible_state: str) -> VisibleFields:
     title = f"Aula {topic.lesson_number:02d} · {topic.title}"
     if visible_state in {"Próxima aula", "Disponível em paralelo"}:
@@ -559,15 +682,8 @@ def render_visible_lesson(topic: TopicProjection, visible_state: str) -> Visible
             if visible_state == "Próxima aula"
             else "**Esta aula também está disponível.**"
         )
-        resources = _resource_lines(topic)
-        description = "\n\n".join(
-            [
-                intro,
-                "**Recursos**\n" + "\n".join(resources),
-                "Quando terminar, envie a avaliação e peça a correção pelo título da aula.",
-            ]
-        )
-        checklist = ("Estudar a aula", "Praticar", "Enviar a avaliação")
+        description = _rich_lesson_body(topic, intro=intro)
+        checklist = _session_checklist_or_default(topic)
     elif visible_state == "Planejado":
         if topic.direct_prerequisite_ids:
             prerequisite_copy = (
@@ -579,12 +695,20 @@ def render_visible_lesson(topic: TopicProjection, visible_state: str) -> Visible
             )
         description = (
             f"**Pré-requisitos desta aula:** {prerequisite_copy}\n\n"
-            "A numeração ajuda a localizar a aula; a disponibilidade depende do progresso durável."
+            "A numeração ajuda a localizar a aula; a disponibilidade depende do progresso durável.\n\n"
+            "**O que você vai aprender:** "
+            + _learning_summary_or_default(topic)
+            + "  \n**Tempo sugerido:** "
+            + _estimated_minutes_copy(topic)
+            + "  \n**O que você vai produzir:** "
+            + _deliverable_summary_or_default(topic)
         )
         checklist = ()
     elif visible_state == "Em estudo":
-        description = "Aula em estudo. Use os recursos atuais e envie a avaliação ao concluir."
-        checklist = ("Estudar", "Praticar", "Enviar a avaliação")
+        description = _rich_lesson_body(
+            topic, intro="**Aula em estudo.** Use os recursos abaixo e envie a avaliação ao concluir."
+        )
+        checklist = _session_checklist_or_default(topic)
     elif visible_state == "Em avaliação":
         description = "Avaliação enviada e aguardando correção durável no GitHub."
         checklist = ()
@@ -776,7 +900,7 @@ def validate_readback(
         if isinstance(visible, Mapping):
             errors.extend(
                 f"{topic_id}: {message}"
-                for message in validate_visible_fields(visible)
+                for message in validate_visible_fields(visible, own_topic_id=topic_id)
             )
         else:
             errors.append(f"{topic_id}: missing visible fields")
@@ -828,7 +952,20 @@ def validate_readback(
         if urls != expected_urls:
             errors.append(f"resource URLs differ for {lesson.topic.topic_id}")
         if lesson.topic.materialized and lesson.visible_state != "Planejado":
-            for key in ("slides", "lesson", "assessment"):
+            # "slides" deliberately excluded from this mandatory-presence
+            # check: unlike lesson/assessment, every real instance with
+            # study_slides.enabled: false (this entire pilot, since Etapa 4)
+            # never has a slides_url for any topic, materialized or not --
+            # that is the correct, expected state, not a missing resource.
+            # A real evaluate dispatch's own run_publish_projection call hit
+            # this exact false requirement and correctly refused to
+            # fabricate a slides URL rather than pass this check. The
+            # separate `urls != expected_urls` comparison above already
+            # catches a genuine mismatch if slides really were expected
+            # (topic.slides_url set) and the backend dropped them, so
+            # dropping "slides" from this list does not weaken that
+            # protection.
+            for key in ("lesson", "assessment"):
                 if not expected_urls.get(key):
                     errors.append(
                         f"materialized eligible lesson {lesson.topic.topic_id} is missing {key} URL"
@@ -1031,7 +1168,9 @@ def normalized_integration_state(
     return state
 
 
-def render_learner_integration_summary(state: Mapping[str, Any]) -> str:
+def render_learner_integration_summary(
+    state: Mapping[str, Any], *, routine_mode: str = "none"
+) -> str:
     task = dict((state.get("selected_capabilities") or {}).get("task_manager") or {})
     provider = str(task.get("provider") or "ferramenta de tarefas")
     container = next(
@@ -1047,11 +1186,36 @@ def render_learner_integration_summary(state: Mapping[str, Any]) -> str:
     lines = [
         "# Integrações ativas",
         "",
-        f"A trilha está organizada no **{provider}**.",
-        "",
-        f"- Quadro ou projeto: {container.get('url', 'link indisponível')}",
-        "- Use as colunas para escolher uma aula disponível e mova somente a aula iniciada para **Em estudo**.",
     ]
+    # Etapa 6d real finding: this text was unconditionally Kanban/board-style
+    # ("Quadro ou projeto", "Use as colunas... mova para Em estudo") for
+    # every provider, including github_issues -- which has no board and no
+    # columns at all, only issue labels. GitHubIssuesBackend synthesizes a
+    # "project"-kind resource for the repository itself (so the `container`
+    # lookup above always matches something for github_issues too), which
+    # made this read as if a real Kanban board existed when it never did.
+    # This was the first time this function's real output was ever
+    # inspected against a genuinely successful github_issues projection --
+    # every earlier real dispatch either predated a working
+    # run_publish_projection call (Etapa 4/5) or had this file hand-written
+    # to bypass an unrelated AssertionError bug (Etapa 6a fixture prep).
+    if provider == "github_issues":
+        lines.extend(
+            [
+                f"A trilha está organizada nas Issues deste repositório GitHub ({container.get('url', 'link indisponível')}).",
+                "",
+                "- Cada aula é uma issue; use os labels `study:*` para ver em que estado ela está.",
+            ]
+        )
+    else:
+        lines.extend(
+            [
+                f"A trilha está organizada no **{provider}**.",
+                "",
+                f"- Quadro ou projeto: {container.get('url', 'link indisponível')}",
+                "- Use as colunas para escolher uma aula disponível e mova somente a aula iniciada para **Em estudo**.",
+            ]
+        )
     reminders = dict((state.get("selected_capabilities") or {}).get("reminders") or {})
     if reminders.get("status") == "success":
         lines.append(
@@ -1059,6 +1223,26 @@ def render_learner_integration_summary(state: Mapping[str, Any]) -> str:
         )
     else:
         lines.append("- Nenhum lembrete adicional está ativo.")
+    # Etapa 6d real finding: scripts/integration_resolution.py's real
+    # validate_plan() requires study.config.yml's own
+    # integration_preferences.routine.mode value to appear verbatim
+    # somewhere in this text -- but this function only ever receives the
+    # projection `state` (built from GitHub Issues + the roadmap), never
+    # the instance config file, so it structurally had no way to know that
+    # value at all. Etapa 6a's own hand-written fixture happened to
+    # include this line by coincidence; the real render function never
+    # did until now. routine_mode defaults to "none" because that is the
+    # only value this pilot's single real configuration ever uses -- a
+    # harness supporting other routine modes would need the caller to
+    # read study.config.yml and pass the real value through
+    # run_publish_projection instead of relying on this default.
+    if routine_mode == "none":
+        lines.append(
+            "- Rotina de estudo: modo **none** (sem calendário fixo nem lembretes "
+            "externos configurados) -- você avança conforme sua disponibilidade."
+        )
+    else:
+        lines.append(f"- Rotina de estudo: modo **{routine_mode}**.")
     lines.extend(
         [
             "- O GitHub continua sendo a fonte de verdade para conteúdo, avaliações e progresso.",
@@ -1080,6 +1264,7 @@ def publish_projection(
     previous_integration_state: Mapping[str, Any] | None = None,
     course_name: str = "Minha trilha de estudos",
     reminder_writer: Callable[[Mapping[str, Any]], Mapping[str, Any]] | None = None,
+    routine_mode: str = "none",
 ) -> PublicationResult:
     plan = build_projection_plan(topics, provider=backend.provider)
     journal = OperationJournal.from_mapping(
@@ -1175,7 +1360,7 @@ def publish_projection(
         )
         journal.checkpoint("durable_state_persisted")
         integration_state["operations"][journal.operation_id]["status"] = "success"
-        summary = render_learner_integration_summary(integration_state)
+        summary = render_learner_integration_summary(integration_state, routine_mode=routine_mode)
         return PublicationResult(
             integration_state=integration_state,
             journal=journal.as_dict(),

@@ -1025,17 +1025,32 @@ def test_replan_gets_a_higher_tool_iteration_and_token_budget() -> None:
     assert max_tokens_for("replan") > DEFAULT_MAX_TOKENS
 
 
-def test_evaluate_allowlist_matches_grading_only_scope() -> None:
-    # Etapa 6c: a deliberately narrower slice of
-    # phase_allows_artifact("assessment") than review_framework.py's full
-    # profile allows -- see agent_runtime.py's EVALUATE_ALLOWED_* comment.
+def test_evaluate_allowlist_matches_full_assessment_profile() -> None:
+    # Etapa 6d: expanded to match review_framework.py's full
+    # phase_allows_artifact("assessment") scope, now that materialization
+    # and the task-state move are wired -- see agent_runtime.py's
+    # EVALUATE_ALLOWED_* comment. Etapa 6c's version of this test asserted
+    # the opposite (narrower) scope; that assertion is now stale by design,
+    # not a regression. state/content-reviews/ and state/operations/ are
+    # additionally allowed here even though phase_allows_artifact("assessment")
+    # itself doesn't cover them -- both are real gaps a real dispatch hit:
+    # the reviewer blocked on a missing content-review artifact, and the
+    # author refused to journal a failed run_publish_projection attempt
+    # because the prefix wasn't allowed.
     assert is_write_allowed("evaluate", "state/progress.json")
     assert is_write_allowed("evaluate", "state/integrations.json")
     assert is_write_allowed("evaluate", "state/assessments/TOPIC-002/attempt-001.json")
-    assert not is_write_allowed("evaluate", "study/topics/TOPIC-003/module.md")
-    assert not is_write_allowed("evaluate", "study/roadmap.md")
-    assert not is_write_allowed("evaluate", "study/integrations.md")
-    assert not is_write_allowed("evaluate", ".github/ISSUE_TEMPLATE/assessment-topic-003.yml")
+    assert is_write_allowed("evaluate", "study/roadmap.md")
+    assert is_write_allowed("evaluate", "study/integrations.md")
+    assert is_write_allowed("evaluate", "study/topics/TOPIC-003/module.md")
+    assert is_write_allowed("evaluate", "study/modules/TOPIC-003.md")
+    assert is_write_allowed("evaluate", "study/flashcards/TOPIC-003.md")
+    assert is_write_allowed("evaluate", "study/assessments/TOPIC-003.yml")
+    assert is_write_allowed("evaluate", ".github/ISSUE_TEMPLATE/assessment-topic-003.yml")
+    assert is_write_allowed("evaluate", "state/content-reviews/TOPIC-003.yml")
+    assert is_write_allowed("evaluate", "state/operations/assessment-topic-003-attempt-01.json")
+    assert not is_write_allowed("evaluate", "state/reviews/agent-pilot-evaluate.yml")
+    assert not is_write_allowed("evaluate", ".open-study-path/instance.yml")
 
 
 def test_evaluate_gets_the_full_resolution_and_publish_tool_set() -> None:
@@ -1066,9 +1081,15 @@ def test_evaluate_gets_the_full_resolution_and_publish_tool_set() -> None:
     # discovery label, unrelated to assessment issues.
     assert "list_intake_issues" not in author_tool_names
     assert "list_intake_issues" not in reviewer_tool_names
-    # Etapa 6c is grading-only: no task-projection engine access yet.
-    assert "run_publish_projection" not in author_tool_names
+    # Etapa 6d: author now has the task-projection engine access needed to
+    # move a mastered topic's authoritative task to Concluído.
+    assert "run_publish_projection" in author_tool_names
+    assert "apply_topic_assessment_result" in author_tool_names
+    # Reviewer still never gets the publish-side-effect tools -- same
+    # "reviewer cannot cause the side effect it is checking" rule as every
+    # other phase, unchanged from Etapa 6c.
     assert "run_publish_projection" not in reviewer_tool_names
+    assert "apply_topic_assessment_result" not in reviewer_tool_names
 
 
 def test_evaluate_label_tools_are_scoped_to_exact_labels() -> None:
@@ -1121,6 +1142,45 @@ def test_evaluate_reviewer_model_is_sonnet_and_structural() -> None:
     # same as replan.
     config = _default_config()
     assert resolve_phase_reviewer_model("evaluate", config) == MODEL_CATALOG["sonnet"]
+
+
+def test_apply_topic_assessment_result_transforms_canonical_state() -> None:
+    with tempfile.TemporaryDirectory() as tmp:
+        root = Path(tmp)
+        author = RepoTools(root=root, phase="evaluate", role="author")
+        topics = [
+            {
+                "topic_id": "TOPIC-001",
+                "lesson_number": 1,
+                "title": "Primeiro programa em Go",
+                "direct_prerequisite_ids": [],
+                "content_version": 1,
+                "canonical_state": "ready",
+                "materialized": True,
+                "visual_position": 0,
+                "external_id": "21",
+                "lesson_url": "https://example.com/lesson",
+            }
+        ]
+
+        mastered = json.loads(author.apply_topic_assessment_result(topics, "TOPIC-001", True))
+        assert mastered["status"] == "success"
+        assert mastered["topics"][0]["canonical_state"] == "completed"
+
+        not_mastered = json.loads(author.apply_topic_assessment_result(topics, "TOPIC-001", False))
+        assert not_mastered["topics"][0]["canonical_state"] == "review_required"
+
+        unknown = json.loads(author.apply_topic_assessment_result(topics, "TOPIC-999", True))
+        assert unknown["status"] == "error"
+        assert unknown["error_type"] == "UnknownTopicId"
+
+        reviewer = RepoTools(root=root, phase="evaluate", role="reviewer")
+        try:
+            reviewer.apply_topic_assessment_result(topics, "TOPIC-001", True)
+        except AllowlistViolation as exc:
+            assert "not available to this role" in str(exc)
+        else:
+            raise AssertionError("reviewer must never be able to apply an assessment result")
 
 
 def test_evaluate_gets_a_higher_tool_iteration_and_token_budget() -> None:
@@ -1179,11 +1239,12 @@ def main() -> None:
         test_replan_has_no_github_issues_tools,
         test_replan_reviewer_model_is_sonnet_per_agent_catalog,
         test_replan_gets_a_higher_tool_iteration_and_token_budget,
-        test_evaluate_allowlist_matches_grading_only_scope,
+        test_evaluate_allowlist_matches_full_assessment_profile,
         test_evaluate_gets_the_full_resolution_and_publish_tool_set,
         test_evaluate_author_can_actually_read_the_submitted_answers,
         test_evaluate_label_tools_are_scoped_to_exact_labels,
         test_evaluate_reviewer_model_is_sonnet_and_structural,
+        test_apply_topic_assessment_result_transforms_canonical_state,
         test_evaluate_gets_a_higher_tool_iteration_and_token_budget,
     ]
     for test in tests:

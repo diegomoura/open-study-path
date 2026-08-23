@@ -11,6 +11,7 @@ sys.path.insert(0, str(SCRIPTS))
 from task_projection_engine import (  # noqa: E402
     AmbiguousMatchError,
     FakeBackend,
+    OperationJournal,
     PartialWriteError,
     ReadbackValidationError,
     TopicProjection,
@@ -20,7 +21,10 @@ from task_projection_engine import (  # noqa: E402
     build_projection_plan,
     ensure_focused_review_resource,
     migrate_legacy_backend,
+    normalized_integration_state,
     publish_projection,
+    render_learner_integration_summary,
+    render_visible_lesson,
     roadmap_fingerprint,
     validate_readback,
     validate_visible_fields,
@@ -239,6 +243,235 @@ class TaskProjectionEngineTests(unittest.TestCase):
         self.assertTrue(any("internal topic id" in error for error in errors))
         self.assertTrue(any("content_version" in error for error in errors))
 
+    def test_own_topic_id_inside_own_resource_url_is_not_a_leak(self):
+        # Real finding from a real Etapa 6d dispatch: TOPIC-001 predates the
+        # slug-filename convention later materializations use, so its real
+        # lesson_url/assessment_url necessarily contain "TOPIC-001" as a
+        # path segment (study/modules/TOPIC-001.md). Once the Em estudo
+        # card started including real resource links, every real dispatch
+        # attempt was blocked by this exact check treating a legitimate
+        # self-referential resource link as an internal-ID leak. This is
+        # not a leak -- it's the topic's own ID inside its own real URL.
+        fields = VisibleFields(
+            title="Aula 01",
+            description=(
+                "**Recursos**\n\n"
+                "- **Aula:** https://github.com/OWNER/REPO/blob/main/study/modules/TOPIC-001.md\n"
+                "- **Avaliação:** https://github.com/OWNER/REPO/blob/main/study/assessments/TOPIC-001.yml"
+            ),
+        )
+        errors = validate_visible_fields(fields, own_topic_id="TOPIC-001")
+        self.assertEqual([], errors)
+
+    def test_other_topic_id_inside_a_url_is_still_a_leak(self):
+        # The exemption above must stay narrow: a URL containing a
+        # *different* topic's internal ID inside another topic's card is
+        # exactly the leak the check exists to catch, and must still fail
+        # even when own_topic_id is provided for the card being validated.
+        fields = VisibleFields(
+            title="Aula 01",
+            description=(
+                "- **Aula:** https://github.com/OWNER/REPO/blob/main/study/modules/TOPIC-002.md"
+            ),
+        )
+        errors = validate_visible_fields(fields, own_topic_id="TOPIC-001")
+        self.assertTrue(any("internal topic id" in error for error in errors))
+
+    def test_own_topic_id_outside_a_url_is_still_a_leak(self):
+        # The exemption only covers the topic's own ID *inside a URL*. A
+        # bare mention of the topic's own ID outside any URL (e.g. leaked
+        # into prose) must still be caught.
+        fields = VisibleFields(
+            title="Aula 01",
+            description="Este é o card interno para TOPIC-001, não mostrar ao aluno.",
+        )
+        errors = validate_visible_fields(fields, own_topic_id="TOPIC-001")
+        self.assertTrue(any("internal topic id" in error for error in errors))
+
+    def test_publish_succeeds_with_real_topic_id_shaped_urls(self):
+        # End-to-end version of the two unit tests above, through the real
+        # publish_projection() -> validate_readback() path with a topic
+        # whose real URLs are shaped exactly like TOPIC-001's actual
+        # materialized files -- the real dispatch scenario this fix
+        # resolves.
+        real_shaped_topic = TopicProjection(
+            topic_id="TOPIC-001",
+            lesson_number=1,
+            title="Primeiro programa em Go",
+            direct_prerequisite_ids=(),
+            content_version=1,
+            canonical_state="in_progress",
+            materialized=True,
+            external_id=None,
+            lesson_url="https://github.com/OWNER/REPO/blob/main/study/modules/TOPIC-001.md",
+            slides_url=None,
+            assessment_url="https://github.com/OWNER/REPO/blob/main/study/assessments/TOPIC-001.yml",
+            learning_summary="Explicar a diferença entre rodar e compilar um programa em Go.",
+            estimated_minutes=60,
+            deliverable_summary="Um programa que compila e roda.",
+            completion_criterion="Responder corretamente as questões da avaliação.",
+            session_checklist=(
+                "Instalar o Go e criar um módulo",
+                "Escrever e rodar um primeiro programa",
+                "Compilar e executar o binário",
+                "Enviar a avaliação",
+            ),
+        )
+        backend = FakeBackend("github_issues")
+        result = publish_projection(
+            topics=(real_shaped_topic,), backend=backend, operation_id="topic-id-url-v1"
+        )
+        self.assertEqual("success", result.journal["status"])
+        managed = [
+            item
+            for item in result.normalized_snapshot["resources"]
+            if item.get("managed") and item.get("kind") == "lesson"
+        ]
+        body = managed[0]["visible"]["description"]
+        self.assertIn("study/modules/TOPIC-001.md", body)
+        self.assertIn("study/assessments/TOPIC-001.yml", body)
+
+    def test_learner_summary_does_not_false_positive_on_repo_name_substring(self):
+        # Real finding, documented in Etapa 6a's fixture commit and fixed in
+        # Etapa 6d: render_learner_integration_summary() used to raise an
+        # uncaught AssertionError whenever the container/project URL
+        # contained the literal substring "open-study-path" -- which any
+        # repository actually named with that product-name prefix (e.g.
+        # this pilot's own disposable test repos) always does in its URL,
+        # even though nothing was leaking. The real marker syntax always has
+        # a colon immediately after ("open-study-path:topic_id=..."); a bare
+        # repository name never does.
+        state = {
+            "selected_capabilities": {"task_manager": {"provider": "github_issues"}},
+            "resources": [
+                {
+                    "capability": "task_manager",
+                    "type": "project",
+                    "url": "https://github.com/someone/open-study-path-agent-test-1",
+                }
+            ],
+        }
+        summary = render_learner_integration_summary(state)
+        self.assertIn("open-study-path-agent-test-1", summary)
+
+        # The real leak this pattern exists to catch must still be caught.
+        leaking_state = deepcopy(state)
+        leaking_state["resources"][0]["url"] = (
+            "https://example.com/<!-- open-study-path:topic_id=TOPIC-001 -->"
+        )
+        with self.assertRaises(AssertionError):
+            render_learner_integration_summary(leaking_state)
+
+    def test_publish_succeeds_for_materialized_topic_without_slides(self):
+        # Real finding from a real Etapa 6d evaluate dispatch:
+        # run_publish_projection returned status="error" (ReadbackValidationError)
+        # for a genuinely correct, fully materialized topic, because
+        # validate_readback unconditionally required a slides URL for every
+        # materialized, non-Planejado lesson -- but this entire pilot (and
+        # any real instance with study_slides.enabled: false) never has one.
+        # The author correctly refused to fabricate a slides URL rather than
+        # pass this false requirement. This is the exact scenario, run
+        # through the real engine end to end, confirming it now succeeds.
+        no_slides_topic = TopicProjection(
+            topic_id="TOPIC-001",
+            lesson_number=1,
+            title="Tema 1",
+            direct_prerequisite_ids=(),
+            content_version=1,
+            canonical_state="ready",
+            materialized=True,
+            external_id=None,
+            lesson_url="https://github.example/aula-1",
+            slides_url=None,
+            assessment_url="https://github.example/avaliacao-1",
+        )
+        backend = FakeBackend("github_issues")
+        result = publish_projection(
+            topics=(no_slides_topic,), backend=backend, operation_id="no-slides-v1"
+        )
+        self.assertEqual("success", result.journal["status"])
+
+    def test_learner_summary_uses_label_based_language_for_github_issues(self):
+        # Real finding from a real Etapa 6d evaluate dispatch:
+        # render_learner_integration_summary()'s text was unconditionally
+        # Kanban/board-style ("Quadro ou projeto", "Use as colunas...
+        # mova... para Em estudo") for every provider, including
+        # github_issues -- which has no board and no columns, only issue
+        # labels. GitHubIssuesBackend synthesizes a "project"-kind resource
+        # for the repository itself, so the container lookup always
+        # matched something for github_issues too, making the rendered
+        # text describe a UI that does not exist and would mislead a real
+        # learner about how to track their own progress. This was the
+        # first time this function's real output was ever produced by a
+        # genuinely successful github_issues publish_projection() call --
+        # every earlier real dispatch either predated a working
+        # run_publish_projection or had this file hand-written to bypass
+        # the unrelated AssertionError bug (Etapa 6a fixture prep).
+        topic = TopicProjection(
+            topic_id="TOPIC-001",
+            lesson_number=1,
+            title="Tema 1",
+            direct_prerequisite_ids=(),
+            content_version=1,
+            canonical_state="ready",
+            materialized=True,
+            external_id=None,
+            lesson_url="https://github.example/aula-1",
+            slides_url=None,
+            assessment_url="https://github.example/avaliacao-1",
+        )
+        backend = FakeBackend("github_issues")
+        result = publish_projection(
+            topics=(topic,), backend=backend, operation_id="label-language-v1"
+        )
+        self.assertEqual("success", result.journal["status"])
+        summary = result.learner_summary
+        self.assertIn("Issues", summary)
+        self.assertIn("labels", summary)
+        self.assertNotIn("Quadro ou projeto", summary)
+        self.assertNotIn("colunas", summary)
+        self.assertNotIn("Em estudo", summary)
+
+    def test_learner_summary_mentions_routine_mode(self):
+        # Real finding from a real Etapa 6d evaluate dispatch:
+        # scripts/integration_resolution.py's real validate_plan() requires
+        # study.config.yml's integration_preferences.routine.mode value to
+        # appear verbatim in study/integrations.md -- but
+        # render_learner_integration_summary() only ever receives the
+        # projection state (GitHub + roadmap + journal), never the
+        # instance config file, so it structurally had no way to know that
+        # value. Etapa 6a's own hand-written fixture happened to include
+        # this line by coincidence; the real render function never did
+        # until this fix. Defaults to "none" (this pilot's only real
+        # value) when the caller does not supply a different one.
+        topic = TopicProjection(
+            topic_id="TOPIC-001",
+            lesson_number=1,
+            title="Tema 1",
+            direct_prerequisite_ids=(),
+            content_version=1,
+            canonical_state="ready",
+            materialized=True,
+            external_id=None,
+            lesson_url="https://github.example/aula-1",
+            slides_url=None,
+            assessment_url="https://github.example/avaliacao-1",
+        )
+        backend = FakeBackend("github_issues")
+        result = publish_projection(
+            topics=(topic,), backend=backend, operation_id="routine-mode-v1"
+        )
+        self.assertIn("none", result.learner_summary.lower())
+
+        backend2 = FakeBackend("github_issues")
+        result2 = publish_projection(
+            topics=(topic,),
+            backend=backend2,
+            operation_id="routine-mode-v2",
+            routine_mode="fixed_calendar",
+        )
+        self.assertIn("fixed_calendar", result2.learner_summary)
+
     def test_readback_fails_when_list_order_is_wrong(self):
         backend = FakeBackend("trello")
         result = publish_projection(
@@ -253,6 +486,183 @@ class TaskProjectionEngineTests(unittest.TestCase):
         plan = build_projection_plan((topic(1), topic(2)), provider="trello")
         errors = validate_readback(plan, snapshot)
         self.assertTrue(any("order is incorrect" in error for error in errors))
+
+    def test_ready_card_renders_full_instructions_40_contract_shape(self):
+        # Real finding from a real Etapa 6d evaluate dispatch: an
+        # independent reviewer read a materialized TOPIC-002 issue back
+        # from GitHub and found only a bare "Recursos" block and a generic
+        # 3-item checklist -- instructions/40-publish-tasks.md's "Ready
+        # lesson card" section requires "O que você vai aprender:",
+        # "Tempo sugerido:", "O que você vai produzir:", "Para concluir:"
+        # and the literal completion-command quote, none of which
+        # TopicProjection had fields for. This exercises the full
+        # end-to-end publish_projection() -> render_visible_lesson() path
+        # with those fields populated the way a real author call must now
+        # populate them, and asserts the rendered card body actually
+        # contains every required piece -- not just that the function
+        # runs without error.
+        rich_topic = TopicProjection(
+            topic_id="TOPIC-001",
+            lesson_number=1,
+            title="Tipos e tipagem estática",
+            direct_prerequisite_ids=(),
+            content_version=1,
+            canonical_state="ready",
+            materialized=True,
+            external_id=None,
+            lesson_url="https://github.example/aula-1",
+            slides_url=None,
+            assessment_url="https://github.example/avaliacao-1",
+            learning_summary="Diferenciar tipagem estática de dinâmica na prática.",
+            estimated_minutes=45,
+            deliverable_summary="Um trecho de código anotado com os tipos corretos.",
+            completion_criterion="Acertar pelo menos 4 das 5 questões da avaliação.",
+            session_checklist=(
+                "Ler a seção sobre tipagem estática",
+                "Rodar os três exemplos do módulo",
+                "Anotar os tipos no exercício guiado",
+                "Enviar a avaliação",
+            ),
+        )
+        backend = FakeBackend("github_issues")
+        result = publish_projection(
+            topics=(rich_topic,), backend=backend, operation_id="ready-card-contract-v1"
+        )
+        self.assertEqual("success", result.journal["status"])
+        managed = [
+            item
+            for item in result.normalized_snapshot["resources"]
+            if item.get("managed") and item.get("kind") == "lesson"
+        ]
+        self.assertEqual(1, len(managed))
+        body = managed[0]["visible"]["description"]
+        self.assertIn("O que você vai aprender", body)
+        self.assertIn("Diferenciar tipagem estática de dinâmica na prática.", body)
+        self.assertIn("Tempo sugerido", body)
+        self.assertIn("45 minutos", body)
+        self.assertIn("O que você vai produzir", body)
+        self.assertIn("Um trecho de código anotado com os tipos corretos.", body)
+        self.assertIn("Para concluir", body)
+        self.assertIn("Acertar pelo menos 4 das 5 questões da avaliação.", body)
+        self.assertIn(
+            '**"Terminei Tipos e tipagem estática. Avalie minhas respostas."**', body
+        )
+        checklist = managed[0]["visible"]["checklist"]
+        self.assertEqual(list(rich_topic.session_checklist), checklist)
+
+    def test_future_card_includes_learning_time_and_deliverable(self):
+        # Same instructions/40-publish-tasks.md gap as the ready-card test
+        # above, but for the "Future lesson card" section, which also
+        # requires "O que você vai aprender:", "Tempo sugerido:" and
+        # "O que você vai produzir:" -- the Planejado branch of
+        # render_visible_lesson() omitted all three before this fix.
+        future_topic = TopicProjection(
+            topic_id="TOPIC-002",
+            lesson_number=2,
+            title="Funções de ordem superior",
+            direct_prerequisite_ids=("TOPIC-001",),
+            content_version=0,
+            canonical_state="planned",
+            materialized=False,
+            learning_summary="Reconhecer e escrever funções que recebem outras funções.",
+            estimated_minutes=30,
+            deliverable_summary="Uma função de ordem superior própria, testada.",
+        )
+        visible = render_visible_lesson(future_topic, "Planejado")
+        self.assertIn("O que você vai aprender", visible.description)
+        self.assertIn(
+            "Reconhecer e escrever funções que recebem outras funções.",
+            visible.description,
+        )
+        self.assertIn("Tempo sugerido", visible.description)
+        self.assertIn("30 minutos", visible.description)
+        self.assertIn("O que você vai produzir", visible.description)
+        self.assertIn(
+            "Uma função de ordem superior própria, testada.", visible.description
+        )
+
+    def test_ready_card_falls_back_gracefully_without_new_fields(self):
+        # Backward compatibility: existing callers/tests (and any real
+        # topic contract not yet updated to populate the new optional
+        # fields) must not break or produce an empty-looking card --
+        # render_visible_lesson() falls back to non-empty generic text
+        # for each new field instead of omitting the section or raising.
+        plain_topic = topic(1)
+        visible = render_visible_lesson(plain_topic, "Próxima aula")
+        self.assertIn("O que você vai aprender", visible.description)
+        self.assertIn("Tempo sugerido", visible.description)
+        self.assertIn("O que você vai produzir", visible.description)
+        self.assertIn("Para concluir", visible.description)
+        self.assertIn(f'"Terminei {plain_topic.title}.', visible.description)
+        self.assertEqual(3, len(visible.checklist))
+
+    def test_session_checklist_length_is_validated(self):
+        with self.assertRaises(ValueError):
+            TopicProjection(
+                topic_id="TOPIC-001",
+                lesson_number=1,
+                title="Tema 1",
+                session_checklist=("Só um passo",),
+            )
+
+    def test_in_progress_card_keeps_full_content_after_learner_moves_it(self):
+        # Real finding from the real Etapa 6d card-content-fix validation
+        # dispatch: an independent reviewer republished TOPIC-001 (already
+        # moved by the learner to Em estudo/in_progress) and found the
+        # rendered card had regressed to a bare one-line description and a
+        # generic 3-item checklist -- nothing in instructions/40-publish-
+        # tasks.md or 41-task-backend-projection.md says moving a card to
+        # Em estudo should drop its resources, learning summary or
+        # checklist; it is the same materialized lesson, just moved by the
+        # learner. render_visible_lesson() must keep the full Ready-lesson-
+        # card content for Em estudo too.
+        in_progress_topic = TopicProjection(
+            topic_id="TOPIC-001",
+            lesson_number=1,
+            title="Primeiro programa em Go",
+            direct_prerequisite_ids=(),
+            content_version=1,
+            canonical_state="in_progress",
+            materialized=True,
+            external_id=None,
+            lesson_url="https://github.example/aula-1",
+            slides_url=None,
+            assessment_url="https://github.example/avaliacao-1",
+            learning_summary="Explicar a diferença entre rodar e compilar um programa em Go.",
+            estimated_minutes=60,
+            deliverable_summary="Um programa que compila e roda, explicando a diferença.",
+            completion_criterion="Responder corretamente as questões sobre compilação e módulos.",
+            session_checklist=(
+                "Instalar o Go e criar um módulo",
+                "Escrever e rodar um primeiro programa",
+                "Compilar e executar o binário",
+                "Enviar a avaliação",
+            ),
+        )
+        backend = FakeBackend("github_issues")
+        result = publish_projection(
+            topics=(in_progress_topic,), backend=backend, operation_id="em-estudo-v1"
+        )
+        self.assertEqual("success", result.journal["status"])
+        managed = [
+            item
+            for item in result.normalized_snapshot["resources"]
+            if item.get("managed") and item.get("kind") == "lesson"
+        ]
+        body = managed[0]["visible"]["description"]
+        self.assertIn("O que você vai aprender", body)
+        self.assertIn(
+            "Explicar a diferença entre rodar e compilar um programa em Go.", body
+        )
+        self.assertIn("Tempo sugerido", body)
+        self.assertIn("60 minutos", body)
+        self.assertIn("O que você vai produzir", body)
+        self.assertIn("Para concluir", body)
+        self.assertIn(
+            '**"Terminei Primeiro programa em Go. Avalie minhas respostas."**', body
+        )
+        checklist = managed[0]["visible"]["checklist"]
+        self.assertEqual(list(in_progress_topic.session_checklist), checklist)
 
     def test_student_sections_resources_comments_and_attachments_are_preserved(self):
         backend = FakeBackend(

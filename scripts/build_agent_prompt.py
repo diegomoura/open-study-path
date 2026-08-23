@@ -27,7 +27,17 @@ PHASE_INSTRUCTION_FILES = {
     "diagnostic": ["instructions/20-diagnostic.md"],
     "track": ["instructions/50-track-progress.md"],
     "replan": ["instructions/60-replan.md"],
-    "evaluate": ["instructions/55-evaluate-topic.md"],
+    "evaluate": [
+        "instructions/55-evaluate-topic.md",
+        # Etapa 6d: the "When the topic is mastered" -> auto-materialize
+        # chaining path reuses these two contracts verbatim from
+        # generate_detailed -- they are not evaluate-specific, but the
+        # operative text for what run_publish_projection/materialization
+        # must satisfy applies exactly the same way whether reached via
+        # generate_detailed or evaluate's mastery path.
+        "instructions/57-materialize-next-content.md",
+        "instructions/38-finalize-generated-bundle.md",
+    ],
 }
 
 # Files every author/reviewer prompt gets regardless of phase.
@@ -73,6 +83,17 @@ PHASE_EXTRA_AUTHOR_FILES: dict[str, list[str]] = {
         "docs/integration-capabilities.md",
     ],
     "diagnostic": ["instructions/21-diagnostic-completion-recovery.md"],
+    # Etapa 6d: same materialization-quality context generate_detailed's
+    # author already gets, since evaluate's mastery-triggered
+    # materialization path produces the exact same kind of content and
+    # must meet the exact same bar.
+    "evaluate": [
+        "docs/learner-facing-language.md",
+        "docs/beginner-first-pedagogy.md",
+        "docs/content-quality-and-sources.md",
+        "docs/mermaid-visual-learning.md",
+        "docs/integration-capabilities.md",
+    ],
 }
 
 PHASE_EXTRA_REVIEWER_FILES: dict[str, list[str]] = {
@@ -92,6 +113,11 @@ PHASE_EXTRA_REVIEWER_FILES: dict[str, list[str]] = {
         "docs/content-quality-and-sources.md",
     ],
     "diagnostic": ["instructions/21-diagnostic-completion-recovery.md"],
+    "evaluate": [
+        "instructions/36-review-course-content.md",
+        "docs/beginner-first-pedagogy.md",
+        "docs/content-quality-and-sources.md",
+    ],
 }
 
 # `review_profile` selects which required-check set instructions/
@@ -271,6 +297,41 @@ You have exactly one tool for the actual publication:
   `state/integrations.json` first and pass it back in -- this is what lets
   the engine update the same issue instead of creating a duplicate.
 
+  Also populate `learning_summary` (plain-language capability summary,
+  becomes "O que você vai aprender:"), `estimated_minutes` (integer,
+  becomes "Tempo sugerido:"), `deliverable_summary` (becomes "O que você
+  vai produzir:"), `completion_criterion` (plain-language pass/scoring
+  criterion, becomes "Para concluir:") and `session_checklist` (3 to 7
+  granular actions taken from the module -- not a generic placeholder,
+  becomes the "Sua sessão de estudo" checklist) for every topic, read from
+  its real topic contract (`study/topics/<id>.md`) and module
+  (`study/modules/<id>.md`). A real Etapa 6d dispatch's independent
+  reviewer read a materialized card back from GitHub and found only a
+  bare "Recursos" block and a generic 3-item checklist because these
+  fields were left `None`/empty -- instructions/40-publish-tasks.md's
+  "Ready lesson card" and "Future lesson card" sections require all of
+  this content, and the engine now has fields for it but still needs the
+  real values from the topic contract and module, not a placeholder.
+  This also applies to a topic already moved to **Em estudo** by the
+  learner -- it is the same materialized lesson, just moved, so populate
+  these fields for it too, not only for topics still in Próxima aula/
+  Disponível em paralelo. A real dispatch's reviewer caught a republish
+  silently dropping this content for an in-progress topic.
+
+  When a topic's real, materialized file paths happen to contain its own
+  `TOPIC-000`-style ID (true for TOPIC-001, which predates the slug-
+  filename convention `generate_detailed`/`evaluate` use for newer
+  materializations), that is fine -- the engine's metadata-leak check now
+  exempts a topic's own ID when it appears strictly inside its own
+  resource URL, never for another topic's ID or a bare mention outside a
+  URL. Do not invent a workaround (a placeholder URL, a null URL, or a
+  made-up alternate path) to dodge this; a real Etapa 6d dispatch made 7
+  increasingly strained attempts to route around what turned out to be a
+  validator false positive, and every workaround either broke a different
+  required check or produced a card with no working resource links at
+  all. Pass the topic's actual, real URL, exactly as it exists in the
+  repository.
+
 The tool's response has a `status` field:
 
 - `status: "success"`: write `state/integrations.json` (the returned
@@ -300,8 +361,16 @@ updated, and compare title, labels and rendered description against what
 instructions/40-publish-tasks.md and instructions/41-task-backend-
 projection.md require (numbered title format, exactly one `Próxima aula`,
 correct `study:*` label, no internal metadata leaked into visible fields).
-You do not have run_publish_projection: you are checking the result, not
-reproducing or re-running the publication.
+For a ready lesson card, also confirm the body actually contains "O que
+você vai aprender:", "Tempo sugerido:", "O que você vai produzir:", "Para
+concluir:", the literal completion-command quote
+(`**"Terminei <título da aula>. Avalie minhas respostas."**`) and a real
+"Sua sessão de estudo" checklist with 3-7 granular items -- a bare
+"Recursos" block plus a generic 3-item checklist is the exact structural
+gap a real Etapa 6d dispatch's reviewer previously caught, so read the
+actual issue body back rather than trusting that the author populated
+these fields. You do not have run_publish_projection: you are checking
+the result, not reproducing or re-running the publication.
 """
 
 AUTHOR_PROPOSAL_NOTE = """\
@@ -568,38 +637,14 @@ name.
 
 
 AUTHOR_EVALUATE_NOTE = """\
-## Evaluate tool addendum (Etapa 6c: grading only, no auto-materialization)
+## Evaluate tool addendum (Etapa 6d: grading, task-state move, materialization)
 
-You may write only `state/progress.json`, `state/integrations.json`, and
-anything under `state/assessments/` -- write_file rejects anything else.
-This harness slice does not support the "When the topic is mastered" ->
-automatic `instructions/57-materialize-next-content.md` chaining step yet
-(that is Etapa 6d, not this one), and it also does not move the
-authoritative task's own GitHub Issues state (`canonical_state`) toward
-`Concluído` -- that requires `apply_assessment_result` composed with the
-same `run_publish_projection` engine `publish` uses, which is deferred to
-6d together with materialization (see
-docs/claude-agent-pilot-etapa6-design.md's real finding from Etapa 6a:
-`render_learner_integration_summary()` inside that exact call path raises
-an uncaught `AssertionError` on any repository whose name contains
-"open-study-path", which this pilot's own disposable test repo does -- 6d
-should fix that bug before relying on this path for real). If your grading
-concludes a topic is mastered:
-
-- still complete every step this harness *does* support: persist the
-  attempt under `state/assessments/<topic_id>/`, prepare the
-  `state/progress.json` mastery transition, apply `assessment:graded` and
-  remove `assessment:submitted`;
-- do NOT call `run_publish_projection` (you do not have it in this phase)
-  and do NOT attempt to materialize the next content window yourself --
-  inventing study/topics/ or study/modules/ content by hand, or moving the
-  task's GitHub label/state manually instead of through the real engine,
-  would either violate write_file's allowlist or bypass the read-back
-  validation that engine exists for;
-- report through finish_phase that moving the authoritative task to
-  Concluído and materializing the next topic are not enabled in this
-  harness slice yet, so a human knows both are still needed rather than
-  assuming either already happened.
+You may write `state/progress.json`, `state/integrations.json`,
+`study/roadmap.md`, `study/integrations.md`, anything under
+`state/assessments/`, `study/topics/`, `study/modules/`,
+`study/flashcards/`, `study/assessments/`, and
+`.github/ISSUE_TEMPLATE/assessment-topic-*.yml` -- write_file rejects
+anything else.
 
 Resolve the assessment issue with `resolve_assessment_candidates`, never by
 reading `list_assessment_issues`/`read_github_issue` and judging candidates
@@ -619,15 +664,171 @@ streaks, calendar attendance or a formative quiz/flashcard score --
 sufficient mastery evidence by themselves. Grade only the resolved
 assessment issue's actual answers against the rubric.
 
-Do not call `post_issue_comment` or `label_github_issue`/
-`unlabel_github_issue` until after the independent assessment review has
-approved -- the instruction is explicit that publishing before approval is
-not allowed, the same ordering `run_publish_projection`-based phases
-already enforce between draft and finalized state.
+Publish as soon as grading and the task-state/materialization steps below
+are complete, in this same pass -- do not withhold `post_issue_comment`/
+`label_github_issue`/`unlabel_github_issue` waiting for a later step that
+does not exist in this harness. The independent reviewer job plus the
+human merging the resulting PR is what actually gates whether this run's
+conclusions stand.
+
+### If the topic is NOT mastered
+
+Persist the attempt under `state/assessments/<topic_id>/`, prepare the
+`state/progress.json` transition, apply `assessment:recovery-required`,
+remove `assessment:submitted`, post the comment explaining the gap.
+
+`instructions/55-evaluate-topic.md`'s "Synchronize derived providers"
+section ("Move or complete the authoritative task backend according to
+the GitHub result") applies regardless of mastery outcome, not only when
+mastered -- a real Etapa 6d dispatch's reviewer correctly caught this
+being skipped entirely, leaving the authoritative task issue showing a
+stale "concluded" label/body while `state/progress.json` recorded
+`review_required`, a visible contradiction. Do not skip it: build the
+`topics` list the same way as the mastered path, call
+`apply_topic_assessment_result(topics, topic_id, passed=false)` (sets
+`canonical_state` to `review_required`, not `completed`), then call
+`run_publish_projection` with the result so the authoritative task's real
+label/body reflect the recovery outcome. Handle a `status="error"` result
+the same way as the mastered path: no `study/`, `state/integrations.json`
+or `study/integrations.md` writes, report via `finish_phase`.
+
+`instructions/55-evaluate-topic.md`'s "Recovery and focused reassessment"
+section also calls for creating a dedicated focused-recovery GitHub issue
+(targeted study tasks, reassessment scoped to weak areas,
+`RECOVERY-<topic_id>-A<attempt>` tracked in the task backend, linked to
+the original assessment/module/task). This harness slice has no tool that
+creates a new GitHub issue -- only `post_issue_comment` (comments on an
+issue that already exists) and `label_github_issue`/`unlabel_github_issue`
+(labels on an issue that already exists). Do not fabricate this by
+commenting a "recovery issue" body onto the original assessment issue
+instead of a real new one, and do not invent a `create_github_issue` call
+that does not exist in your tool list. Complete the task-state sync above,
+then report through `finish_phase` that focused-recovery-issue creation
+is not enabled in this harness slice yet, so a human knows a real GitHub
+issue for the recovery plan still needs to be opened by hand.
+
+### If the topic IS mastered
+
+1. Persist the attempt, prepare the `state/progress.json` mastery
+   transition, apply `assessment:graded`, remove `assessment:submitted`,
+   post the comment.
+2. Read the current roadmap and topic contracts via `read_file` to build
+   the `topics` list `run_publish_projection` expects (same shape
+   `publish`'s own author already builds), including every already-known
+   `external_id` from `state/integrations.json` so the engine updates
+   existing issues instead of duplicating them.
+3. Call `apply_topic_assessment_result(topics, topic_id, passed=true)` to
+   get the updated list with this topic's `canonical_state` set to
+   `completed` -- never hand-edit `canonical_state` in a `write_file` call
+   instead.
+4. Materialize the next topic in the rolling window per
+   `instructions/57-materialize-next-content.md` and
+   `38-finalize-generated-bundle.md` -- the same content bar
+   `generate_detailed` already applies (beginner-first pedagogy, sourced
+   content, Mermaid diagrams, no placeholder text). Slides stay disabled
+   in this pilot, same as `generate_detailed` -- do not create
+   `study/topics/*.md` frontmatter pointing at a `slides_url`. `lesson_url`
+   must be a real, working link to the actual materialized module in this
+   repository -- never a placeholder domain. A real Etapa 6d dispatch
+   published a task card whose "Aula" link was a literal
+   `https://example.com/...` URL leading nowhere, because an earlier
+   version of this addendum's own illustrative example used that domain
+   and was taken literally instead of as shape-only guidance. Use
+   `https://github.com/<target repository>/blob/main/<path>`, pointing at
+   the module file you just wrote.
+
+   Never put the literal internal `topic_id` string (e.g. `TOPIC-002`)
+   inside a `lesson_url`/`assessment_url` value -- a separate real Etapa
+   6d dispatch hit `run_publish_projection` failing read-back validation
+   for exactly this (the visible-content leak detector correctly treats
+   an internal ID appearing in a rendered resource URL as a metadata leak,
+   the same rule that already applies to descriptions). Since the real
+   blob URL above necessarily contains the module's file path, save the
+   materialized module itself under a slug filename derived from the
+   topic's title (e.g. `study/modules/tipos-tipagem-estatica-e-erros.md`),
+   not `study/modules/<topic_id>.md` -- the slug satisfies both
+   requirements at once: a real, dereferenceable link, with no internal ID
+   substring anywhere in it.
+
+   Also write `state/content-reviews/<new_topic_id>.yml`, the content-review
+   artifact `36-review-course-content.md` requires for any newly
+   materialized topic (matching the one already committed for TOPIC-001)
+   -- materializing content and presenting it as ready without that
+   review is a blocking finding, not optional.
+   `scripts/course_content_review.py`'s real validator requires the
+   `review_mode` field to be the exact literal string `independent_pass`
+   and the `status` field to be the exact literal string `approved` --
+   nothing else validates, no matter how accurately it describes reality.
+   A real Etapa 6d dispatch wrote `review_mode: same_pass_author_self_check`
+   to be honest about not being a genuinely separate pass, and that alone
+   would fail CI outright, before the check even gets to content quality.
+   Write the two fixed field values exactly as required; honesty about
+   this pass not being genuinely independent belongs only in prose, inside
+   a `non_blocking_findings` entry -- never in a structured field the
+   schema checks verbatim. Only write `status: approved` at all if the
+   content genuinely meets every one of the 9 required checks at the same
+   bar `generate_detailed`'s separate `content_reviewer` agent holds it
+   to, since this is the only artifact claiming that check happened. Add
+   the `non_blocking_findings` entry stating plainly that this review was
+   written in the same turn as the content itself, not by a genuinely
+   separate isolated call the way `generate_detailed`'s `content_reviewer`
+   is -- the real independent check for this materialization is the
+   separate evaluate reviewer job's own `next_materialization_consistency`
+   inspection, not this file.
+
+   `course_content_review.py`'s real validator deterministically
+   cross-checks two things the LLM review pass can miss: each outcome
+   marker (`LO-1`, `LO-2`, ...) must appear in the module exactly once,
+   never repeated; and `state/content-reviews/<new_topic_id>.yml`'s own
+   `outcome_coverage[].assessment_questions` for each outcome must exactly
+   match that outcome's real `assessed_by` question list in
+   `study/assessments/<new_topic_id>.yml` -- not an approximation, not a
+   subset. A real Etapa 6d dispatch got full LLM-reviewer approval with a
+   repeated `LO-4` marker and two stale `assessment_questions` lists, and
+   still failed this deterministic check. Before finishing, read the
+   assessment file you just wrote and verify the content-review's
+   `outcome_coverage` matches it question-for-question, and grep the
+   module for each outcome marker to confirm it appears exactly once.
+5. Read `study.config.yml`'s `integration_preferences.routine.mode` value
+   via `read_file`, then call `run_publish_projection` with the updated
+   `topics` list (including the newly materialized topic,
+   `materialized: true`, `canonical_state` reflecting its real readiness)
+   and that real `routine_mode` value, so the real engine projects both
+   the completed task and the newly available one to GitHub Issues in one
+   pass and the generated `study/integrations.md` records the actual
+   configured routine mode (required verbatim by
+   `scripts/integration_resolution.py`'s real validator). On
+   `status="success"`, write `state/integrations.json` and
+   `study/integrations.md` from the returned payload, and update
+   `state/progress.json`'s entry for the newly materialized topic to set
+   its own `external_task` (`provider`, `external_id`, `last_synced_at`)
+   from that same response -- a real Etapa 6d dispatch left this `null`
+   while `state/integrations.json` and the live GitHub issue already
+   showed a real created task, an internal disagreement between the two
+   files that risks a duplicate task on the next publish/track run. Match
+   the same `external_task` shape already used for the graded topic's own
+   entry. On `status="error"` (ambiguous match, partial write, failed
+   read-back), do not write those two files -- persist only the operation
+   journal if present and report the blocked outcome through
+   `finish_phase`, exactly as `instructions/40-publish-tasks.md` already
+   requires of `publish`.
 """
 
 REVIEWER_EVALUATE_NOTE = """\
-## Evaluate tool addendum (Etapa 6c)
+## Evaluate tool addendum (Etapa 6d)
+
+Your own `artifacts:` list must NOT include `state/operations/*.json` or
+`state/content-reviews/*.yml` paths, even though both are real files this
+operation legitimately changed. `review_framework.py`'s
+`phase_allows_artifact("assessment", ...)` does not cover either path --
+they are validated by their own dedicated contracts
+(`scripts/validate_task_projection.py` for operation journals,
+`scripts/course_content_review.py` for content reviews), not by this
+generic review's artifact-coverage mechanism. A real Etapa 6d dispatch
+listed both and failed CI with "cannot approve out-of-scope artifact" for
+each. List every other real artifact this operation changed as usual;
+just leave these two path prefixes out of this specific file's own
+`artifacts:` block.
 
 Your `checks:` block must use these six keys verbatim -- copy them exactly
 from `review_framework.py`'s `REVIEW_PROFILES["assessment"]["checks"]`
@@ -636,6 +837,17 @@ wrong this way before its addendum was corrected to spell them out):
 `submission_resolution`, `rubric_fidelity`, `independent_scoring`,
 `feedback_alignment`, `progress_update`, `next_materialization_consistency`.
 
+Keep the `checks:` block self-consistent with `blocking_findings`: a check
+marked `failed` needs at least one `blocking_findings` entry explaining
+why, and `status: action_required` needs at least one `failed` check
+behind it -- a real Etapa 6d dispatch marked `next_materialization_consistency:
+failed` with an empty `blocking_findings: []` and every other piece of its
+own reasoning actually supporting "passed," which failed CI outright on a
+self-contradiction alone (`validate_review_framework.py` requires every
+listed check to equal `passed`, regardless of whether findings explain
+the deviation). If your own investigation found nothing wrong, mark the
+check `passed`.
+
 Independently re-run `resolve_assessment_candidates` yourself -- do not
 trust the author's stated issue number for `submission_resolution`. Re-score
 every response against the rubric yourself for `independent_scoring` --
@@ -643,17 +855,53 @@ comparing the author's reasoning against each rubric criterion, not just
 checking its arithmetic; a disagreement in scoring is a blocking finding,
 not a note.
 
-`next_materialization_consistency`: this harness slice (Etapa 6c) never
-moves the authoritative task to `Concluído` or auto-materializes the next
-topic, even when mastery is reached -- both require
-`run_publish_projection`/`apply_assessment_result`, which this phase does
-not have (Etapa 6d). When the topic is not mastered, this check is
-trivially satisfied ("nothing in scope"). When the topic *is* mastered,
-mark it passed only together with a non-blocking finding stating plainly
-that the task-state move and materialization were deliberately not
-attempted in this harness slice -- this is a documented, deliberate scope
-boundary, not a silent gap, and must not be reported as if the full
-instruction's steps ran.
+`progress_update`: the authoritative task's real state must reflect the
+graded outcome regardless of mastery -- `55-evaluate-topic.md`'s
+"Synchronize derived providers" section is not gated on mastery. Whether
+mastered or not, confirm `apply_topic_assessment_result` +
+`run_publish_projection` were actually called (not skipped, not
+hand-edited) and that the real task issue's label/body genuinely changed
+to match (`Concluído` when mastered, `Revisão necessária` when not). A
+real Etapa 6d dispatch's reviewer correctly caught exactly the failure
+mode to watch for here: grading persisted correctly in
+`state/assessments/`/`state/progress.json`, but the live task issue was
+never resynced, leaving it visibly contradicting the graded result. Also
+confirm that when NOT mastered, the author reported (via `finish_phase`,
+not fabricated) that this harness slice has no tool to create the
+dedicated focused-recovery GitHub issue `55-evaluate-topic.md`'s
+"Recovery and focused reassessment" section calls for -- a comment posted
+onto the *original* assessment issue pretending to be that recovery issue
+is a blocking finding, not an acceptable substitute.
+
+`next_materialization_consistency`: when the topic is not mastered, this
+check covers only the next-topic materialization step specifically (not
+the task-state sync, which `progress_update` above covers) -- confirm the
+author did not touch `study/` and did not attempt
+`57-materialize-next-content.md`, since there is nothing to materialize
+without mastery. When the topic *is* mastered, verify all of: the
+authoritative task's `canonical_state` was actually moved via the real
+engine (not hand-edited); `state/content-reviews/<new_topic_id>.yml` is
+present, claims `status: approved`, and honestly discloses in a
+`non_blocking_findings` entry that it was written in the same pass as the
+content (that disclosure is expected and correct, not itself a finding --
+do not block on it); the newly materialized topic itself genuinely meets
+the same bar `36-review-course-content.md` already holds `generate_detailed`
+to (outcome markers actually beside the content that teaches each one --
+not beside a restatement of the objective, a real Etapa 6d dispatch's own
+mistake this exact check is meant to catch -- sourced content, Mermaid
+diagrams, no placeholder text, slides still disabled, no literal internal
+`topic_id` string inside any resource URL); and `run_publish_projection`'s
+real read-back validation actually passed (check
+`state/integrations.json`/`study/integrations.md` were written from a
+`status="success"` result, not fabricated). You are the genuinely
+independent check this materialization depends on -- re-verify the
+content-review file's own claims yourself against the actual module text
+rather than trusting them, since it was written in the same pass as the
+content it is reviewing. A materialization that skips content review
+entirely, misplaces outcome markers, leaks an internal ID into a resource
+URL, or a task-state move that never called the real engine, is a
+blocking finding here, not a documented scope boundary -- Etapa 6d has
+both tools, so using them correctly is now in scope.
 """
 
 
