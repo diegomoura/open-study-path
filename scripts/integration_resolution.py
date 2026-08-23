@@ -10,6 +10,41 @@ VALID_RESOLUTION_STATUSES = {"resolved", "action_required"}
 NONE_VALUES = {"", "none", "disabled", "false", "null"}
 NO_EXTERNAL_ACCOUNTS = "no_external_accounts"
 
+# Every key that scripts/task_projection_engine.py's normalized_integration_state()
+# legitimately writes onto a state["resources"][*] entry, across every resource
+# kind it builds (task_manager container, section/list, orientation, lesson,
+# reminder). This is the enforcement side of instructions/50-track-progress.md's
+# "Update state/integrations.json only with safe external identifiers, content
+# versions, authority, synchronization status and timestamps" rule: that
+# sentence alone did not stop `track`'s author from writing an ad hoc
+# `activity_checkpoint` object into a resource entry, which run_publish_projection
+# then silently discarded on the next republish (normalized_integration_state
+# rebuilds `resources` from scratch and has no path for unknown per-resource
+# keys). Keep this set in sync with normalized_integration_state() if that
+# function's resource shapes change.
+ALLOWED_RESOURCE_KEYS = {
+    "capability",
+    "provider",
+    "type",
+    "id",
+    "url",
+    "name",
+    "position",
+    "title",
+    "topic_id",
+    "visible_lesson_number",
+    "direct_prerequisite_ids",
+    "content_version",
+    "canonical_state",
+    "visible_state",
+    "visual_position",
+    "managed_fields_version",
+    "roadmap_fingerprint",
+    "target_url",
+    "sync_status",
+    "last_synced_at",
+}
+
 
 @dataclass(frozen=True)
 class ResolutionResult:
@@ -166,12 +201,40 @@ def _capability_resolved(name: str, entry: Mapping[str, Any]) -> tuple[bool, lis
     return resolved, errors
 
 
+def _validate_resource_shapes(state: Mapping[str, Any]) -> list[str]:
+    """Reject any resources[] entry carrying keys outside ALLOWED_RESOURCE_KEYS.
+
+    This is a deterministic guardrail for Achado 2 (activity_checkpoint
+    silently discarded on republish): rather than trust an author to keep
+    following the "only safe external identifiers, content versions,
+    authority, synchronization status and timestamps" instruction, fail the
+    review loudly the moment any ad hoc field lands in a resource entry --
+    before it can be silently dropped later.
+    """
+    errors: list[str] = []
+    resources = state.get("resources")
+    if not isinstance(resources, list):
+        return errors
+    for index, resource in enumerate(resources):
+        if not isinstance(resource, Mapping):
+            continue
+        extra = sorted(set(resource.keys()) - ALLOWED_RESOURCE_KEYS)
+        if extra:
+            errors.append(
+                f"resources[{index}] has fields outside the managed schema: {extra}. "
+                "Application/activity data belongs in state/progress.json, not "
+                "state/integrations.json."
+            )
+    return errors
+
+
 def validate_documents(
     config: Mapping[str, Any],
     state: Mapping[str, Any],
     plan_markdown: str,
 ) -> ResolutionResult:
     errors = validate_plan(config, plan_markdown) if plan_markdown else validate_account_policy(config, "")
+    errors.extend(_validate_resource_shapes(state))
     expected = expected_capabilities(config)
     selected = _mapping(state.get("selected_capabilities"))
     resolution = _mapping(state.get("resolution"))

@@ -559,6 +559,14 @@ formative-practice signals, exactly as instructions/50-track-progress.md's
 assessment issue exists but has not yet been evaluated, keep the topic in
 the pending/`Em avaliação` state and surface the normal evaluate command
 through finish_phase -- do not attempt to grade it yourself in this phase.
+
+Every `state/integrations.json` resources[] entry has a fixed, managed
+schema (see scripts/integration_resolution.py's ALLOWED_RESOURCE_KEYS). Do
+not add any ad hoc field there to record study/practice/assessment activity
+-- it will be rejected by the progress review, and even if it slipped
+through, the next publish or evaluate republish would silently discard it
+anyway, since the projection engine rebuilds every resource from scratch.
+Record activity evidence only in `state/progress.json`.
 """
 
 REVIEWER_TRACK_NOTE = """\
