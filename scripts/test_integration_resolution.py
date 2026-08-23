@@ -364,9 +364,6 @@ def test_managed_resource_fields_pass_unmodified() -> None:
 def test_numbered_graph_aware_task_projection_contract() -> None:
     documents = {
         "AGENTS.md": (REPO_ROOT / "AGENTS.md").read_text(encoding="utf-8"),
-        "templates/chatgpt-project-instructions.md": (
-            REPO_ROOT / "templates" / "chatgpt-project-instructions.md"
-        ).read_text(encoding="utf-8"),
         "instructions/31-topic-first-safe-publication.md": (
             REPO_ROOT / "instructions" / "31-topic-first-safe-publication.md"
         ).read_text(encoding="utf-8"),

@@ -211,14 +211,12 @@ evaluation; external activity such as a checked task, reminder or habit streak i
 sufficient alone), the same class as `publish`/`integration_preflight` rather than
 `curriculum_architect`/`evaluate`.
 
-## Automated agent-pilot dispatch
+## Agent-pilot dispatch
 
-Every phase above can run as an isolated Claude API call through the GitHub Actions
-workflows described in `docs/claude-agent-pilot.md`, instead of a single manual
-conversation. Human onboarding for that path is `docs/claude-agent-setup.md`
-(`ANTHROPIC_API_KEY` repository Secret) rather than `docs/chatgpt-project-setup.md`
-(connect GitHub to a ChatGPT Project) -- both remain valid for the same instance, and
-neither changes which instruction files govern behavior.
+Every phase above runs as an isolated Claude API call through the GitHub Actions
+workflows described in `docs/claude-agent-pilot.md`. This is the only operating mode:
+the earlier manual chat flow was removed entirely (Etapa 8). Human onboarding is
+`docs/claude-agent-setup.md` (`ANTHROPIC_API_KEY` repository Secret).
 
 ## Safety
 

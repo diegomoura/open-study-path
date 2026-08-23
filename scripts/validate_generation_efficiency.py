@@ -57,7 +57,6 @@ def main() -> None:
     require("docs/study-slides.md", ["static SVG", "slides.pdf", "12 slides", "at least two worked examples", "generic filler", "contains no Mermaid runtime"])
     require("instructions/37-review-study-slides.md", ["version 4", "required_concept_coverage", "content_density", "topic_specificity", "static_svg_quality", "pdf_delivery"])
     require("AGENTS.md", [EXECUTION_CONTRACT, "Complete them before responding", "Do not lead with PR, CI", "instructions/57-materialize-next-content.md", "## Safety"])
-    require("templates/chatgpt-project-instructions.md", ["Internal review, correction, CI, safe merge", EXECUTION_CONTRACT])
     for path in [TERMINAL_RESOLVER, TERMINAL_TESTS, SCOPE_GUARD, SCOPE_TESTS, "scripts/render_study_slides.mjs", "scripts/test_study_slide_renderer.mjs"]:
         text(path)
     manifest = load_yaml("instructions/manifest.yml")

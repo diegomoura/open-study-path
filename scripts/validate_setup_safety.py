@@ -141,17 +141,6 @@ def validate_contracts() -> None:
         "Never ask the learner to edit an issue to add a technical marker",
         "CI is red or unknown",
     ])
-    require("templates/chatgpt-project-instructions.md", [
-        SETUP_EXECUTION,
-        "Repository size",
-        "keeps `.open-study-path/template.yml`",
-        "current intake marker",
-        "form marker identifies the checked-in form contract",
-        "study-request",
-        "intake:imported",
-        "Never ask the learner to edit an issue to add a technical marker",
-        "CI is red or unknown",
-    ])
     require("instructions/00-bootstrap.md", [
         SETUP_EXECUTION,
         "sentinel files",
@@ -206,7 +195,7 @@ def validate_contracts() -> None:
         if command not in validation_workflow:
             fail(f"validation workflow must run: {command}")
 
-    setup_workflow = text(".github/workflows/render-project-instructions.yml")
+    setup_workflow = text(".github/workflows/ensure-repository-labels.yml")
     for term in [
         "issues: write",
         "Ensure intake labels",

@@ -15,12 +15,10 @@ on:
       - 'scripts/task_projection_*.py'
       - 'scripts/operation_branch.py'
       - 'scripts/render_integration_summary.py'
-      - 'scripts/render_project_instructions.py'
       - 'scripts/refresh_review_fingerprints.py'
       - 'scripts/validate_task_projection.py'
       - 'tests/test_task_projection_engine.py'
       - 'tests/test_operation_branch.py'
-      - 'tests/test_render_project_instructions.py'
       - 'tests/test_refresh_review_fingerprints.py'
       - 'tests/test_validate_task_projection.py'
   push:
@@ -38,12 +36,10 @@ on:
       - 'scripts/task_projection_*.py'
       - 'scripts/operation_branch.py'
       - 'scripts/render_integration_summary.py'
-      - 'scripts/render_project_instructions.py'
       - 'scripts/refresh_review_fingerprints.py'
       - 'scripts/validate_task_projection.py'
       - 'tests/test_task_projection_engine.py'
       - 'tests/test_operation_branch.py'
-      - 'tests/test_render_project_instructions.py'
       - 'tests/test_refresh_review_fingerprints.py'
       - 'tests/test_validate_task_projection.py'
   workflow_dispatch:
@@ -74,6 +70,5 @@ jobs:
           PYTHONPATH=scripts python -m unittest \
             tests/test_task_projection_engine.py \
             tests/test_operation_branch.py \
-            tests/test_render_project_instructions.py \
             tests/test_refresh_review_fingerprints.py \
             tests/test_validate_task_projection.py 2>&1 | tee task-projection-tests.log

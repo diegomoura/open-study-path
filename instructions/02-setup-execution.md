@@ -26,7 +26,7 @@ When `github_issue` is selected:
 
 - verify the form contains `<!-- open-study-path:intake form_id=create-study-path version=4 -->`;
 - require repository labels `study-request` and `intake:imported` before importing a real submission;
-- provision missing labels through the GitHub labels API when available, or through the inherited **Prepare ChatGPT Project Instructions** workflow, which runs `scripts/ensure_repository_labels.py` on the default-branch push;
+- provision missing labels through the GitHub labels API when available, or through the inherited **Ensure repository labels** workflow, which runs `scripts/ensure_repository_labels.py` on the default-branch push;
 - never ask the learner to run that workflow manually;
 - never ask the learner to create, inspect or repair technical labels;
 - never ask the learner to edit an issue to add a technical marker.

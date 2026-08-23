@@ -35,7 +35,7 @@ class FakeApi:
 
 def assert_setup_contract() -> None:
     contract = (ROOT / "instructions/02-setup-execution.md").read_text(encoding="utf-8")
-    workflow = (ROOT / ".github/workflows/render-project-instructions.yml").read_text(encoding="utf-8")
+    workflow = (ROOT / ".github/workflows/ensure-repository-labels.yml").read_text(encoding="utf-8")
 
     required_contract_terms = [
         "never ask the learner to run that workflow manually",

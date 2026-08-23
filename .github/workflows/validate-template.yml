@@ -181,8 +181,6 @@ jobs:
         run: python scripts/validate_generation_efficiency.py
       - name: Validate learner-facing study experience
         run: python scripts/validate_learning_experience.py
-      - name: Test automatic Project Instructions rendering
-        run: python scripts/test_render_project_instructions.py
       - name: Test curriculum placeholder detection
         run: python scripts/test_curriculum_placeholder_detection.py
       - name: Upload guided validation diagnostics

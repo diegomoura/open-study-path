@@ -1,6 +1,6 @@
 # Open Study Path
 
-Template open source para criar trilhas de estudo personalizadas com ChatGPT e GitHub.
+Template open source para criar trilhas de estudo personalizadas com Claude e GitHub Actions.
 
 > Este repositório é o template. Cada pessoa cria um repositório próprio a partir dele para guardar sua trilha, aulas, avaliações e progresso.
 
@@ -64,41 +64,22 @@ Veja `docs/learner-facing-language.md`.
 ## Começar uma nova trilha
 
 1. Use este template para criar um repositório próprio.
-2. Aguarde a ação **Prepare ChatGPT Project Instructions** concluir. Ela preenche automaticamente o nome exato do novo repositório.
-3. Abra `templates/chatgpt-project-instructions.md` no repositório novo e confirme que a linha **Instance** já contém `owner/repositório`.
-4. Crie um Projeto dedicado no ChatGPT.
-5. Conecte o GitHub e autorize o repositório da trilha.
-6. Copie o conteúdo já preparado de `templates/chatgpt-project-instructions.md` para as Instruções do Projeto, sem editar o identificador.
-7. Abra o primeiro chat e envie:
+2. Adicione sua `ANTHROPIC_API_KEY` como Secret do repositório novo (**Settings -> Secrets and variables -> Actions**) e defina um limite de gasto para ela no Console da Anthropic.
+3. Na aba **Actions**, rode o workflow **Agent pilot** com `phase: bootstrap_instance` e `target_repo` igual ao `owner/repositório` do seu próprio repositório novo.
+4. Revise e mergeie a pull request que o workflow abre. Ela cria `.open-study-path/instance.yml` e prepara o formulário de entrada.
+5. Rode **Agent pilot** de novo com `phase: configure_intake` (mesmo `target_repo`). Ao terminar, a PR devolve o link direto do formulário.
+6. Preencha o formulário no link devolvido.
+7. Rode **Agent pilot** com `phase: intake` para importar sua resposta.
+
+Depois disso, cada fase seguinte (`diagnostic`, `generate_proposal`, `generate_detailed`, `publish`, `evaluate`, `track`, `replan`) é a mesma coisa: escolher a fase no dropdown do workflow **Agent pilot** e rodar. `diagnostic` é a exceção — ele já roda sozinho por comentário na issue de sessão que a fase anterior cria, sem precisar disparar o workflow manualmente a cada pergunta.
+
+O texto natural que a pessoa digitaria numa conversa continua valendo como o conteúdo de `extra_context` ao disparar a próxima fase, por exemplo:
 
 ```text
-Configure este repositório como uma nova trilha de estudos usando o formulário do GitHub.
-```
-
-Se o arquivo ainda mostrar `OWNER/REPOSITORY`, execute manualmente a ação **Prepare ChatGPT Project Instructions** na aba Actions. A substituição manual continua disponível apenas como alternativa.
-
-O agente cuida internamente dos arquivos, validações e limites da primeira operação. Ao terminar, ele devolve o link do formulário.
-
-Depois de preencher:
-
-```text
-Preenchi o formulário. Pode continuar.
-```
-
-Os comandos seguintes também são naturais:
-
-```text
-Vamos fazer meu diagnóstico.
-Crie minha trilha de estudos.
-Organize minha trilha nas ferramentas que escolhemos.
 Terminei <título da aula>. Avalie minhas respostas.
 ```
 
-Comandos técnicos antigos continuam aceitos como aliases, mas não precisam ser ensinados à pessoa.
-
-### Alternativa: pipeline automatizado via GitHub Actions
-
-Existe um segundo caminho, ainda em piloto, pra quem já quer despachar cada fase como uma chamada real à API da Claude em vez de uma conversa manual: adicionar sua própria `ANTHROPIC_API_KEY` como Secret do repositório e rodar a Action **Agent pilot**. Veja `docs/claude-agent-setup.md` para o passo a passo e `docs/claude-agent-pilot.md` para o que já foi validado em cada fase e quais restrições ainda existem. Os dois caminhos podem ser usados na mesma instância; nenhum dos dois é obrigatório.
+Veja `docs/claude-agent-setup.md` para o passo a passo completo, as restrições atuais de cada fase (por exemplo: só o provedor `github_issue` de intake e só o backend `GitHub Issues` de tarefas estão automatizados por enquanto) e `docs/claude-agent-pilot.md` para o design completo.
 
 ## Ciclo de aprendizagem
 

@@ -1,35 +1,23 @@
-# Set up the automated agent pilot for an Open Study Path instance
+# Set up the agent pilot for an Open Study Path instance
 
-This is the Secret-based, GitHub Actions counterpart to
-`docs/chatgpt-project-setup.md`. Where the ChatGPT/Claude chat flow is one
-person driving one long conversation through every phase, this flow runs
-each `instructions/manifest.yml` phase as an isolated Claude API call --
-author and reviewer never share context, and a GitHub Actions workflow does
-the dispatching instead of a human copying prompts.
+Every `instructions/manifest.yml` phase runs as an isolated Claude API call
+dispatched through GitHub Actions -- author and reviewer never share
+context, and the workflow does the dispatching instead of a human copying
+prompts into a chat conversation. This is the only onboarding path this
+repository supports (Etapa 8 removed the earlier manual chat flow entirely).
 
 Read `docs/claude-agent-pilot.md` for the full design rationale and current
-validation status of every phase. This document is only the setup path: what
-to add, where, and how to run it.
+validation status of every phase. This document is only the setup path:
+what to add, where, and how to run it.
 
-## Status: pilot, not the default
+## Why this needs a Secret
 
-Both onboarding paths work today. This one is still a pilot with real,
-documented scope limits (see "Current scope" below) -- it is an alternative
-for an owner who wants to try real automated dispatches, not yet a
-replacement for `docs/chatgpt-project-setup.md`. Nothing here turns off or
-changes the manual chat flow.
-
-## Why this needs a Secret instead of a chat connection
-
-The ChatGPT Project flow authenticates through a person's ChatGPT account
-connected to GitHub. This flow instead has the *repository itself* call the
-Anthropic API directly from a GitHub Actions workflow, so it needs its own
-credential: an `ANTHROPIC_API_KEY` stored as a repository Secret.
-
-There is no equivalent of "copy the prepared instructions into a Project" --
-the workflow already lives in the repository (it ships with the template)
-and reads `AGENTS.md` / `instructions/*.md` directly at run time, the same
-files the manual flow reads. Setup is the Secret plus one workflow run.
+The repository itself calls the Anthropic API directly from a GitHub
+Actions workflow, so it needs its own credential: an `ANTHROPIC_API_KEY`
+stored as a repository Secret. The workflow already lives in the repository
+(it ships with the template) and reads `AGENTS.md` / `instructions/*.md`
+directly at run time -- there is nothing to copy or paste anywhere. Setup
+is the Secret plus one workflow run.
 
 ## Required repository Secret
 
@@ -44,8 +32,8 @@ committed file, an issue body, or a workflow log.
 ## Setup steps
 
 1. Create a repository from `diegomoura/open-study-path` using the GitHub
-   template, the same as the manual flow's step 1. The `agent-pilot-*.yml`
-   workflows are already part of the template; nothing extra to copy in.
+   template. The `agent-pilot-*.yml` workflows are already part of the
+   template; nothing extra to copy in.
 2. Add `ANTHROPIC_API_KEY` as a repository Secret (above) and set its spend
    limit in the Anthropic Console.
 3. Optional: if you want to override the recommended Claude model tier per
@@ -64,11 +52,11 @@ committed file, an issue body, or a workflow log.
    and a PR comment). Read the reviewer's findings before merging -- this
    pilot does not auto-merge; a human makes the final call on every run.
 
-`diagnostic` does not use the Run workflow button: instructions/20-diagnostic.md
+`diagnostic` does not use the Run workflow button: `instructions/20-diagnostic.md`
 requires a real multi-turn placement conversation, so **Agent pilot -
 diagnostic** instead triggers once per learner reply, on each comment posted
-to the session issue. Start it by opening that issue the same way the
-manual flow does; no separate dispatch step.
+to the session issue. Start it by opening that issue; no separate dispatch
+step.
 
 ## Current scope
 
@@ -79,7 +67,7 @@ behind each one before relying on it:
 | Phase | Restriction today |
 |---|---|
 | `bootstrap_instance`, `configure_intake` | `configure_intake` always resolves as `github_issue` intake; no interactive provider choice (nobody to ask in an unattended run) |
-| `intake` | Only the `github_issue` provider path is wired; Jotform and manual YAML intake still need the manual chat flow |
+| `intake` | Only the `github_issue` provider path is wired; Jotform and manual YAML intake have no dispatched path yet |
 | `publish` | Only the `task manager: GitHub Issues` backend; Trello/Todoist/Notion remain deferred |
 | `generate_proposal`, `generate_detailed` | `generate_detailed` has slide generation disabled by default (`AGENT_PILOT_ENABLE_SLIDES`) |
 | `track`, `replan`, `evaluate` | No cross-repo restriction beyond the shared GitHub Issues scope above; `evaluate`'s materialization-on-mastery path reuses `generate_detailed`'s own restrictions |
@@ -87,8 +75,9 @@ behind each one before relying on it:
 
 None of these restrictions are enforced by hiding the option; each one fails
 loudly (a tool call is rejected, or the author refuses) rather than silently
-degrading, matching the same pattern already used for the manual flow's own
-guardrails.
+degrading. Jotform and manual YAML intake are documented contracts
+(`docs/template-lifecycle.md`) waiting on a future stage to wire a dispatched
+phase to them -- they are not deprecated, just not reachable yet.
 
 ## What this pilot deliberately does not do yet
 
@@ -110,18 +99,9 @@ the Anthropic Console for real billed usage. See `docs/claude-agent-pilot.md`,
 
 ## Updating an existing instance after a contract change
 
-Unlike the ChatGPT Project flow, there is no separate copied-instructions
-file to go stale here -- the workflow reads `AGENTS.md` and
-`instructions/*.md` directly from the instance repository's own checkout on
-every run. Pulling in an upstream template update (a normal git merge or
-cherry-pick from `diegomoura/open-study-path`) is enough to bring the next
-dispatch up to date; there is no second synchronization step.
-
-## Running both flows on the same repository
-
-An instance is not required to pick one flow permanently. A repository
-owner can run a phase through this pilot one day and continue the same
-instance through a manual ChatGPT/Claude chat the next -- both read the same
-`instructions/*.md` contracts and the same repository state
-(`.open-study-path/instance.yml`, `state/*.json`, `study.config.yml`), so
-neither flow's output is foreign to the other.
+There is no separate copied-instructions file to go stale: the workflow
+reads `AGENTS.md` and `instructions/*.md` directly from the instance
+repository's own checkout on every run. Pulling in an upstream template
+update (a normal git merge or cherry-pick from `diegomoura/open-study-path`)
+is enough to bring the next dispatch up to date; there is no second
+synchronization step.
