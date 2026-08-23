@@ -18,6 +18,11 @@ def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--reviewer-result", required=True)
     parser.add_argument("--usage-summary", required=True)
+    parser.add_argument(
+        "--model-config-warning",
+        default="state/reviews/model-config-warnings.md",
+        help="Path to the structural model-tier warning note, if model_config_review_note.py wrote one",
+    )
     args = parser.parse_args()
 
     reviewer_result = json.loads(Path(args.reviewer_result).read_text(encoding="utf-8"))
@@ -34,6 +39,11 @@ def main() -> None:
 
 Combined usage: {total_tokens} tokens (author model {author_model}, reviewer model {reviewer_model}) -- estimated cost {cost_str}. This is an estimate for planning only; check the Anthropic Console for actual billed usage. Full breakdown appended to `state/agent-pilot-usage.jsonl`.
 """
+
+    warning_path = Path(args.model_config_warning)
+    if warning_path.is_file():
+        body += f"\n---\n\n{warning_path.read_text(encoding='utf-8')}"
+
     print(body)
 
 
