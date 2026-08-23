@@ -211,6 +211,15 @@ evaluation; external activity such as a checked task, reminder or habit streak i
 sufficient alone), the same class as `publish`/`integration_preflight` rather than
 `curriculum_architect`/`evaluate`.
 
+## Automated agent-pilot dispatch
+
+Every phase above can run as an isolated Claude API call through the GitHub Actions
+workflows described in `docs/claude-agent-pilot.md`, instead of a single manual
+conversation. Human onboarding for that path is `docs/claude-agent-setup.md`
+(`ANTHROPIC_API_KEY` repository Secret) rather than `docs/chatgpt-project-setup.md`
+(connect GitHub to a ChatGPT Project) -- both remain valid for the same instance, and
+neither changes which instruction files govern behavior.
+
 ## Safety
 
 Never commit credentials, secrets, raw submissions, original uploaded files, diagnostic transcripts or unnecessary personal data. Prefer pull requests for structural and material changes. Ask before destructive operations.
