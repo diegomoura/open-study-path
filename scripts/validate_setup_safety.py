@@ -64,6 +64,8 @@ def materialize_minimal_instance(repo: Path) -> None:
     integrations = integrations.replace("OWNER/REPOSITORY", "example/setup-regression")
     (state_dir / "integrations.json").write_text(integrations, encoding="utf-8")
 
+    shutil.copy2(repo / "templates/agent-models.yml", repo / ".open-study-path/models.yml")
+
     study_dir = repo / "study"
     study_dir.mkdir(exist_ok=True)
     shutil.copy2(repo / "templates/roadmap.md", study_dir / "roadmap.md")
@@ -149,6 +151,9 @@ def validate_contracts() -> None:
         "Keep `.open-study-path/template.yml`",
         "Open exactly one pull request",
         "merge gate",
+        "templates/agent-models.yml",
+        ".open-study-path/models.yml",
+        "Never overwrite an existing `.open-study-path/models.yml`",
     ])
     require("instructions/05-configure-intake.md", [
         SETUP_EXECUTION,
@@ -220,6 +225,10 @@ def validate_instance_regression() -> None:
         instance_marker = repo / ".open-study-path/instance.yml"
         if not template_marker.is_file() or not instance_marker.is_file():
             fail("a configured instance must retain both repository markers")
+
+        models_config = repo / ".open-study-path/models.yml"
+        if not models_config.is_file():
+            fail("bootstrap must copy templates/agent-models.yml into .open-study-path/models.yml")
 
         valid = run_validator(repo, "all")
         if valid.returncode != 0:

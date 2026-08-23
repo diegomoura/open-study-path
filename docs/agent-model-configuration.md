@@ -9,15 +9,24 @@ rodar como workflows do GitHub Actions em vez de uma conversa manual.
 
 ## Arquivos envolvidos
 
-- `templates/agent-models.yml` — configuração padrão, copiada para `.open-study-path/models.yml`
-  durante o bootstrap de uma instância (essa cópia ainda não está automatizada — ver "Próximos
-  passos" abaixo).
+- `templates/agent-models.yml` — configuração padrão, com todo `model_overrides` em `null`
+  (tier recomendado). `instructions/00-bootstrap.md` copia este arquivo para
+  `.open-study-path/models.yml` durante o bootstrap de uma instância, quando esse arquivo
+  ainda não existir — nunca sobrescrevendo uma instância já configurada.
 - `.open-study-path/models.yml` — configuração real de uma instância. Opcional: na ausência
-  dele, todo agente usa o tier recomendado.
+  dele (por exemplo, uma instância criada antes desta automação existir), todo agente usa o
+  tier recomendado.
 - `schemas/agent-model-config.schema.json` — schema JSON validado em CI.
 - `scripts/agent_model_resolution.py` — lógica pura (sem I/O) que resolve o modelo efetivo
-  de cada agente a partir do dial global e dos overrides.
+  de cada agente a partir do dial global e dos overrides. Já é consumida diretamente por
+  `scripts/agent_runtime.py` para escolher o modelo real de cada chamada de API de um
+  dispatch do harness (`.github/workflows/agent-pilot-setup.yml`).
 - `scripts/validate_model_config.py` — CLI que valida o schema e imprime a resolução efetiva.
+- `scripts/model_config_review_note.py` — roda no job revisor de um dispatch real
+  (`.github/workflows/agent-pilot-setup.yml`) e persiste os avisos estruturais, se houver
+  algum, em `state/reviews/model-config-warnings.md`; o conteúdo também é anexado ao corpo
+  do pull request via `scripts/format_pr_body.py`. Sem aviso nenhum, nenhum arquivo é escrito
+  (e um arquivo obsoleto de um dispatch anterior é removido).
 
 ## O dial (`reasoning_tier`)
 
@@ -58,11 +67,7 @@ recomendado (via dial ou override) gera um **aviso não-bloqueante** — o CI n�
 aviso fica visível em `scripts/validate_model_config.py`. É uma escolha legítima de
 custo/qualidade da pessoa dona da instância, só não deve ser silenciosa.
 
-## Próximos passos (fora do escopo deste commit)
-
-- Automatizar a cópia de `templates/agent-models.yml` para `.open-study-path/models.yml`
-  durante `instructions/00-bootstrap.md`.
-- Persistir os avisos estruturais em `state/reviews/` quando existir uma execução real de
-  agente para anexá-los.
-- Consumir `scripts/agent_model_resolution.py` a partir dos workflows do GitHub Actions que
-  farão as chamadas de API de fato.
+Os três itens que este documento listava aqui como "fora do escopo" (cópia automática do
+template no bootstrap, persistência do aviso estrutural em `state/reviews/` e consumo real
+de `agent_model_resolution.py` pelos workflows) estão todos implementados — ver a lista de
+arquivos acima.

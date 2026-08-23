@@ -169,6 +169,8 @@ jobs:
         run: python scripts/test_agent_model_resolution.py
       - name: Validate agent model configuration
         run: python scripts/validate_model_config.py
+      - name: Test model config review note persistence
+        run: python scripts/test_model_config_review_note.py
       - name: Validate topic-first planning and publication safety
         run: python scripts/validate_planning_publication_safety.py
       - name: Test topic-first planning and publication safety

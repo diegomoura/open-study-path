@@ -264,6 +264,16 @@ jobs:
           mkdir -p state/reviews
           python -c "import json, os; open('state/reviews/agent-pilot-' + os.environ['PHASE'] + '.yml', 'w', encoding='utf-8').write(json.load(open('/tmp/reviewer-result.json', encoding='utf-8'))['review_yaml'])"
 
+      - name: Persist structural model-tier warnings, if any
+        # Non-blocking by design (docs/agent-model-configuration.md): resolves
+        # whichever config this dispatch actually used (instance
+        # .open-study-path/models.yml if the instance has one, otherwise the
+        # all-recommended template) and writes a note only when a structural
+        # agent is configured below its recommended tier. Idempotent: removes
+        # a stale note from an earlier dispatch once warnings clear.
+        run: |
+          python scripts/model_config_review_note.py --phase "$PHASE"
+
       - name: Summarize combined token usage and cost
         run: |
           python scripts/summarize_agent_pilot_usage.py \
