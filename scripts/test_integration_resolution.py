@@ -310,6 +310,57 @@ def test_plan_rejects_removed_capabilities() -> None:
     assert_error(resolved_fixed_state(), "removed flashcard capabilities", broken, config())
 
 
+def test_ad_hoc_resource_field_is_rejected() -> None:
+    # Achado 2: track's author once wrote an ad hoc `activity_checkpoint`
+    # object directly onto a resources[] entry in state/integrations.json.
+    # normalized_integration_state() rebuilds resources from scratch on the
+    # next republish and has no merge path for unknown keys, so the field
+    # was silently discarded. This guardrail must catch it immediately,
+    # before any republish has the chance to drop it.
+    state = resolved_fixed_state()
+    state["resources"][0]["activity_checkpoint"] = {
+        "study_completed": True,
+        "practice_completed": True,
+        "assessment_submitted": False,
+        "tracked_at": "2026-08-18T20:10:30Z",
+    }
+    assert_error(
+        state,
+        "resources[0] has fields outside the managed schema: ['activity_checkpoint']",
+        FIXED_PLAN,
+        config("fixed_calendar"),
+    )
+
+
+def test_managed_resource_fields_pass_unmodified() -> None:
+    # Every key normalized_integration_state() actually writes across its
+    # resource kinds (task_manager container, section/list, orientation,
+    # lesson, reminder) must stay allowed -- this is the regression guard
+    # for the allowlist itself getting out of sync with the engine.
+    state = resolved_fixed_state()
+    state["resources"][0] = {
+        "capability": "task_manager",
+        "provider": "github_issues",
+        "type": "issue",
+        "id": "123",
+        "url": "https://github.com/o/r/issues/123",
+        "topic_id": "TOPIC-001",
+        "visible_lesson_number": 1,
+        "title": "Aula 01",
+        "direct_prerequisite_ids": [],
+        "content_version": "abc123",
+        "canonical_state": "ready",
+        "visible_state": "Disponível",
+        "visual_position": 0,
+        "managed_fields_version": 1,
+        "roadmap_fingerprint": "def456",
+        "sync_status": "success",
+        "last_synced_at": "2026-08-01T23:00:00Z",
+    }
+    result = validate_documents(config("fixed_calendar"), state, FIXED_PLAN)
+    assert not result.errors, result.errors
+
+
 def test_numbered_graph_aware_task_projection_contract() -> None:
     documents = {
         "AGENTS.md": (REPO_ROOT / "AGENTS.md").read_text(encoding="utf-8"),
@@ -361,6 +412,8 @@ def main() -> None:
         test_no_external_accounts_uses_only_internal_capabilities,
         test_no_external_accounts_rejects_explicit_external_provider,
         test_plan_rejects_removed_capabilities,
+        test_ad_hoc_resource_field_is_rejected,
+        test_managed_resource_fields_pass_unmodified,
         test_numbered_graph_aware_task_projection_contract,
     ]
     for test in tests:
