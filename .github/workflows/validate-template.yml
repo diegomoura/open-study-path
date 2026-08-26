@@ -124,6 +124,10 @@ jobs:
         run: python scripts/test_intake_resolution.py
       - name: Test repository label provisioning
         run: python scripts/test_repository_labels.py
+      - name: Test diagnostic-answer form resolution
+        run: python scripts/test_diagnostic_answer_resolution.py
+      - name: Test diagnostic-answer bridge orchestration
+        run: python scripts/test_bridge_diagnostic_answer.py
       - name: Validate configuration schema
         run: python scripts/validate_template.py schema
       - name: Validate guided lifecycle
