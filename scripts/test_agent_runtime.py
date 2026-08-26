@@ -924,6 +924,70 @@ def test_diagnostic_finish_phase_guard_does_not_apply_to_other_phases() -> None:
         assert tools.finish_phase("done", "next") == "phase marked finished"
 
 
+def test_configure_intake_finish_phase_accepts_no_changes_needed_with_reason() -> None:
+    with tempfile.TemporaryDirectory() as tmp:
+        root = Path(tmp)
+        tools = RepoTools(root=root, phase="configure_intake", role="author")
+        result = tools.finish_phase(
+            "Already fully configured",
+            "Preencha o formulario.",
+            no_changes_needed=True,
+            reason="Verified form marker, both labels and every instance.yml status field.",
+        )
+        assert result == "phase marked finished"
+        assert tools.finish_payload["no_changes_needed"] is True
+        assert "form marker" in tools.finish_payload["reason"]
+
+
+def test_configure_intake_finish_phase_rejects_no_changes_needed_without_reason() -> None:
+    with tempfile.TemporaryDirectory() as tmp:
+        root = Path(tmp)
+        tools = RepoTools(root=root, phase="configure_intake", role="author")
+        try:
+            tools.finish_phase("summary", "next", no_changes_needed=True, reason="   ")
+            assert False, "expected AllowlistViolation"
+        except AllowlistViolation:
+            pass
+
+
+def test_no_changes_needed_is_rejected_outside_its_phase_allowlist() -> None:
+    with tempfile.TemporaryDirectory() as tmp:
+        root = Path(tmp)
+        # intake's ambiguous/no-candidate case must keep failing the workflow's
+        # no-diff guard, not gain a way to opt out of it.
+        tools = RepoTools(
+            root=root,
+            phase="intake",
+            role="author",
+            github_request=lambda *a, **k: {},
+            github_repository="o/r",
+        )
+        try:
+            tools.finish_phase("summary", "next", no_changes_needed=True, reason="looks fine")
+            assert False, "expected AllowlistViolation"
+        except AllowlistViolation:
+            pass
+
+
+def test_finish_phase_default_always_sets_no_changes_needed_false() -> None:
+    with tempfile.TemporaryDirectory() as tmp:
+        root = Path(tmp)
+        tools = RepoTools(root=root, phase="bootstrap_instance", role="author")
+        tools.finish_phase("done", "next")
+        assert tools.finish_payload["no_changes_needed"] is False
+        assert tools.finish_payload["reason"] == ""
+
+
+def test_no_changes_needed_tool_property_only_offered_to_allowed_phases() -> None:
+    def finish_phase_schema(phase: str) -> dict:
+        tool = next(t for t in author_tools(phase) if t["name"] == "finish_phase")
+        return tool["input_schema"]["properties"]
+
+    assert "no_changes_needed" in finish_phase_schema("configure_intake")
+    assert "no_changes_needed" not in finish_phase_schema("intake")
+    assert "no_changes_needed" not in finish_phase_schema("bootstrap_instance")
+
+
 def test_diagnostic_gets_a_higher_max_tokens_budget() -> None:
     # Regression for a real dispatch finding (Etapa 4b validation): the
     # diagnostic reviewer hit stop_reason "max_tokens" at the untouched 4096
@@ -1231,6 +1295,11 @@ def main() -> None:
         test_diagnostic_author_gets_comment_tools_reviewer_does_not,
         test_diagnostic_finish_phase_requires_a_posted_comment,
         test_diagnostic_finish_phase_guard_does_not_apply_to_other_phases,
+        test_configure_intake_finish_phase_accepts_no_changes_needed_with_reason,
+        test_configure_intake_finish_phase_rejects_no_changes_needed_without_reason,
+        test_no_changes_needed_is_rejected_outside_its_phase_allowlist,
+        test_finish_phase_default_always_sets_no_changes_needed_false,
+        test_no_changes_needed_tool_property_only_offered_to_allowed_phases,
         test_diagnostic_gets_a_higher_max_tokens_budget,
         test_track_allowlist_matches_progress_review_profile,
         test_track_gets_only_the_narrow_read_github_issue_tool,
