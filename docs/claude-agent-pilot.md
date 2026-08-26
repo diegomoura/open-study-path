@@ -217,6 +217,33 @@ exists (Etapa 8 removed it entirely) -- every setup and configure_intake
 run today is this isolated harness, so the exception is what actually
 applies now, not a special case beside a live default.
 
+## A phase can legitimately have nothing to write
+
+Real dispatch finding (Etapa 9 item 2): running `configure_intake` against an
+instance where `bootstrap_instance` had already defaulted every status field
+correctly (`intake_provider: github_issue`, which needs no further setup)
+left the author with nothing to write. The workflow's own "the author wrote
+nothing, fail the job" guard predates this case, and until this fix it could
+not tell a legitimate no-op apart from an author that silently skipped its
+job -- both looked identical from the outside: empty working tree, job fails.
+
+`scripts/agent_runtime.py`'s `finish_phase` now accepts an explicit
+`no_changes_needed` flag plus a required `reason`, but only for phases listed
+in `PHASES_ALLOWING_NO_CHANGES_NEEDED` (`configure_intake` today). Calling it
+for any other phase is an `AllowlistViolation`, on purpose: `intake`'s
+ambiguous/no-candidate case still relies on an empty diff failing the job
+loudly, and this flag must never become a way around that.
+
+Critically, `no_changes_needed=true` skips writing a no-op file, not review.
+The workflow still pushes the (unchanged) branch and runs the reviewer job
+exactly as normal; the reviewer independently re-checks every requirement
+against the live repository (it already has `read_file`/`list_dir` for this)
+and can reject the claim just like it would reject a wrong diff. The review
+artifact `state/reviews/agent-pilot-<phase>.yml` the reviewer writes is
+itself new content, so the pull request still exists and still carries a
+real, independently-produced verdict -- there is no run of this harness that
+merges without one.
+
 ## Required repository secret
 
 `ANTHROPIC_API_KEY` -- add it under **Settings -> Secrets and variables ->
