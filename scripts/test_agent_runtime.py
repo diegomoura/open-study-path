@@ -924,6 +924,59 @@ def test_diagnostic_finish_phase_guard_does_not_apply_to_other_phases() -> None:
         assert tools.finish_phase("done", "next") == "phase marked finished"
 
 
+def test_diagnostic_post_issue_comment_appends_loop_prevention_marker() -> None:
+    from agent_runtime import DIAGNOSTIC_AUTHOR_COMMENT_MARKER
+
+    posted: dict[str, object] = {}
+
+    def fake_request(method, path, payload):
+        posted["method"] = method
+        posted["path"] = path
+        posted["payload"] = payload
+        return {}
+
+    with tempfile.TemporaryDirectory() as tmp:
+        root = Path(tmp)
+        tools = RepoTools(
+            root=root,
+            phase="diagnostic",
+            role="author",
+            github_request=fake_request,
+            github_repository="o/r",
+        )
+        tools.post_issue_comment(5, "Pergunta 1: como vai?")
+        body = posted["payload"]["body"]
+        assert body.startswith("Pergunta 1: como vai?")
+        assert DIAGNOSTIC_AUTHOR_COMMENT_MARKER in body
+        # Idempotent: calling again with a body that already carries the
+        # marker (e.g. a retried call) must not duplicate it.
+        tools.post_issue_comment(5, body)
+        assert posted["payload"]["body"].count(DIAGNOSTIC_AUTHOR_COMMENT_MARKER) == 1
+
+
+def test_non_diagnostic_post_issue_comment_never_gets_the_marker() -> None:
+    from agent_runtime import DIAGNOSTIC_AUTHOR_COMMENT_MARKER
+
+    posted: dict[str, object] = {}
+
+    def fake_request(method, path, payload):
+        posted["payload"] = payload
+        return {}
+
+    with tempfile.TemporaryDirectory() as tmp:
+        root = Path(tmp)
+        tools = RepoTools(
+            root=root,
+            phase="intake",
+            role="author",
+            github_request=fake_request,
+            github_repository="o/r",
+        )
+        tools.list_intake_issues()  # populate _issue_summaries so label calls don't explode
+        tools.post_issue_comment(5, "comentario qualquer")
+        assert DIAGNOSTIC_AUTHOR_COMMENT_MARKER not in posted["payload"]["body"]
+
+
 def test_configure_intake_finish_phase_accepts_no_changes_needed_with_reason() -> None:
     with tempfile.TemporaryDirectory() as tmp:
         root = Path(tmp)
@@ -1295,6 +1348,8 @@ def main() -> None:
         test_diagnostic_author_gets_comment_tools_reviewer_does_not,
         test_diagnostic_finish_phase_requires_a_posted_comment,
         test_diagnostic_finish_phase_guard_does_not_apply_to_other_phases,
+        test_diagnostic_post_issue_comment_appends_loop_prevention_marker,
+        test_non_diagnostic_post_issue_comment_never_gets_the_marker,
         test_configure_intake_finish_phase_accepts_no_changes_needed_with_reason,
         test_configure_intake_finish_phase_rejects_no_changes_needed_without_reason,
         test_no_changes_needed_is_rejected_outside_its_phase_allowlist,

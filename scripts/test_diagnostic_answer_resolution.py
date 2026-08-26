@@ -44,14 +44,22 @@ def test_extract_session_issue_number_handles_missing_field() -> None:
 def test_extract_answers_skips_no_response_and_preserves_order() -> None:
     answers = extract_answers(RENDERED_BODY)
     assert answers == (
-        "Nunca li os textos originais.",
-        "Aceitaria o que não pode controlar e focaria no que pode.",
+        (1, "Nunca li os textos originais."),
+        (3, "Aceitaria o que não pode controlar e focaria no que pode."),
     )
 
 
 def test_render_answers_as_comment_is_plain_numbered_list() -> None:
-    text = render_answers_as_comment(["primeira resposta", "segunda resposta"])
+    text = render_answers_as_comment([(1, "primeira resposta"), (2, "segunda resposta")])
     assert text == "1. primeira resposta\n\n2. segunda resposta"
+
+
+def test_render_answers_as_comment_preserves_original_question_numbers() -> None:
+    # Answering questions 1 and 4 (2 and 3 skipped) must keep saying "1."
+    # and "4." -- resequencing to "1."/"2." would make the diagnostic
+    # author think answer "2" responds to a question that was never asked.
+    text = render_answers_as_comment([(1, "resposta um"), (4, "resposta quatro")])
+    assert text == "1. resposta um\n\n4. resposta quatro"
 
 
 def test_classify_accepts_well_formed_submission() -> None:
@@ -145,6 +153,7 @@ def main() -> None:
         test_extract_session_issue_number_handles_missing_field,
         test_extract_answers_skips_no_response_and_preserves_order,
         test_render_answers_as_comment_is_plain_numbered_list,
+        test_render_answers_as_comment_preserves_original_question_numbers,
         test_classify_accepts_well_formed_submission,
         test_classify_rejects_pull_request,
         test_classify_rejects_already_imported,
