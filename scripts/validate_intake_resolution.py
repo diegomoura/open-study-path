@@ -149,6 +149,27 @@ def main() -> None:
     if derived_subject.get("from") != "path.learning_request":
         fail("path.subject must be derived from the preserved learning request")
 
+    # Etapa 9 item 2 (real dispatch finding): every other dropdown field here
+    # has a provider_rules table translating its rendered option text into a
+    # schema-valid value; current_level previously had none at all, so a real
+    # dispatch normalized "Nenhum conhecimento" into the plausible-looking but
+    # schema-invalid "no_knowledge" (study-config.schema.json's
+    # learner.current_level enum is exactly none/beginner/intermediate/advanced)
+    # and failed CI's schema validation. Guard the fix structurally: every
+    # current_level provider_rules entry must resolve to a member of that
+    # exact enum, not just any string.
+    valid_current_levels = {"none", "beginner", "intermediate", "advanced"}
+    current_level_rules = mapping.get("provider_rules", {}).get("current_level", {})
+    if not current_level_rules:
+        fail("intake/field-mapping.yml must define provider_rules.current_level")
+    for option, targets in current_level_rules.items():
+        value = targets.get("learner.current_level")
+        if value not in valid_current_levels:
+            fail(
+                f"provider_rules.current_level[{option!r}] maps to {value!r}, "
+                f"which is not a valid learner.current_level enum value {sorted(valid_current_levels)}"
+            )
+
     for path in [
         "scripts/intake_resolution.py",
         "scripts/test_intake_resolution.py",
