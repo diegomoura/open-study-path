@@ -58,7 +58,7 @@ When the form was reported as submitted:
 6. when more than one remains, list candidate number, title and creation time and ask the owner to choose;
 7. never select an arbitrary newest repository issue.
 
-After import, persist the exact source reference, apply `intake:imported` and retain `study-request` for auditability. Treat attachments as optional and do not copy them into the repository by default.
+After import, persist the exact source reference, apply `intake:imported` and retain `study-request` for auditability. Treat attachments as optional and do not copy them into the repository by default. The source reference and every other import-audit fact (issue number, title, timestamp) belong only in `state/intake-summary.json.source_reference` -- `study.config.yml`'s `intake:` block is a closed schema (`additionalProperties: false`) describing the provider's setup, not the specific submission, and does not accept audit fields. A real dispatch added `imported_from_issue`/`imported_at` there and failed CI's schema validation for exactly this reason.
 
 ## Manual YAML
 
