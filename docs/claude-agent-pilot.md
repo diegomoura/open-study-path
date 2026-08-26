@@ -51,12 +51,15 @@ wired to a real agent call so far:
 (`.github/workflows/agent-pilot-diagnostic.yml`), triggered by
 `issue_comment` per learner answer instead of `workflow_dispatch` one-shot,
 since `instructions/20-diagnostic.md` requires a real, multi-turn
-interactive placement session with the learner ("ask exactly one short
-question at a time"), which does not fit this harness's other phases'
-one-shot `run_agent()` -> `finish_phase()` shape. Validated with a real
-4-turn session (question budget respected, correct placement conclusion,
-reviewer approved with substantive findings) -- see
-`docs/claude-agent-pilot-etapa4b-diagnostic-design.md`, section 6.
+interactive placement session with the learner, which does not fit this
+harness's other phases' one-shot `run_agent()` -> `finish_phase()` shape.
+Originally one question per turn; Etapa 9c (real dispatch measured this at
+~4x a normal phase's cost) switched the question-asking style to a single
+form batch -- see `docs/claude-agent-pilot-etapa9c-diagnostic-single-form.md`.
+The workflow's trigger and turn/terminal mechanics are unchanged from the
+original real 4-turn validation (question budget respected, correct
+placement conclusion, reviewer approved with substantive findings) --
+see `docs/claude-agent-pilot-etapa4b-diagnostic-design.md`, section 6.
 
 `generate` (curriculum/content/slides) has not been picked up either --
 proposal section 7, step 5. `publish`'s real-dispatch validation is
