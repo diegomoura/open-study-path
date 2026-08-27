@@ -162,3 +162,36 @@ were fixed before that test could be called complete:
    onboarding step, unlike the earlier `ANTHROPIC_API_KEY` and "allow
    Actions to create pull requests" gaps documented in
    `docs/claude-agent-setup.md`.
+
+5. **The `workflow_call` fix above still failed on the first real test** --
+   `startup_failure`, no job list, no error message anywhere in the UI or
+   API. The cause: a reusable workflow can only ever be granted a subset of
+   its *caller's own* `permissions:`, never more. `agent-pilot-diagnostic-
+   answer-bridge.yml`'s top-level `permissions:` declared only
+   `issues: write` -- everything the `bridge` job itself needs -- but the
+   reusable workflow it calls (`agent-pilot-diagnostic.yml`) needs
+   `contents: write` and `pull-requests: write` too, and a called workflow
+   can never elevate past what its caller already has. GitHub enforces this
+   silently: no annotation, no log, nothing beyond the bare `startup_failure`
+   conclusion on the run itself. Fixed by matching the bridge workflow's
+   permissions block to the one it calls.
+
+6. **Fixing #5 revealed one more gap.** With `startup_failure` gone, the
+   `evaluate` job itself now completed, but its inner `author` job showed
+   `skipped` instead of running -- meaning `agent-pilot-diagnostic.yml`'s own
+   `if:` guard, `github.event_name == 'workflow_call'`, was never true. A
+   real test confirmed why: `github.event_name` inside a workflow invoked via
+   `workflow_call` is **not** `'workflow_call'` -- it stays whatever the
+   top-level calling workflow's own trigger was (here, `'issues'`, from the
+   bridge's `issues: opened` trigger). Fixed by detecting the
+   `workflow_dispatch`/`workflow_call` path via `inputs.issue_number != ''`
+   instead of `github.event_name` -- that context is only ever populated
+   along those two paths (never for `issue_comment`), which is exactly the
+   distinction needed and does not depend on which event name GitHub
+   happens to report for a nested reusable-workflow call.
+
+   Confirmed with a real, complete end-to-end round trip after both fixes:
+   form submitted -> bridge imported it and reposted the answers -> `evaluate`
+   invoked `agent-pilot-diagnostic.yml` as a reusable workflow -> its author
+   ran for real (not skipped) -> reviewer approved -> pull request opened.
+   All five findings' fixes verified together in one run.
