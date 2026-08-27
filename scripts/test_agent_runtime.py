@@ -1308,6 +1308,15 @@ def test_evaluate_gets_a_higher_tool_iteration_and_token_budget() -> None:
     assert max_tokens_for("evaluate") > DEFAULT_MAX_TOKENS
 
 
+def test_generate_proposal_gets_a_higher_tool_iteration_and_token_budget() -> None:
+    # Etapa 9 item 2: a real dispatch (never real-dispatch-validated before
+    # this) hit "did not finish within 20 tool round trips" and failed
+    # outright -- same untouched-default gap generate_detailed, diagnostic
+    # and replan each independently hit first.
+    assert max_tool_iterations_for("generate_proposal") > MAX_TOOL_ITERATIONS
+    assert max_tokens_for("generate_proposal") > DEFAULT_MAX_TOKENS
+
+
 def main() -> None:
     tests = [
         test_write_allowlist_matches_setup_execution_contract,
@@ -1370,6 +1379,7 @@ def main() -> None:
         test_evaluate_reviewer_model_is_sonnet_and_structural,
         test_apply_topic_assessment_result_transforms_canonical_state,
         test_evaluate_gets_a_higher_tool_iteration_and_token_budget,
+        test_generate_proposal_gets_a_higher_tool_iteration_and_token_budget,
     ]
     for test in tests:
         test()
