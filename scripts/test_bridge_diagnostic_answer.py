@@ -32,8 +32,6 @@ class FakeApi:
             return {"id": 1}
         if method == "POST" and path.endswith("/labels"):
             return {}
-        if method == "POST" and path.endswith("/dispatches"):
-            return {}
         if method == "PATCH":
             return {}
         raise AssertionError(f"unexpected call: {method} {path}")
@@ -52,7 +50,7 @@ def _issue(number: int, body: str, labels: list[str], is_pr: bool = False) -> di
     return payload
 
 
-def _run_bridge(fake: FakeApi, answer_issue_number: int) -> None:
+def _run_bridge(fake: FakeApi, answer_issue_number: int, github_output_path: str | None = None) -> None:
     import bridge_diagnostic_answer as bridge
 
     original_factory = bridge.github_request_factory
@@ -68,12 +66,19 @@ def _run_bridge(fake: FakeApi, answer_issue_number: int) -> None:
         import os
 
         os.environ["GITHUB_TOKEN"] = "fake-token"
+        if github_output_path is not None:
+            os.environ["GITHUB_OUTPUT"] = github_output_path
+        elif "GITHUB_OUTPUT" in os.environ:
+            del os.environ["GITHUB_OUTPUT"]
         bridge.main()
     finally:
         bridge.github_request_factory = original_factory
 
 
-def test_accepted_submission_comments_labels_closes_and_dispatches() -> None:
+def test_accepted_submission_comments_labels_closes_and_outputs_session_number() -> None:
+    import os
+    import tempfile
+
     answer_body = (
         "### Número da issue da sua sessão de diagnóstico\n\n5\n\n"
         "### Resposta à Pergunta 1\n\nresposta um\n"
@@ -84,7 +89,12 @@ def test_accepted_submission_comments_labels_closes_and_dispatches() -> None:
             5: _issue(5, "session body", [SESSION_LABEL]),
         }
     )
-    _run_bridge(fake, 9)
+    with tempfile.TemporaryDirectory() as tmp:
+        output_path = os.path.join(tmp, "github_output")
+        open(output_path, "w", encoding="utf-8").close()
+        _run_bridge(fake, 9, github_output_path=output_path)
+        output_content = open(output_path, encoding="utf-8").read()
+        assert "session_issue_number=5" in output_content
 
     comment_calls = [c for c in fake.calls if c[0] == "POST" and c[1].endswith("/comments")]
     assert len(comment_calls) == 1
@@ -100,12 +110,11 @@ def test_accepted_submission_comments_labels_closes_and_dispatches() -> None:
     assert len(patch_calls) == 1
     assert patch_calls[0][2] == {"state": "closed"}
 
+    # Never tries to trigger a separate workflow run -- see the module
+    # docstring for why (both a repost-only and an explicit
+    # workflow_dispatch call were tried for real and both failed).
     dispatch_calls = [c for c in fake.calls if c[0] == "POST" and c[1].endswith("/dispatches")]
-    assert len(dispatch_calls) == 1
-    assert dispatch_calls[0][1] == (
-        "/repos/example/study/actions/workflows/agent-pilot-diagnostic.yml/dispatches"
-    )
-    assert dispatch_calls[0][2]["inputs"]["issue_number"] == "5"
+    assert not dispatch_calls
 
 
 def test_rejected_submission_only_comments_on_answer_issue() -> None:
@@ -137,7 +146,7 @@ def test_session_issue_not_found_is_rejected_not_a_crash() -> None:
 
 def main() -> None:
     tests = [
-        test_accepted_submission_comments_labels_closes_and_dispatches,
+        test_accepted_submission_comments_labels_closes_and_outputs_session_number,
         test_rejected_submission_only_comments_on_answer_issue,
         test_session_issue_not_found_is_rejected_not_a_crash,
     ]
