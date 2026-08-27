@@ -21,6 +21,13 @@ name: Agent pilot - diagnostic answer bridge
 # an explanatory comment on the answer issue and leaves it open, the same
 # "return the form link, do not silently guess" posture intake_resolution.py
 # takes for an ambiguous or absent candidate.
+#
+# The last step of a successful import calls agent-pilot-diagnostic.yml's
+# workflow_dispatch trigger explicitly, rather than relying on the comment
+# just posted to trigger it via issue_comment: a real round trip found that
+# GitHub does not fire event-triggered workflows for events caused by a
+# workflow's own GITHUB_TOKEN, so that comment alone can never do it. An
+# explicit workflow_dispatch API call is not subject to that restriction.
 
 on:
   issues:
@@ -28,6 +35,11 @@ on:
 
 permissions:
   issues: write
+  # Needed only for the last step: explicitly calling
+  # agent-pilot-diagnostic.yml's workflow_dispatch trigger, since GitHub does
+  # not fire event-triggered workflows for events this workflow's own
+  # GITHUB_TOKEN causes (see scripts/bridge_diagnostic_answer.py).
+  actions: write
 
 concurrency:
   # Scoped per answer issue, not per repo -- two different learners
