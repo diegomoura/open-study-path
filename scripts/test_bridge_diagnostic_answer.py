@@ -32,6 +32,8 @@ class FakeApi:
             return {"id": 1}
         if method == "POST" and path.endswith("/labels"):
             return {}
+        if method == "POST" and path.endswith("/dispatches"):
+            return {}
         if method == "PATCH":
             return {}
         raise AssertionError(f"unexpected call: {method} {path}")
@@ -71,7 +73,7 @@ def _run_bridge(fake: FakeApi, answer_issue_number: int) -> None:
         bridge.github_request_factory = original_factory
 
 
-def test_accepted_submission_comments_labels_and_closes() -> None:
+def test_accepted_submission_comments_labels_closes_and_dispatches() -> None:
     answer_body = (
         "### Número da issue da sua sessão de diagnóstico\n\n5\n\n"
         "### Resposta à Pergunta 1\n\nresposta um\n"
@@ -97,6 +99,13 @@ def test_accepted_submission_comments_labels_and_closes() -> None:
     patch_calls = [c for c in fake.calls if c[0] == "PATCH"]
     assert len(patch_calls) == 1
     assert patch_calls[0][2] == {"state": "closed"}
+
+    dispatch_calls = [c for c in fake.calls if c[0] == "POST" and c[1].endswith("/dispatches")]
+    assert len(dispatch_calls) == 1
+    assert dispatch_calls[0][1] == (
+        "/repos/example/study/actions/workflows/agent-pilot-diagnostic.yml/dispatches"
+    )
+    assert dispatch_calls[0][2]["inputs"]["issue_number"] == "5"
 
 
 def test_rejected_submission_only_comments_on_answer_issue() -> None:
@@ -128,7 +137,7 @@ def test_session_issue_not_found_is_rejected_not_a_crash() -> None:
 
 def main() -> None:
     tests = [
-        test_accepted_submission_comments_labels_and_closes,
+        test_accepted_submission_comments_labels_closes_and_dispatches,
         test_rejected_submission_only_comments_on_answer_issue,
         test_session_issue_not_found_is_rejected_not_a_crash,
     ]
