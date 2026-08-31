@@ -103,7 +103,7 @@ behind each one before relying on it:
 | `bootstrap_instance`, `configure_intake` | `configure_intake` always resolves as `github_issue` intake; no interactive provider choice (nobody to ask in an unattended run) |
 | `intake` | Only the `github_issue` provider path is wired; Jotform and manual YAML intake have no dispatched path yet |
 | `publish` | Only the `task manager: GitHub Issues` backend; Trello/Todoist/Notion remain deferred |
-| `generate_proposal`, `generate_detailed` | `generate_detailed` has slide generation disabled by default (`AGENT_PILOT_ENABLE_SLIDES`) |
+| `generate_proposal`, `generate_detailed` | No slide generation -- study slides were removed from the pilot entirely, not just toggled off |
 | `track`, `replan`, `evaluate` | No cross-repo restriction beyond the shared GitHub Issues scope above; `evaluate`'s materialization-on-mastery path reuses `generate_detailed`'s own restrictions |
 | `diagnostic` | Its own event-triggered workflow, not `workflow_dispatch` -- see above |
 
