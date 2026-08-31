@@ -673,7 +673,6 @@ def test_run_publish_projection_routes_through_dispatch_and_reports_success() ->
                         "lesson_number": 1,
                         "title": "Introdução",
                         "materialized": True,
-                        "slides_url": "https://github.com/o/r/raw/HEAD/study/slides/aula-01/slides.pdf",
                         "lesson_url": "https://github.com/o/r/blob/HEAD/study/lessons/aula-01.md",
                         "assessment_url": "https://github.com/o/r/blob/HEAD/study/assessments/aula-01.md",
                     }
@@ -713,13 +712,12 @@ def test_run_publish_projection_reports_invalid_topic_input_without_crashing() -
 def test_generate_proposal_allowlist_matches_proposal_outputs() -> None:
     # instructions/28-propose-path.md "Outputs": only the roadmap and the
     # instance marker -- everything instructions/30-generate-path.md later
-    # materializes (topics, modules, slides, assessments) must stay outside
+    # materializes (topics, modules, assessments) must stay outside
     # this suboperation's allowlist.
     assert is_write_allowed("generate_proposal", "study/roadmap.md")
     assert is_write_allowed("generate_proposal", ".open-study-path/instance.yml")
     assert not is_write_allowed("generate_proposal", "study/topics/TOPIC-001.md")
     assert not is_write_allowed("generate_proposal", "study/modules/TOPIC-001.md")
-    assert not is_write_allowed("generate_proposal", "study/slides/TOPIC-001/slides.pdf")
     assert not is_write_allowed("generate_proposal", "study/assessments/TOPIC-001.md")
     assert not is_write_allowed("generate_proposal", "state/reviews/agent-pilot-generate-proposal.yml")
 
@@ -750,13 +748,7 @@ def test_pricing_table_covers_every_resolvable_model() -> None:
         )
 
 
-def test_generate_detailed_allowlist_excludes_slides_by_default() -> None:
-    # Etapa 5b: slides are off by default in this pilot (docs/claude-agent-
-    # pilot-etapa5.md, section 7). study/slides/ and state/slide-reviews/
-    # must never be write-allowed, regardless of the env var -- the
-    # allowlist itself doesn't grow when the toggle flips; main() refuses to
-    # even start a generate_detailed run when it's on (see
-    # test_slides_toggle_enabled_reads_env_var below).
+def test_generate_detailed_allowlist_covers_expected_outputs() -> None:
     assert is_write_allowed("generate_detailed", "study/topics/TOPIC-001.md")
     assert is_write_allowed("generate_detailed", "study/modules/TOPIC-001.md")
     assert is_write_allowed("generate_detailed", "study/assessments/TOPIC-001.md")
@@ -764,32 +756,9 @@ def test_generate_detailed_allowlist_excludes_slides_by_default() -> None:
     assert is_write_allowed("generate_detailed", ".github/ISSUE_TEMPLATE/assessment-topic-001.yml")
     assert is_write_allowed("generate_detailed", "study/roadmap.md")
     assert is_write_allowed("generate_detailed", "study/integrations.md")
-    assert not is_write_allowed("generate_detailed", "study/slides/TOPIC-001/index.html")
-    assert not is_write_allowed("generate_detailed", "study/slides/TOPIC-001/slides.pdf")
-    assert not is_write_allowed("generate_detailed", "state/slide-reviews/TOPIC-001.yml")
     # Prefix matching must not spill onto unrelated Issue Form files --
     # confirms the intake form is never shadowed by this phase's allowlist.
     assert not is_write_allowed("generate_detailed", ".github/ISSUE_TEMPLATE/create-study-path.yml")
-
-
-def test_slides_toggle_enabled_reads_env_var() -> None:
-    import agent_runtime as ar
-
-    original = os.environ.get(ar.SLIDES_ENV_VAR)
-    try:
-        os.environ.pop(ar.SLIDES_ENV_VAR, None)
-        assert ar.slides_toggle_enabled() is False
-        for value in ("true", "1", "yes", "on", "True", "ON"):
-            os.environ[ar.SLIDES_ENV_VAR] = value
-            assert ar.slides_toggle_enabled() is True, value
-        for value in ("false", "0", "no", "off", ""):
-            os.environ[ar.SLIDES_ENV_VAR] = value
-            assert ar.slides_toggle_enabled() is False, value
-    finally:
-        if original is None:
-            os.environ.pop(ar.SLIDES_ENV_VAR, None)
-        else:
-            os.environ[ar.SLIDES_ENV_VAR] = original
 
 
 def test_generate_detailed_gets_a_higher_tool_iteration_budget() -> None:
@@ -1347,8 +1316,7 @@ def main() -> None:
         test_generate_proposal_allowlist_matches_proposal_outputs,
         test_generate_proposal_has_no_github_issues_tools,
         test_pricing_table_covers_every_resolvable_model,
-        test_generate_detailed_allowlist_excludes_slides_by_default,
-        test_slides_toggle_enabled_reads_env_var,
+        test_generate_detailed_allowlist_covers_expected_outputs,
         test_generate_detailed_gets_a_higher_tool_iteration_budget,
         test_agent_budget_exceeded_carries_tool_call_diagnostics,
         test_transcript_captures_stop_reason_for_unfinished_runs,
