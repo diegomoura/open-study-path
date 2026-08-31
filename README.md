@@ -12,9 +12,8 @@ Uma trilha possui:
 - etapas pequenas, com objetivo e tempo sugerido;
 - aulas autocontidas com explicações, exemplos, prática e diagramas;
 - fontes verificáveis e formas alternativas de aprender;
-- flashcards quando ajudam;
 - avaliações com feedback e revisão focada;
-- integração opcional com tarefas, agenda, Quizlet e outras ferramentas.
+- integração opcional com tarefas, agenda e outras ferramentas.
 
 As próximas aulas podem ser preparadas conforme a pessoa avança. Isso permite adaptar exemplos, fontes e prática a partir das avaliações anteriores.
 
@@ -101,7 +100,6 @@ O mapa completo é criado desde o início. Em trilhas maiores, apenas as primeir
 - `study/roadmap.md` — visão completa e sequência;
 - `study/topics/` — visão resumida de cada etapa;
 - `study/modules/` — aulas completas;
-- `study/flashcards/` — prática local em Markdown e TSV;
 - `study/assessments/` — rubricas;
 - `.github/ISSUE_TEMPLATE/` — formulários de entrada e avaliação;
 - `study/integrations.md` — ferramentas que podem ajudar;
@@ -121,7 +119,6 @@ Ferramentas externas são escolhidas pelo valor que oferecem, não por estarem d
 
 | Necessidade | Possível ferramenta | Alternativa local |
 | --- | --- | --- |
-| Flashcards | Quizlet | Markdown e TSV |
 | Tarefas | Trello ou Todoist | GitHub ou Markdown |
 | Agenda | Reclaim, Google ou Outlook | projeção semanal |
 | Pesquisa acadêmica | Consensus | fontes originais e web |
@@ -129,7 +126,7 @@ Ferramentas externas são escolhidas pelo valor que oferecem, não por estarem d
 | Entregáveis | Google Drive | arquivos do repositório |
 | Analytics | Airtable | arquivos de estado |
 
-Só uma ferramenta de tarefas mantém o acompanhamento principal. Flashcards, agenda, hábitos e cursos ajudam, mas não concluem uma etapa.
+Só uma ferramenta de tarefas mantém o acompanhamento principal. Agenda, hábitos e cursos ajudam, mas não concluem uma etapa.
 
 Os recursos externos são indexados em `state/integrations.json` para evitar duplicações. Veja `docs/integration-capabilities.md`.
 

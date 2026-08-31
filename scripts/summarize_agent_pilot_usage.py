@@ -22,36 +22,50 @@ def _load(path: str) -> dict:
     return json.loads(Path(path).read_text(encoding="utf-8"))
 
 
-def combine(author_result: dict, reviewer_result: dict) -> dict:
+def combine(author_result: dict, reviewer_result: dict | None = None) -> dict:
     author_usage = author_result.get("usage", {})
-    reviewer_usage = reviewer_result.get("usage", {})
+    has_reviewer = reviewer_result is not None
+    reviewer_usage = (reviewer_result or {}).get("usage", {})
     author_cost = author_usage.get("estimated_cost_usd")
     reviewer_cost = reviewer_usage.get("estimated_cost_usd")
     combined_cost = None
     if author_cost is not None and reviewer_cost is not None:
         combined_cost = author_cost + reviewer_cost
+    elif author_cost is not None:
+        # Author-only record (e.g. a non-terminal diagnostic turn, which
+        # never involves a reviewer call at all -- see
+        # docs/claude-agent-pilot-etapa14-diagnostic-usage-ledger.md). The
+        # combined cost is simply the author's real cost, not unknown.
+        combined_cost = author_cost
 
-    return {
+    summary = {
         "author": {"model": author_result.get("model"), **author_usage},
-        "reviewer": {"model": reviewer_result.get("model"), **reviewer_usage},
         "combined_tokens": (
             author_usage.get("total_tokens", 0) + reviewer_usage.get("total_tokens", 0)
         ),
         "combined_estimated_cost_usd": combined_cost,
     }
+    if has_reviewer:
+        summary["reviewer"] = {"model": reviewer_result.get("model"), **reviewer_usage}
+    return summary
 
 
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--author-result", required=True)
-    parser.add_argument("--reviewer-result", required=True)
+    parser.add_argument(
+        "--reviewer-result",
+        default=None,
+        help="Omit for an author-only record (e.g. a non-terminal diagnostic turn, which never calls a reviewer)",
+    )
     parser.add_argument("--phase", required=True)
     parser.add_argument("--target-repo", required=True)
     parser.add_argument("--out-summary-json", required=True)
     parser.add_argument("--append-log", default=None, help="Path to a JSONL cost log to append one record to")
     args = parser.parse_args()
 
-    summary = combine(_load(args.author_result), _load(args.reviewer_result))
+    reviewer_result = _load(args.reviewer_result) if args.reviewer_result else None
+    summary = combine(_load(args.author_result), reviewer_result)
     summary["phase"] = args.phase
     summary["target_repo"] = args.target_repo
     summary["recorded_at"] = datetime.now(timezone.utc).isoformat()
