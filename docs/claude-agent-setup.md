@@ -27,6 +27,16 @@ run in, not a separate driver repository). This is never copied automatically
 by the GitHub template generator -- every new instance, including disposable
 test repositories, needs it added by hand.
 
+When creating the key in the Anthropic Console, scope it to a single
+workspace. A key left scoped to "all workspaces" fails the very first
+dispatch outright, before any diff or review happens, with `anthropic-
+workspace-id is required when authenticating with an identity-linked API
+key` -- this workflow only ever sends `x-api-key`, not a workspace-id
+header, so a multi-workspace key has no way to tell it which workspace to
+run in. If a dispatch fails with that exact error, edit the key in the
+Console (its workspace scope is a property of the key itself, not
+something this repository's workflow can pass in) and re-run.
+
 Before running this against anything but a disposable test repository, set
 a spend limit for that key in the Anthropic Console. Never put the key in a
 committed file, an issue body, or a workflow log.
@@ -52,46 +62,124 @@ pull request is left open for a human, exactly as before Etapa 12.
 ## Setup steps
 
 1. Create a repository from `diegomoura/open-study-path` using the GitHub
-   template. The `agent-pilot-*.yml` workflows are already part of the
-   template; nothing extra to copy in.
-2. Add `ANTHROPIC_API_KEY` as a repository Secret (above) and set its spend
-   limit in the Anthropic Console.
-3. Enable "Allow GitHub Actions to create and approve pull requests" (above).
-   Skipping this is the most common first-dispatch failure on a new instance.
-4. Optional: if you want to override the recommended Claude model tier per
-   agent role, edit `.open-study-path/models.yml` after your first
-   `bootstrap_instance` run creates it from `templates/agent-models.yml` (see
-   `docs/agent-model-configuration.md`). Leave every override `null` to use
+   template (green **Use this template** button on the template repository's
+   page, then **Create a new repository**). The `agent-pilot-*.yml` workflows
+   are already part of the template; nothing extra to copy in.
+   **Next:** you land on your new repository. Continue with step 2 before
+   doing anything else -- a dispatch without the Secret and the permission
+   below fails immediately.
+2. Add `ANTHROPIC_API_KEY` as a repository Secret (see "Required repository
+   Secret" above) and set its spend limit in the Anthropic Console.
+   **Next:** step 3, in the same repository's Settings tab.
+3. Enable "Allow GitHub Actions to create and approve pull requests" (see
+   "Required repository setting" above). Skipping this is the most common
+   first-dispatch failure on a new instance.
+   **Next:** step 4 -- your first real dispatch.
+4. Go to the **Actions** tab -> **Agent pilot** -> **Run workflow**. Choose
+   `phase: bootstrap_instance` for this very first run regardless of what you
+   plan to do afterward -- every other phase depends on files it creates.
+   Give `target_repo` as this same repository's `OWNER/REPOSITORY`. Leave
+   `extra_context` blank for this first run.
+   **Next:** click the green **Run workflow** button. The run takes a
+   minute or two; refresh the Actions tab to watch it.
+5. When the run finishes, a pull request appears on the repository's **Pull
+   requests** tab, with the author's diff and the independent reviewer's
+   verdict (`state/reviews/agent-pilot-bootstrap_instance.yml` and a PR
+   comment).
+   **Next:** two possible outcomes --
+   - **The PR is already merged** (its branch is gone, and `state/`,
+     `study.config.yml`, and `.open-study-path/instance.yml` exist on your
+     default branch): this is Etapa 12's auto-merge, and it only happens
+     when the reviewer approved and every required check passed. Nothing
+     left to do for this dispatch -- go to step 6.
+   - **The PR is still open**: read the reviewer's findings in the PR
+     description before merging it yourself. This means either the reviewer
+     found something blocking, or a required check did not pass -- both are
+     shown on the PR. Fix and re-dispatch, or merge by hand if you agree
+     the finding does not actually block.
+6. Optional, any time after your first `bootstrap_instance` dispatch: edit
+   `.open-study-path/models.yml` (bootstrap creates it from
+   `templates/agent-models.yml`) if you want to override the recommended
+   Claude model tier for a specific agent role -- see
+   `docs/agent-model-configuration.md`. Leave every override `null` to use
    the recommended tier for every agent.
-5. Go to the **Actions** tab -> **Agent pilot** -> **Run workflow**.
-6. Choose `phase` from the dropdown (see "Current scope" for what each phase
-   actually does today), and give `target_repo` as this same repository's
-   `OWNER/REPOSITORY`. `extra_context` is optional free text passed straight
-   to the author agent (a course name, a specific instruction, or -- for
-   `evaluate` -- the learner's literal command, see `docs/claude-agent-pilot.md`).
-7. The workflow opens a pull request with the author's diff and the
-   independent reviewer's verdict (`state/reviews/agent-pilot-<phase>.yml`
-   and a PR comment). Read the reviewer's findings before merging -- this
-   pilot does not auto-merge; a human makes the final call on every run.
+   **Next:** repeat step 4 with your next phase (`configure_intake` is the
+   usual second dispatch) whenever you are ready to continue the trilha --
+   see "Current scope" below for what each phase does. `target_repo` and
+   `extra_context` follow the same pattern as step 4; `extra_context` is
+   optional free text passed straight to the author agent (a course name, a
+   specific instruction, or -- for `evaluate` -- the learner's literal
+   command, see `docs/claude-agent-pilot.md`).
 
 `diagnostic` does not use the Run workflow button: `instructions/20-diagnostic.md`
 requires a real multi-turn placement conversation, so **Agent pilot -
-diagnostic** instead triggers once per learner reply, on each comment posted
-to the session issue. Start it by opening that issue; no separate dispatch
-step.
+diagnostic** instead triggers on each comment posted to the session issue,
+once per learner reply.
 
-## A pull request opened by a workflow does not trigger other workflows
+Nothing creates or labels that session issue automatically -- this is
+deliberate, the same way nothing auto-creates the original study-request
+issue. A human decides when a learner is ready to start their diagnostic and
+makes that decision visible on GitHub:
 
-GitHub does not run `pull_request`-triggered workflows (including
-`validate-template.yml`, this repository's main CI) against a pull request
-that was itself opened using the default `GITHUB_TOKEN` -- this is a
-deliberate GitHub Actions safety limit against triggering infinite workflow
-chains, not a bug in this repository. Every agent-pilot PR needs its CI
-started by hand once: **Actions -> Validate Open Study Path -> Run workflow**,
-choosing the PR's branch as `ref`. Do this before merging -- CI having a
-green run against the PR's actual head commit is still the only thing that
-justifies a merge; an automatically-triggered run is not a prerequisite, a
-manually-triggered one satisfies it exactly the same way.
+1. Open the learner's `study-request` issue (or reuse whichever issue you
+   want the diagnostic conversation to live in).
+2. Add the `diagnostic:in-progress` label to it. The workflow's `issue_comment`
+   trigger checks for exactly this label before it will respond to anything
+   posted on the issue.
+3. Post a comment starting the conversation (for example: "Vamos fazer meu
+   diagnóstico."). **Next:** the workflow runs once per reply from here --
+   watch the Actions tab for **Agent pilot - diagnostic** after each comment,
+   yours or the learner's. The final turn removes `diagnostic:in-progress`
+   automatically and opens a pull request the same way `Run workflow` phases
+   do -- **`diagnostic` never auto-merges** (its own workflow has no
+   auto-merge job, unlike every phase dispatched through `agent-pilot-
+   setup.yml`), so read the reviewer's verdict and merge it yourself.
+
+## A pull request opened by this workflow may need its CI started by hand
+
+Every agent-pilot pull request is opened by the workflow's own `GITHUB_TOKEN`,
+under the `github-actions[bot]` identity. This repository's own CI workflows
+(`validate-template.yml` and the others under `.github/workflows/`)
+deliberately skip their `pull_request`-triggered run for a PR opened by that
+identity -- running it would just race Etapa 12's auto-merge job, which
+already runs the same checks synchronously, inline, before deciding whether
+to merge.
+
+This matters only for a PR that auto-merge left open for you (the reviewer
+found something blocking, a required check failed, or the phase -- like
+`diagnostic` -- has no auto-merge job at all). Before merging one of those by
+hand, get a real CI run against its exact head commit: **Actions -> Validate
+Open Study Path -> Run workflow**, choosing the PR's branch as `ref`. A PR
+that already auto-merged needs none of this -- its CI already ran as part of
+the same dispatch, before the merge happened.
+
+## Starting `evaluate`: how a real assessment submission works
+
+`evaluate` also has no `Run workflow` entry point of its own for the
+learner-facing half of the loop -- it dispatches through `agent-pilot-
+setup.yml` (`phase: evaluate`) the same way `publish` and `generate_detailed`
+do, but only once a real submission exists to grade:
+
+1. The learner opens the assessment issue form for the specific topic
+   (`.github/ISSUE_TEMPLATE/assessment-topic-NNN.yml`, linked from the
+   lesson's own GitHub Issue) and submits it. This applies the
+   `assessment`, `assessment:submitted`, and `topic:TOPIC-NNN` labels
+   automatically -- the form's `labels:` key, not something you set by hand.
+2. Dispatch `phase: evaluate` the normal way (step 4 above), with
+   `target_repo` as usual. `extra_context` can carry the learner's own
+   command if instructed to.
+   **Next:** same as any other phase -- watch for the PR, read the
+   reviewer's verdict, and either let auto-merge do its job or merge by hand
+   if it was left open.
+
+The evaluator finds the submission by that `topic:TOPIC-NNN` label, not by
+searching the issue body for anything. Every assessment form's first block is
+markdown-only instructional text containing a machine-readable marker for a
+hand-authored or migrated issue outside the standard form -- but GitHub's own
+documentation confirms a `type: markdown` block "is not submitted" with the
+issue, so a real, form-submitted issue never actually carries that marker in
+its body. If you are troubleshooting a submission `evaluate` isn't finding,
+check the label first.
 
 ## Current scope
 
